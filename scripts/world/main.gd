@@ -37,7 +37,7 @@ const NPC_SCENE := preload("res://scenes/entities/npc.tscn")
 # 固定地图场景（玩家在编辑器中手动设计）
 const FIXED_MAP_SCENE := preload("res://scenes/world/fixed_map.tscn")
 var fixed_map: Node2D = null
-const USE_FIXED_MAP := true  # 设置为true使用固定地图，false使用随机生成
+const USE_FIXED_MAP := false  # 设置为true使用固定地图，false使用随机生成
 
 const MAX_ZOMBIES := 100
 const ZOMBIE_SPAWN_INTERVAL := 5.0
@@ -160,8 +160,11 @@ func _ready() -> void:
 		character_ui.name = "CharacterUI"
 		hud.add_child(character_ui)
 		print("[Main] 人物属性UI已创建")
-	# 主机生成初始资源
-	if GameManager.is_server:
+	# 主机或单人游戏生成初始资源
+	if GameManager.is_server or multiplayer.multiplayer_peer == null:
+		if not GameManager.is_server:
+			GameManager.is_server = true
+			print("[Main] 单人游戏模式，强制设置is_server=true")
 		_generate_initial_resources()
 	# 连接聊天信号
 	GameManager.chat_received.connect(_on_chat_received)
@@ -526,7 +529,14 @@ func _register_chunk_entity(entity: Node) -> void:
 	if not chunk_entities.has(chunk_coord):
 		chunk_entities[chunk_coord] = []
 	chunk_entities[chunk_coord].append(entity)
-	# 初始状态：根据是否在玩家附近决定是否激活
+	# 延迟一帧设置初始状态，确保实体_ready先执行（纹理生成）
+	call_deferred("_set_entity_chunk_state", entity, chunk_coord)
+
+
+func _set_entity_chunk_state(entity: Node, chunk_coord: Vector2i) -> void:
+	## 延迟设置实体的初始分块状态（确保_ready先执行）
+	if not entity or not is_instance_valid(entity):
+		return
 	var player: Node = GameManager.get_local_player()
 	if player:
 		var player_chunk: Vector2i = _get_chunk_coord(player.position)
@@ -534,6 +544,8 @@ func _register_chunk_entity(entity: Node) -> void:
 			entity.process_mode = Node.PROCESS_MODE_INHERIT
 		else:
 			entity.process_mode = Node.PROCESS_MODE_DISABLED
+	else:
+		entity.process_mode = Node.PROCESS_MODE_INHERIT
 
 
 func _unregister_chunk_entity(entity: Node) -> void:
@@ -560,9 +572,6 @@ func _update_chunks() -> void:
 	if not player or not is_instance_valid(player):
 		return
 	var player_chunk: Vector2i = _get_chunk_coord(player.position)
-	# 如果玩家没有移动到新的chunk，跳过更新
-	if player_chunk == last_player_chunk:
-		return
 	last_player_chunk = player_chunk
 	total_active_entities = 0
 	total_frozen_entities = 0
@@ -578,9 +587,8 @@ func _update_chunks() -> void:
 					entity.process_mode = Node.PROCESS_MODE_INHERIT
 				total_active_entities += 1
 			else:
-				# 临时禁用冻结，确保所有实体都能显示
-				# if entity.process_mode != Node.PROCESS_MODE_DISABLED:
-				# 	entity.process_mode = Node.PROCESS_MODE_DISABLED
+				if entity.process_mode != Node.PROCESS_MODE_DISABLED:
+					entity.process_mode = Node.PROCESS_MODE_DISABLED
 				total_frozen_entities += 1
 	print("[Chunk] 玩家在chunk(%d,%d)，激活%d个实体，冻结%d个实体" % [player_chunk.x, player_chunk.y, total_active_entities, total_frozen_entities])
 
@@ -629,33 +637,33 @@ func _generate_initial_resources() -> void:
 	if USE_FIXED_MAP:
 		_load_fixed_map()
 		return
-	# 等距地图中心和范围（50x50瓦片，等距坐标）
-	map_w = 50.0 * 64.0
-	map_h = 50.0 * 64.0
+	# 等距地图中心和范围（200x200瓦片，等距坐标）
+	map_w = 200.0 * 64.0
+	map_h = 200.0 * 64.0
 	var center_x: float = 0.0  # 等距地图x中心
-	var center_y: float = (25.0 + 25.0) * 32.0 / 2.0  # 等距地图y中心 = 800
-	var range_x: float = 1400.0  # 等距地图x范围
-	var range_y: float = 700.0  # 等距地图y范围
+	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0  # 等距地图y中心 = 3200
+	var range_x: float = 5600.0  # 等距地图x范围
+	var range_y: float = 2800.0  # 等距地图y范围
 	# 生成实验室位置（全图唯一，随机出现在地图四条边的附近）
 	# 先检查是否已经有实验室存在，防止重复生成
 	var existing_labs: Array = get_tree().get_nodes_in_group("laboratory")
 	if existing_labs.size() > 0:
 		print("[Virus] 已存在实验室，跳过生成")
 		return
-	var edge_margin: float = 100.0  # 距离边缘的距离
+	var edge_margin: float = 400.0  # 距离边缘的距离
 	var edge_side: int = randi() % 4  # 0=上边(顶部), 1=下边(底部), 2=左边, 3=右边
-	# 等距地图是菱形，四个顶点：顶(0,0)、右(1568,784)、底(0,1568)、左(-1568,784)
+	# 等距地图是菱形，四个顶点：顶(0,0)、右(6368,3184)、底(0,6368)、左(-6368,3184)
 	match edge_side:
 		0:  # 上边（顶部顶点附近，沿着上边分布）
 			var t: float = randf()
-			lab_position = Vector2(lerp(-1568 + edge_margin, 1568 - edge_margin, t), lerp(784 - edge_margin, edge_margin, abs(t - 0.5) * 2))
+			lab_position = Vector2(lerp(-6368 + edge_margin, 6368 - edge_margin, t), lerp(3184 - edge_margin, edge_margin, abs(t - 0.5) * 2))
 		1:  # 下边（底部顶点附近，沿着下边分布）
 			var t2: float = randf()
-			lab_position = Vector2(lerp(-1568 + edge_margin, 1568 - edge_margin, t2), lerp(784 + edge_margin, 1568 - edge_margin, abs(t2 - 0.5) * 2))
+			lab_position = Vector2(lerp(-6368 + edge_margin, 6368 - edge_margin, t2), lerp(3184 + edge_margin, 6368 - edge_margin, abs(t2 - 0.5) * 2))
 		2:  # 左边（左部顶点附近）
-			lab_position = Vector2(-1568 + edge_margin, randf_range(edge_margin, 1568 - edge_margin))
+			lab_position = Vector2(-6368 + edge_margin, randf_range(edge_margin, 6368 - edge_margin))
 		3:  # 右边（右部顶点附近）
-			lab_position = Vector2(1568 - edge_margin, randf_range(edge_margin, 1568 - edge_margin))
+			lab_position = Vector2(6368 - edge_margin, randf_range(edge_margin, 6368 - edge_margin))
 	print("[Virus] 实验室位置（边缘附近）：", lab_position, " 边：", edge_side)
 	# 创建实验室建筑（全地图只生成一个，使用building.tscn）
 	var lab_building: Node2D = BUILDING_SCENE.instantiate()

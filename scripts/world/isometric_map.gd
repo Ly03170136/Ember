@@ -1,11 +1,11 @@
 extends Node2D
-## 等距地图生成器（手动渲染方式，避免TileSet配置问题）
-## 使用Sprite2D手动渲染每个瓦片，实现真正的等距视角
+## 等距地图生成器（合并大纹理渲染，高性能）
+## 将所有瓦片合并成一个大纹理，只用1个Sprite2D渲染，大大提高FPS
 
 const TILE_WIDTH := 64
 const TILE_HEIGHT := 32  # 等距瓦片高度是宽度的一半
-const MAP_WIDTH := 50
-const MAP_HEIGHT := 50
+const MAP_WIDTH := 200
+const MAP_HEIGHT := 200
 
 @onready var map_container: Node2D = $MapContainer
 
@@ -70,7 +70,7 @@ func _create_isometric_tile_texture(terrain_type: String) -> Texture2D:
 
 
 func _generate_map() -> void:
-	## 生成等距地图
+	## 生成等距地图（合并成一个大纹理，高性能）
 	var noise := FastNoiseLite.new()
 	noise.noise_type = FastNoiseLite.TYPE_PERLIN
 	noise.frequency = 0.01
@@ -83,6 +83,25 @@ func _generate_map() -> void:
 	
 	_tile_data.resize(MAP_WIDTH * MAP_HEIGHT)
 	
+	# 计算等距地图边界
+	var min_iso_x: float = -(MAP_HEIGHT - 1) * TILE_WIDTH / 2.0
+	var max_iso_x: float = (MAP_WIDTH - 1) * TILE_WIDTH / 2.0
+	var min_iso_y: float = 0.0
+	var max_iso_y: float = (MAP_WIDTH + MAP_HEIGHT - 2) * TILE_HEIGHT / 2.0
+	var img_width: int = int(max_iso_x - min_iso_x) + TILE_WIDTH
+	var img_height: int = int(max_iso_y - min_iso_y) + TILE_HEIGHT
+	print("[IsoMap] 大纹理尺寸: %dx%d" % [img_width, img_height])
+	
+	# 创建大图像
+	var big_img: Image = Image.create(img_width, img_height, false, Image.FORMAT_RGBA8)
+	big_img.fill(Color(0, 0, 0, 0))  # 透明背景
+	
+	# 预加载所有瓦片图像
+	var tile_images: Dictionary = {}
+	for terrain_type in _terrain_textures.keys():
+		tile_images[terrain_type] = _terrain_textures[terrain_type].get_image()
+	
+	# 遍历所有瓦片，绘制到大图像上
 	for x in range(MAP_WIDTH):
 		for y in range(MAP_HEIGHT):
 			var height: float = noise.get_noise_2d(float(x), float(y))
@@ -106,19 +125,37 @@ func _generate_map() -> void:
 			var iso_x: float = (x - y) * TILE_WIDTH / 2.0
 			var iso_y: float = (x + y) * TILE_HEIGHT / 2.0
 			
-			# 创建Sprite2D渲染瓦片
-			var sprite: Sprite2D = Sprite2D.new()
-			sprite.texture = _terrain_textures[terrain_type]
-			sprite.position = Vector2(iso_x, iso_y)
-			sprite.centered = true
-			map_container.add_child(sprite)
+			# 计算在大图像中的位置（瓦片中心）
+			var px: int = int(iso_x - min_iso_x)
+			var py: int = int(iso_y - min_iso_y)
+			
+			# 将瓦片图像绘制到大图像上
+			var tile_img: Image = tile_images[terrain_type]
+			if tile_img:
+				for ty in range(TILE_HEIGHT):
+					for tx in range(TILE_WIDTH):
+						var c: Color = tile_img.get_pixel(tx, ty)
+						if c.a > 0.1:  # 只绘制不透明像素
+							var dst_x: int = px + tx - TILE_WIDTH / 2
+							var dst_y: int = py + ty - TILE_HEIGHT / 2
+							if dst_x >= 0 and dst_x < img_width and dst_y >= 0 and dst_y < img_height:
+								big_img.set_pixel(dst_x, dst_y, c)
 	
-	print("[IsoMap] 地图瓦片生成完成，共%d个瓦片" % (MAP_WIDTH * MAP_HEIGHT))
+	# 将大图像转换为纹理
+	var big_tex: ImageTexture = ImageTexture.create_from_image(big_img)
+	
+	# 创建一个Sprite2D显示整个地图
+	var map_sprite: Sprite2D = Sprite2D.new()
+	map_sprite.texture = big_tex
+	map_sprite.position = Vector2(min_iso_x + TILE_WIDTH / 2, min_iso_y + TILE_HEIGHT / 2)
+	map_sprite.centered = false
+	map_container.add_child(map_sprite)
+	
+	print("[IsoMap] 地图瓦片生成完成，共%d个瓦片，合并为1个Sprite2D" % (MAP_WIDTH * MAP_HEIGHT))
 
 
 func get_tile_type_at_world_position(world_pos: Vector2) -> String:
 	## 根据世界坐标获取瓦片类型（等距坐标反算）
-	# 等距坐标反算：world_pos -> 瓦片坐标
 	var tile_x: float = (world_pos.x / (TILE_WIDTH / 2.0) + world_pos.y / (TILE_HEIGHT / 2.0)) / 2.0
 	var tile_y: float = (world_pos.y / (TILE_HEIGHT / 2.0) - world_pos.x / (TILE_WIDTH / 2.0)) / 2.0
 	var tx: int = int(tile_x)

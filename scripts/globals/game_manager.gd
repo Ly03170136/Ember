@@ -109,9 +109,9 @@ func _spawn_player(peer_id: int) -> void:
 	player.player_name = player_names.get(peer_id, "Player")
 	player.player_class = player_classes.get(peer_id, "warrior")
 	player.player_color = PLAYER_COLORS[peer_id % PLAYER_COLORS.size()]
-	# 等距地图中心（瓦片坐标(25,25)对应的等距世界坐标）
+	# 等距地图中心（瓦片坐标(100,100)对应的等距世界坐标）
 	var map_center_x: float = 0.0
-	var map_center_y: float = (25.0 + 25.0) * 32.0 / 2.0
+	var map_center_y: float = (100.0 + 100.0) * 32.0 / 2.0
 	var map_center: Vector2 = Vector2(map_center_x, map_center_y)
 	# 尝试通过IsometricMap寻找安全出生点
 	var spawn_pos: Vector2 = map_center
