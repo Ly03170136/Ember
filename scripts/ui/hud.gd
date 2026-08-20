@@ -5,6 +5,7 @@ extends CanvasLayer
 @onready var hunger_bar: ProgressBar = $BottomLeft/HungerBar
 @onready var thirst_bar: ProgressBar = $BottomLeft/ThirstBar
 @onready var stamina_bar: ProgressBar = $BottomLeft/StaminaBar
+@onready var sanity_bar: ProgressBar = $BottomLeft/SanityBar
 @onready var time_label: Label = $TopRight/TimeLabel
 @onready var day_label: Label = $TopRight/DayLabel
 @onready var chat_box: VBoxContainer = $Chat/Scroll/ChatBox
@@ -52,6 +53,9 @@ func _update_stats() -> void:
 		hunger_bar.value = player.hunger
 		thirst_bar.value = player.thirst
 		stamina_bar.value = player.stamina
+		# 理智值
+		if player.has_method("get") or true:
+			sanity_bar.value = player.sanity
 
 
 func _update_time() -> void:
@@ -154,7 +158,7 @@ func _on_chat_received(peer_id: int, message: String) -> void:
 func _add_chat_message(name: String, message: String) -> void:
 	var label := Label.new()
 	label.text = "[%s] %s" % [name, message]
-	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_font_size_override("font_size", 16)
 	label.add_theme_color_override("font_color", Color(1, 1, 1))
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	chat_box.add_child(label)

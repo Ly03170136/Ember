@@ -90,10 +90,20 @@ theme_override_font_sizes/font_size = 13
 [node name="SanityLabel" type="Label" parent="BottomLeft"]
 offset_left = 12.0
 offset_top = 168.0
+offset_right = 90.0
+offset_bottom = 186.0
+text = "理智"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.7, 0.7, 0.9, 1)
+
+[node name="SanityBar" type="ProgressBar" parent="BottomLeft"]
+offset_left = 84.0
+offset_top = 171.0
 offset_right = 300.0
 offset_bottom = 186.0
-text = "理智：100"
-theme_override_font_sizes/font_size = 12
+max_value = 100.0
+value = 100.0
+show_percentage = false
 theme_override_colors/font_color = Color(0.7, 0.7, 0.9, 1)
 
 [node name="TopRight" type="Panel" parent="."]
@@ -153,29 +163,29 @@ theme_override_constants/separation = 4
 
 [node name="Chat" type="Panel" parent="."]
 offset_left = 24.0
-offset_top = 450.0
-offset_right = 540.0
-offset_bottom = 840.0
+offset_top = 580.0
+offset_right = 485.0
+offset_bottom = 810.0
 
 [node name="Scroll" type="ScrollContainer" parent="Chat"]
-offset_left = 6.0
-offset_top = 6.0
-offset_right = 510.0
-offset_bottom = 339.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 453.0
+offset_bottom = 185.0
 horizontal_scroll_mode = 0
 
 [node name="ChatBox" type="VBoxContainer" parent="Chat/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 3
+theme_override_constants/separation = 6
 
 [node name="ChatInput" type="LineEdit" parent="Chat"]
-offset_left = 6.0
-offset_top = 348.0
-offset_right = 510.0
-offset_bottom = 378.0
+offset_left = 8.0
+offset_top = 195.0
+offset_right = 453.0
+offset_bottom = 230.0
 placeholder_text = "按 Enter 聊天..."
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 18
 
 [node name="Notification" type="Label" parent="."]
 offset_left = 510.0
