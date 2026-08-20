@@ -6,8 +6,10 @@ extends CanvasLayer
 @onready var thirst_bar: ProgressBar = $BottomLeft/ThirstBar
 @onready var stamina_bar: ProgressBar = $BottomLeft/StaminaBar
 @onready var sanity_bar: ProgressBar = $BottomLeft/SanityBar
-@onready var time_label: Label = $TopRight/TimeLabel
 @onready var day_label: Label = $TopRight/DayLabel
+@onready var month_season_label: Label = $TopRight/MonthSeasonLabel
+@onready var weather_temp_label: Label = $TopRight/WeatherTempLabel
+@onready var time_label: Label = $TopRight/TimeLabel
 @onready var chat_box: VBoxContainer = $Chat/Scroll/ChatBox
 @onready var chat_input: LineEdit = $Chat/ChatInput
 @onready var chat_panel: Control = $Chat
@@ -64,15 +66,41 @@ func _update_time() -> void:
 		var t: float = main.get_time_of_day()
 		var hour := int(t * 24)
 		var minute := int((t * 24 - hour) * 60)
+		# 第四行：当前时间24小时制
 		time_label.text = "%02d:%02d" % [hour, minute]
-		# 显示季节、天数和天气
+		# 第一行：存活多少天
+		day_label.text = "已存活 %d 天" % main.get_day_count()
+		# 第二行：月份 季节
+		var month_name: String = "3月"
+		if main.has_method("get_month_name"):
+			month_name = main.get_month_name()
 		var season: String = main.get_season() if main.has_method("get_season") else "spring"
-		var weather: String = main.get_weather() if main.has_method("get_weather") else "clear"
-		var season_names: Dictionary = {"spring": "春", "summer": "夏", "autumn": "秋", "winter": "冬"}
-		var weather_names: Dictionary = {"clear": "晴", "cloudy": "多云", "rain": "小雨", "storm": "暴雨", "snow": "大雪", "fog": "大雾"}
+		var season_names: Dictionary = {"spring": "春季", "summer": "夏季", "autumn": "秋季", "winter": "冬季"}
 		var season_text: String = season_names.get(season, season)
+		month_season_label.text = "%s | %s" % [month_name, season_text]
+		# 第三行：天气 | 温度 舒适情况
+		var weather: String = main.get_weather() if main.has_method("get_weather") else "clear"
+		var weather_names: Dictionary = {"clear": "晴", "cloudy": "多云", "rain": "小雨", "storm": "暴雨", "snow": "大雪", "fog": "大雾"}
 		var weather_text: String = weather_names.get(weather, weather)
-		day_label.text = "%s 第%d天 %s" % [season_text, main.get_day_count(), weather_text]
+		var temp_text: String = "舒适"
+		var temp_value: float = 0.0
+		if main.has_method("get_ambient_temperature"):
+			temp_value = main.get_ambient_temperature()
+			if temp_value < -20:
+				temp_text = "极寒"
+			elif temp_value < -10:
+				temp_text = "严寒"
+			elif temp_value < 0:
+				temp_text = "寒冷"
+			elif temp_value < 10:
+				temp_text = "凉爽"
+			elif temp_value < 25:
+				temp_text = "舒适"
+			elif temp_value < 30:
+				temp_text = "温暖"
+			else:
+				temp_text = "炎热"
+		weather_temp_label.text = "%s | %.0f°C %s" % [weather_text, temp_value, temp_text]
 
 
 func _update_player_list() -> void:

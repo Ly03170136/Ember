@@ -43,14 +43,30 @@ const MAX_ZOMBIES := 100
 const ZOMBIE_SPAWN_INTERVAL := 5.0
 var zombie_spawn_timer: float = 0.0
 
-# ==================== P1: 季节天气系统 ====================
-const SEASON_LENGTH := 10  # 每个季节10天
+# ==================== P1: 季节天气系统（长春气候，含月份） ====================
+const SEASON_LENGTH := 12  # 每个季节12天（3个月×4天）
 const SEASONS := ["spring", "summer", "autumn", "winter"]
 const SEASON_NAMES := {"spring": "春季", "summer": "夏季", "autumn": "秋季", "winter": "冬季"}
-const SEASON_TEMPS := {"spring": 15.0, "summer": 28.0, "autumn": 10.0, "winter": -5.0}
+# 长春气候：温带大陆性季风气候，冬季严寒漫长，夏季温暖
+# 季节平均温度（保留兼容）
+const SEASON_TEMPS := {"spring": 7.0, "summer": 23.0, "autumn": 6.0, "winter": -13.0}
 var season: String = "spring"
 var day_in_season: int = 1
-var ambient_temperature: float = 15.0
+
+# 月份系统（一年12个月，每月4天，共48天）
+# 月份天数分配（每月4天）
+const MONTH_DAYS := [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]  # 1-12月，每月4天
+const MONTH_NAMES := ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
+# 长春月平均气温（实际数据）
+const MONTH_TEMPS := [-15.0, -11.0, -2.0, 8.0, 16.0, 22.0, 24.0, 22.0, 16.0, 7.0, -4.0, -12.0]
+# 月份对应的季节
+const MONTH_SEASONS := ["winter", "winter", "spring", "spring", "spring", "summer", "summer", "summer", "autumn", "autumn", "autumn", "winter"]
+var current_month: int = 3  # 当前月份（0-11，对应1-12月，默认3月=春季开始）
+var day_in_month: int = 1  # 当月第几天
+
+var ambient_temperature: float = -2.0  # 默认3月温度
+var _temp_random_mod: float = 0.0  # 温度随机波动（每分钟更新一次）
+var _temp_random_timer: float = 0.0  # 温度随机波动计时器
 
 # 天气系统
 const WEATHER_TYPES := ["clear", "cloudy", "rain", "storm", "snow", "fog"]
@@ -484,16 +500,27 @@ func _trigger_special_event() -> void:
 
 
 func _on_day_changed() -> void:
-	# 新的一天，更新季节
+	# 新的一天，更新月份和季节
+	day_in_month += 1
 	day_in_season += 1
+	# 检查是否进入下一个月
+	if day_in_month > MONTH_DAYS[current_month]:
+		day_in_month = 1
+		current_month = (current_month + 1) % 12
+		# 更新季节
+		var new_season: String = MONTH_SEASONS[current_month]
+		if new_season != season:
+			season = new_season
+			day_in_season = 1
+			print("[Season] 季节变为: %s" % SEASON_NAMES[season])
+			GameManager.send_chat.rpc("%s来了！" % SEASON_NAMES[season])
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX.SUCCESS)
+		print("[Month] 月份变为: %s, 平均温度: %.0f°C" % [MONTH_NAMES[current_month], MONTH_TEMPS[current_month]])
+		GameManager.send_chat.rpc("进入%s，平均温度%.0f°C" % [MONTH_NAMES[current_month], MONTH_TEMPS[current_month]])
+	# 季节天数检查（兼容旧逻辑）
 	if day_in_season > SEASON_LENGTH:
 		day_in_season = 1
-		var current_index: int = SEASONS.find(season)
-		season = SEASONS[(current_index + 1) % SEASONS.size()]
-		print("[Season] 季节变为: %s" % SEASON_NAMES[season])
-		GameManager.send_chat.rpc("%s来了！" % SEASON_NAMES[season])
-		if AudioManager:
-			AudioManager.play_sfx(AudioManager.SFX.SUCCESS)
 	# 自动存档（每天结束时）
 	if SaveManager:
 		SaveManager.save_game(SaveManager.current_slot, self)
@@ -517,10 +544,21 @@ func manual_save(slot: int = -1) -> bool:
 
 
 func _update_ambient_temperature() -> void:
-	# 基础温度由季节决定
-	var base_temp: float = SEASON_TEMPS.get(season, 15.0)
-	# 昼夜修正：白天+5，夜晚-8
-	var day_night_mod: float = 5.0 if (current_time > 0.25 and current_time < 0.75) else -8.0
+	# 基础温度由月份决定（长春实际月平均气温）
+	var base_temp: float = MONTH_TEMPS[current_month]
+	# 昼夜修正：正弦波平滑过渡（长春昼夜温差约10°C）
+	# current_time: 0.0=黎明, 0.5=正午, 1.0=次日黎明
+	# 正午最高，午夜最低
+	var day_night_mod: float = 0.0
+	if season == "winter":
+		# 长春冬天：白天+5，夜晚-5，温差10°C
+		day_night_mod = 0.0 + 5.0 * sin(PI * current_time)
+	elif season == "summer":
+		# 长春夏天：白天+6，夜晚-4，温差10°C
+		day_night_mod = 1.0 + 5.0 * sin(PI * current_time)
+	else:
+		# 长春春秋：白天+5，夜晚-5，温差10°C
+		day_night_mod = 0.0 + 5.0 * sin(PI * current_time)
 	# 天气修正
 	var weather_eff: Dictionary = WEATHER_EFFECTS.get(weather, {})
 	var weather_mod: float = weather_eff.get("temp_mod", 0.0)
@@ -529,9 +567,20 @@ func _update_ambient_temperature() -> void:
 	if special_event != "":
 		var event_eff: Dictionary = SPECIAL_EVENTS.get(special_event, {})
 		event_mod = event_eff.get("temp_mod", 0.0)
-	# 随机波动
-	var random_mod: float = randf_range(-3.0, 3.0)
-	ambient_temperature = base_temp + day_night_mod + weather_mod + event_mod + random_mod
+	# 随机波动（每分钟更新一次，幅度±2°C，符合长春天气波动）
+	_temp_random_timer -= get_process_delta_time()
+	if _temp_random_timer <= 0:
+		_temp_random_timer = 60.0  # 每分钟更新一次
+		_temp_random_mod = randf_range(-2.0, 2.0)
+	# 计算目标温度
+	var target_temp: float = base_temp + day_night_mod + weather_mod + event_mod + _temp_random_mod
+	# 平滑过渡：每秒最多变化0.3°C（防止温度突变）
+	var temp_diff: float = target_temp - ambient_temperature
+	var max_change: float = 0.3 * get_process_delta_time()
+	if abs(temp_diff) < max_change:
+		ambient_temperature = target_temp
+	else:
+		ambient_temperature += sign(temp_diff) * max_change
 
 
 func _update_player_temperature(delta: float) -> void:
@@ -1016,6 +1065,21 @@ func get_special_event() -> String:
 
 func get_ambient_temperature() -> float:
 	return ambient_temperature
+
+
+func get_current_month() -> int:
+	## 获取当前月份（0-11，对应1-12月）
+	return current_month
+
+
+func get_month_name() -> String:
+	## 获取当前月份名称
+	return MONTH_NAMES[current_month]
+
+
+func get_day_in_month() -> int:
+	## 获取当月第几天
+	return day_in_month
 
 
 func _connect_inventory_ui() -> void:
