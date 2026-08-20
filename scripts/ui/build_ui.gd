@@ -235,8 +235,8 @@ func _update_preview_position() -> void:
 	if not preview:
 		return
 	var mouse_pos: Vector2 = _get_world_mouse_pos()
-	# 对齐到网格（48像素一格）
-	var grid_size: float = 48.0
+	# 对齐到网格（32像素一格）
+	var grid_size: float = 32.0
 	var snapped_pos: Vector2 = Vector2(
 		round(mouse_pos.x / grid_size) * grid_size,
 		round(mouse_pos.y / grid_size) * grid_size
@@ -263,7 +263,7 @@ func _try_place_building() -> void:
 	if not is_placing or selected_building == "":
 		return
 	var mouse_pos: Vector2 = _get_world_mouse_pos()
-	var grid_size: float = 48.0
+	var grid_size: float = 32.0
 	var snapped_pos: Vector2 = Vector2(
 		round(mouse_pos.x / grid_size) * grid_size,
 		round(mouse_pos.y / grid_size) * grid_size

@@ -269,14 +269,14 @@ func restore_thirst(amount: float) -> void:
 func _input(event: InputEvent) -> void:
 	if not is_local() or is_down:
 		return
-	# 鼠标滚轮缩放（正常等比例缩放，范围2.0-3.0）
+	# 鼠标滚轮缩放（正常等比例缩放，范围2.0-4.0）
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_UP:
-		var new_zoom: float = min(camera.zoom.x + 0.1, 3.0)
+		var new_zoom: float = min(camera.zoom.x + 0.2, 4.0)
 		camera.zoom = Vector2(new_zoom, new_zoom)
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-		var new_zoom: float = max(camera.zoom.x - 0.1, 2.0)
+		var new_zoom: float = max(camera.zoom.x - 0.2, 2.0)
 		camera.zoom = Vector2(new_zoom, new_zoom)
 		get_viewport().set_input_as_handled()
 		return

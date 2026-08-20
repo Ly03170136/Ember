@@ -637,7 +637,7 @@ func _generate_initial_resources() -> void:
 	if USE_FIXED_MAP:
 		_load_fixed_map()
 		return
-	# 等距地图中心和范围（200x200瓦片，等距坐标）
+	# 等距地图中心和范围（200x200瓦片，瓦片64x32）
 	map_w = 200.0 * 64.0
 	map_h = 200.0 * 64.0
 	var center_x: float = 0.0  # 等距地图x中心

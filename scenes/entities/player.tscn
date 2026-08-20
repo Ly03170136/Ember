@@ -40,4 +40,4 @@ show_percentage = false
 replication_interval = 0.05
 
 [node name="Camera" type="Camera2D" parent="."]
-zoom = Vector2(2.6, 2.6)
+zoom = Vector2(3.0, 3.0)
