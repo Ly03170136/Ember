@@ -9,6 +9,13 @@ extends Control
 var is_open: bool = false
 var _map_texture: ImageTexture = null
 var _map_generated: bool = false
+# 等距投影参数
+var _map_scale_x: float = 2.0
+var _map_scale_y: float = 1.0
+var _map_min_x: float = 0.0
+var _map_min_y: float = 0.0
+var _map_img_w: int = 0
+var _map_img_h: int = 0
 
 
 func _ready() -> void:
@@ -44,33 +51,60 @@ func _process(delta: float) -> void:
 
 
 func _generate_map_texture() -> void:
-	# 获取世界生成器
+	# 获取等距地图生成器
 	var main = get_tree().current_scene
-	if not main or not main.has_node("WorldGenerator"):
+	if not main or not main.has_node("IsometricMap"):
+		print("[MapUI] 错误: 找不到IsometricMap节点")
 		return
-	var wg = main.get_node("WorldGenerator")
-	if not wg:
+	var iso_map = main.get_node("IsometricMap")
+	if not iso_map:
 		return
-	var map_w: int = wg.MAP_WIDTH
-	var map_h: int = wg.MAP_HEIGHT
-	# 创建地图图像（缩小显示，每4个瓦片显示为1个像素）
-	var scale: int = 2
-	var img_w: int = map_w / scale
-	var img_h: int = map_h / scale
+	var map_w: int = iso_map.MAP_WIDTH
+	var map_h: int = iso_map.MAP_HEIGHT
+	print("[MapUI] 地图大小: %dx%d, _tile_data大小: %d" % [map_w, map_h, iso_map._tile_data.size()])
+	# 等距投影渲染
+	var scale_x: float = 2.0  # 每个瓦片x方向缩放
+	var scale_y: float = 1.0  # 每个瓦片y方向缩放
+	# 计算等距地图边界
+	var min_screen_x: float = -(map_h - 1) * scale_x
+	var max_screen_x: float = (map_w - 1) * scale_x
+	var min_screen_y: float = 0
+	var max_screen_y: float = (map_w + map_h - 2) * scale_y
+	var img_w: int = int(max_screen_x - min_screen_x) + 20
+	var img_h: int = int(max_screen_y - min_screen_y) + 20
+	if img_w < 100: img_w = 100
+	if img_h < 100: img_h = 100
 	var img := Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 1))
-	# 绘制地形
-	for x in range(img_w):
-		for y in range(img_h):
-			var world_x: int = x * scale
-			var world_y: int = y * scale
-			var tile_type: String = wg._get_tile_type(world_x, world_y)
+	img.fill(Color(0.1, 0.1, 0.12, 1))
+	# 绘制地形（等距投影）
+	for x in range(map_w):
+		for y in range(map_h):
+			var idx: int = y * map_w + x
+			var tile_type: String = "grass"
+			if iso_map._tile_data.size() > idx:
+				tile_type = iso_map._tile_data[idx]
 			var color: Color = _get_tile_map_color(tile_type)
-			img.set_pixel(x, y, color)
+			# 等距投影到屏幕坐标
+			var sx: float = (x - y) * scale_x - min_screen_x + 10
+			var sy: float = (x + y) * scale_y - min_screen_y + 10
+			# 绘制小方块
+			for dx in range(-1, 2):
+				for dy in range(-1, 2):
+					var px: int = int(sx) + dx
+					var py: int = int(sy) + dy
+					if px >= 0 and px < img_w and py >= 0 and py < img_h:
+						img.set_pixel(px, py, color)
 	_map_texture = ImageTexture.create_from_image(img)
 	map_image.texture = _map_texture
 	_map_generated = true
-	print("[MapUI] 地图缩略图生成完成: %dx%d" % [img_w, img_h])
+	# 保存等距投影参数供玩家标记使用
+	_map_scale_x = scale_x
+	_map_scale_y = scale_y
+	_map_min_x = min_screen_x
+	_map_min_y = min_screen_y
+	_map_img_w = img_w
+	_map_img_h = img_h
+	print("[MapUI] 等距地图缩略图生成完成: %dx%d" % [img_w, img_h])
 
 
 func _get_tile_map_color(tile_type: String) -> Color:
@@ -99,23 +133,25 @@ func _update_player_marker() -> void:
 		player_marker.visible = false
 		return
 	var main = get_tree().current_scene
-	if not main or not main.has_node("WorldGenerator"):
+	if not main or not main.has_node("IsometricMap"):
 		return
-	var wg = main.get_node("WorldGenerator")
-	if not wg:
+	var iso_map = main.get_node("IsometricMap")
+	if not iso_map:
 		return
-	var map_w: int = wg.MAP_WIDTH
-	var map_h: int = wg.MAP_HEIGHT
-	var tile_size: int = wg.TILE_SIZE
-	var world_w: float = map_w * tile_size
-	var world_h: float = map_h * tile_size
-	# 计算玩家在地图上的相对位置
-	var rel_x: float = player.position.x / world_w
-	var rel_y: float = player.position.y / world_h
-	# 地图图片的实际显示尺寸
+	var tile_w: int = iso_map.TILE_WIDTH
+	var tile_h: int = iso_map.TILE_HEIGHT
+	# 将玩家等距世界坐标反算为瓦片坐标
+	var tile_x: float = (player.position.x / (tile_w / 2.0) + player.position.y / (tile_h / 2.0)) / 2.0
+	var tile_y: float = (player.position.y / (tile_h / 2.0) - player.position.x / (tile_w / 2.0)) / 2.0
+	# 等距投影到大图像素坐标
+	var sx: float = (tile_x - tile_y) * _map_scale_x - _map_min_x + 10
+	var sy: float = (tile_x + tile_y) * _map_scale_y - _map_min_y + 10
+	# 映射到TextureRect的实际显示尺寸
 	var img_size: Vector2 = map_image.size
 	if img_size.x <= 0 or img_size.y <= 0:
-		img_size = Vector2(640, 640)
+		img_size = Vector2(400, 300)
+	var rel_x: float = sx / _map_img_w
+	var rel_y: float = sy / _map_img_h
 	# 设置标记位置
 	player_marker.visible = true
 	player_marker.position = Vector2(rel_x * img_size.x - 5, rel_y * img_size.y - 5)
