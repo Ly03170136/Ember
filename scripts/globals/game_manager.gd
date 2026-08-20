@@ -87,8 +87,8 @@ func disconnect_game() -> void:
 
 func _start_game() -> void:
 	game_started.emit()
-	# 先播放过场动画，然后进入游戏
-	get_tree().change_scene_to_file("res://scenes/ui/cutscene.tscn")
+	# 直接进入main场景，显示真实加载进度
+	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 
 func set_game_world(world: Node2D) -> void:

@@ -153,6 +153,12 @@ func _ready() -> void:
 	map_ui.reparent(hud)
 	settings_menu.reparent(hud)
 	tech_tree_ui.reparent(hud)
+	# 加载界面也reparent到HUD，并确保在最上层
+	if loading_screen:
+		loading_screen.reparent(hud)
+		loading_screen.z_index = 100
+		loading_screen.visible = true
+		print("[Main] 加载界面已reparent到HUD，z_index=100")
 	# 动态创建人物属性UI
 	var char_scene: PackedScene = load("res://scenes/ui/character_ui.tscn")
 	if char_scene:
@@ -160,17 +166,210 @@ func _ready() -> void:
 		character_ui.name = "CharacterUI"
 		hud.add_child(character_ui)
 		print("[Main] 人物属性UI已创建")
-	# 主机或单人游戏生成初始资源
+	# 主机或单人游戏生成初始资源（改为异步加载，显示真实进度）
 	if GameManager.is_server or multiplayer.multiplayer_peer == null:
 		if not GameManager.is_server:
 			GameManager.is_server = true
 			print("[Main] 单人游戏模式，强制设置is_server=true")
-		_generate_initial_resources()
+		# 异步分阶段加载，显示真实进度
+		call_deferred("_async_loading")
 	# 连接聊天信号
 	GameManager.chat_received.connect(_on_chat_received)
-	# 启动加载界面
-	if loading_screen and loading_screen.has_method("start_loading"):
-		loading_screen.start_loading()
+
+
+func _async_loading() -> void:
+	## 异步分阶段加载，显示真实进度
+	print("[Loading] ===== 开始异步加载 =====")
+	# 显示加载界面
+	if loading_screen:
+		loading_screen.visible = true
+		loading_screen.z_index = 100
+		if loading_screen.has_method("set_progress"):
+			loading_screen.set_progress(0, "初始化游戏引擎...")
+	
+	await get_tree().create_timer(0.3).timeout
+	
+	# 阶段1：初始化（5%）
+	_update_loading_progress(5, "初始化游戏引擎...")
+	await get_tree().create_timer(0.3).timeout
+	
+	# 阶段2：等待地图生成（25%）
+	_update_loading_progress(15, "生成世界地图...")
+	# 等待等距地图生成完成
+	var map_node: Node = get_node_or_null("IsometricMap")
+	if map_node and map_node.has_method("is_ready"):
+		var wait_count: int = 0
+		while not map_node.is_ready() and wait_count < 100:
+			await get_tree().process_frame
+			wait_count += 1
+			_update_loading_progress(15 + min(wait_count, 10), "生成世界地图...")
+	_update_loading_progress(25, "世界地图生成完成")
+	await get_tree().create_timer(0.3).timeout
+	
+	# 阶段3：生成实验室（40%）
+	_update_loading_progress(30, "放置实验室和病毒源头...")
+	_generate_lab_only()
+	_update_loading_progress(40, "实验室放置完成")
+	await get_tree().create_timer(0.3).timeout
+	
+	# 阶段4：生成资源（55%）
+	_update_loading_progress(45, "生成资源节点（树木/石头/浆果）...")
+	_generate_resources_only()
+	_update_loading_progress(55, "资源节点生成完成")
+	await get_tree().create_timer(0.3).timeout
+	
+	# 阶段5：生成载具（70%）
+	_update_loading_progress(60, "生成废弃载具残骸...")
+	_generate_vehicles_only()
+	_update_loading_progress(70, "载具生成完成")
+	await get_tree().create_timer(0.3).timeout
+	
+	# 阶段6：生成NPC（85%）
+	_update_loading_progress(75, "生成人类NPC...")
+	_generate_npcs_only()
+	_update_loading_progress(85, "NPC生成完成")
+	await get_tree().create_timer(0.3).timeout
+	
+	# 阶段7：初始化玩家（95%）
+	_update_loading_progress(90, "初始化玩家和职业系统...")
+	await get_tree().create_timer(0.3).timeout
+	_update_loading_progress(95, "玩家初始化完成")
+	await get_tree().create_timer(0.3).timeout
+	
+	# 阶段8：完成（100%）
+	_update_loading_progress(100, "准备就绪，幸存者加油！")
+	await get_tree().create_timer(0.5).timeout
+	
+	# 隐藏加载界面
+	if loading_screen:
+		loading_screen.visible = false
+	print("[Loading] ===== 异步加载完成 =====")
+
+
+func _update_loading_progress(progress: float, stage_text: String) -> void:
+	## 更新加载进度
+	if loading_screen and loading_screen.has_method("set_progress"):
+		loading_screen.set_progress(progress, stage_text)
+	print("[Loading] ", int(progress), "% - ", stage_text)
+
+
+func _generate_lab_only() -> void:
+	## 只生成实验室
+	if USE_FIXED_MAP:
+		return
+	# 等距地图中心和范围
+	map_w = 200.0 * 64.0
+	map_h = 200.0 * 64.0
+	var center_x: float = 0.0
+	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0
+	# 检查是否已经有实验室存在
+	var existing_labs: Array = get_tree().get_nodes_in_group("laboratory")
+	if existing_labs.size() > 0:
+		print("[Virus] 已存在实验室，跳过生成")
+		return
+	var edge_margin: float = 400.0
+	var edge_side: int = randi() % 4
+	match edge_side:
+		0:
+			var t: float = randf()
+			lab_position = Vector2(lerp(-6368 + edge_margin, 6368 - edge_margin, t), lerp(3184 - edge_margin, edge_margin, abs(t - 0.5) * 2))
+		1:
+			var t2: float = randf()
+			lab_position = Vector2(lerp(-6368 + edge_margin, 6368 - edge_margin, t2), lerp(3184 + edge_margin, 6368 - edge_margin, abs(t2 - 0.5) * 2))
+		2:
+			lab_position = Vector2(-6368 + edge_margin, randf_range(edge_margin, 6368 - edge_margin))
+		3:
+			lab_position = Vector2(6368 - edge_margin, randf_range(edge_margin, 6368 - edge_margin))
+	print("[Virus] 实验室位置：", lab_position, " 边：", edge_side)
+	var lab_building: Node2D = BUILDING_SCENE.instantiate()
+	lab_building.building_id = "laboratory"
+	lab_building.position = lab_position
+	lab_building.name = "Laboratory"
+	lab_building.add_to_group("laboratory")
+	world_layer.add_child(lab_building)
+	lab_building.call_deferred("set_building_complete")
+	print("[Virus] 实验室建筑已创建，全地图唯一")
+
+
+func _generate_resources_only() -> void:
+	## 只生成资源（树木/石头/浆果）
+	var center_x: float = 0.0
+	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0
+	var range_x: float = 5600.0
+	var range_y: float = 2800.0
+	# 生成随机树木
+	for i in range(200):
+		var tree: Node2D = TREE_SCENE.instantiate()
+		tree.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
+		world_layer.add_child(tree)
+		_register_chunk_entity(tree)
+	# 生成随机石头
+	for i in range(100):
+		var rock: Node2D = ROCK_SCENE.instantiate()
+		rock.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
+		world_layer.add_child(rock)
+		_register_chunk_entity(rock)
+	# 生成浆果丛
+	for i in range(60):
+		var berry: Node2D = BERRY_SCENE.instantiate()
+		berry.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
+		world_layer.add_child(berry)
+		_register_chunk_entity(berry)
+	# 出生点附近额外资源
+	for i in range(30):
+		var tree2: Node2D = TREE_SCENE.instantiate()
+		tree2.position = Vector2(center_x + randf_range(-400, 400), center_y + randf_range(-400, 400))
+		world_layer.add_child(tree2)
+		_register_chunk_entity(tree2)
+	for i in range(15):
+		var rock2: Node2D = ROCK_SCENE.instantiate()
+		rock2.position = Vector2(center_x + randf_range(-400, 400), center_y + randf_range(-400, 400))
+		world_layer.add_child(rock2)
+		_register_chunk_entity(rock2)
+	for i in range(10):
+		var berry2: Node2D = BERRY_SCENE.instantiate()
+		berry2.position = Vector2(center_x + randf_range(-400, 400), center_y + randf_range(-400, 400))
+		world_layer.add_child(berry2)
+		_register_chunk_entity(berry2)
+	print("[World] 生成了230树木, 115石头, 70浆果")
+
+
+func _generate_vehicles_only() -> void:
+	## 只生成载具
+	var center_x: float = 0.0
+	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0
+	var range_x: float = 5600.0
+	var range_y: float = 2800.0
+	var vehicle_types: Array = ["bicycle", "motorcycle", "car", "truck", "armored"]
+	for i in range(15):
+		var vehicle: Node2D = VEHICLE_SCENE.instantiate()
+		vehicle.vehicle_type = vehicle_types[randi() % vehicle_types.size()]
+		vehicle.is_wreck = true
+		vehicle.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
+		world_layer.add_child(vehicle)
+		_register_chunk_entity(vehicle)
+	print("[World] 生成了15辆废弃载具残骸")
+
+
+func _generate_npcs_only() -> void:
+	## 只生成NPC
+	var center_x: float = 0.0
+	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0
+	var range_x: float = 5600.0
+	var range_y: float = 2800.0
+	for i in range(500):
+		var npc: Node2D = NPC_SCENE.instantiate()
+		npc.npc_type = "civilian"
+		npc.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
+		world_layer.add_child(npc)
+		_register_chunk_entity(npc)
+	for i in range(80):
+		var police: Node2D = NPC_SCENE.instantiate()
+		police.npc_type = "police"
+		police.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
+		world_layer.add_child(police)
+		_register_chunk_entity(police)
+	print("[World] 生成了500市民, 80警察")
 
 
 func _process(delta: float) -> void:

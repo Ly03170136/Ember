@@ -1,5 +1,5 @@
 extends Control
-## 过场动画：点击开始游戏后显示"正在穿越时空"，然后进入游戏
+## 过场动画：前2秒穿越时空，后5秒生成世界，7秒后进入游戏
 
 @onready var bg: ColorRect = $Background
 @onready var title_label: Label = $VBox/TitleLabel
@@ -38,7 +38,7 @@ func _process(delta: float) -> void:
 	else:
 		bg.color = Color(0.05, 0.05, 0.15)
 	
-	# 标题：0.2秒淡入，之后保持显示（无渐隐）
+	# 标题：0.1-0.25秒淡入，之后保持显示
 	if t < 0.1:
 		title_label.modulate.a = 0.0
 	elif t < 0.25:
@@ -48,7 +48,7 @@ func _process(delta: float) -> void:
 		title_label.modulate.a = 1.0
 		title_label.modulate = Color(1, 0.85, 0.5, 1.0)
 	
-	# 副标题：0.3秒淡入，之后保持显示（无渐隐）
+	# 副标题：0.2-0.35秒淡入，之后保持显示
 	if t < 0.2:
 		subtitle_label.modulate.a = 0.0
 	elif t < 0.35:
@@ -56,7 +56,7 @@ func _process(delta: float) -> void:
 	else:
 		subtitle_label.modulate.a = 1.0
 	
-	# 进度条：0.35秒淡入，0.4-0.6从0到93%，之后定格（无渐隐）
+	# 进度条：0.3-0.4秒淡入
 	if t < 0.3:
 		progress_bar.modulate.a = 0.0
 	elif t < 0.4:
@@ -64,12 +64,19 @@ func _process(delta: float) -> void:
 	else:
 		progress_bar.modulate.a = 1.0
 	
-	if t >= 0.4 and t <= 0.6:
-		progress_bar.value = (t - 0.4) / 0.2 * 93.0
-	elif t > 0.6:
-		progress_bar.value = 93.0  # 定格在93%
+	# 进度条逻辑：前2秒穿越时空（0-30%），后5秒生成世界（30-93%）
+	if _elapsed < 2.0:
+		# 前2秒：穿越时空，进度0-30%
+		var phase1_t: float = _elapsed / 2.0
+		progress_bar.value = phase1_t * 30.0
+		hint_label.text = "正在穿越时空..."
+	else:
+		# 后5秒：生成世界，进度30-93%
+		var phase2_t: float = (_elapsed - 2.0) / 5.0
+		progress_bar.value = 30.0 + phase2_t * 63.0
+		hint_label.text = "正在生成世界..."
 	
-	# 提示文字：0.5秒淡入，之后保持显示（无渐隐）
+	# 提示文字：0.45-0.55秒淡入，之后保持显示
 	if t < 0.45:
 		hint_label.modulate.a = 0.0
 	elif t < 0.55:
