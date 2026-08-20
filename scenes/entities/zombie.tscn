@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3 uid="uid://bzombie001"]
+
+[ext_resource type="Script" path="res://scripts/world/zombie.gd" id="1_zombie"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_zombie"]
+radius = 14.0
+
+[node name="Zombie" type="CharacterBody2D"]
+script = ExtResource("1_zombie")
+collision_layer = 8
+collision_mask = 39
+
+[node name="Sprite" type="Sprite2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_zombie")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_interval = 0.1

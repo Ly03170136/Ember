@@ -1,0 +1,74 @@
+[gd_scene format=3 uid="uid://bmapui001"]
+
+[ext_resource type="Script" path="res://scripts/ui/map_ui.gd" id="1_map"]
+
+[node name="MapUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_map")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -525.0
+offset_top = -525.0
+offset_right = 525.0
+offset_bottom = 525.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "大地图"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
+theme_override_font_sizes/font_size = 20
+
+[node name="MapImage" type="TextureRect" parent="Panel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(960, 960)
+size_flags_vertical = 3
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PlayerMarker" type="ColorRect" parent="Panel/VBox/MapImage"]
+visible = false
+custom_minimum_size = Vector2(10, 10)
+color = Color(0, 1, 0, 1)
+
+[node name="HintLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "按 M 关闭地图"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 12

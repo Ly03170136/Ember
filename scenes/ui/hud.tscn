@@ -1,0 +1,191 @@
+[gd_scene load_steps=2 format=3 uid="uid://bhud000001"]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="BottomLeft" type="Panel" parent="."]
+offset_left = 24.0
+offset_top = 870.0
+offset_right = 330.0
+offset_bottom = 1056.0
+
+[node name="HealthLabel" type="Label" parent="BottomLeft"]
+offset_left = 12.0
+offset_top = 9.0
+offset_right = 90.0
+offset_bottom = 33.0
+text = "生命"
+theme_override_font_sizes/font_size = 14
+
+[node name="HealthBar" type="ProgressBar" parent="BottomLeft"]
+offset_left = 84.0
+offset_top = 12.0
+offset_right = 300.0
+offset_bottom = 33.0
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="HungerLabel" type="Label" parent="BottomLeft"]
+offset_left = 12.0
+offset_top = 42.0
+offset_right = 90.0
+offset_bottom = 66.0
+text = "饥饿"
+theme_override_font_sizes/font_size = 14
+
+[node name="HungerBar" type="ProgressBar" parent="BottomLeft"]
+offset_left = 84.0
+offset_top = 45.0
+offset_right = 300.0
+offset_bottom = 66.0
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="ThirstLabel" type="Label" parent="BottomLeft"]
+offset_left = 12.0
+offset_top = 75.0
+offset_right = 90.0
+offset_bottom = 99.0
+text = "口渴"
+theme_override_font_sizes/font_size = 14
+
+[node name="ThirstBar" type="ProgressBar" parent="BottomLeft"]
+offset_left = 84.0
+offset_top = 78.0
+offset_right = 300.0
+offset_bottom = 99.0
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="StaminaLabel" type="Label" parent="BottomLeft"]
+offset_left = 12.0
+offset_top = 108.0
+offset_right = 90.0
+offset_bottom = 132.0
+text = "体力"
+theme_override_font_sizes/font_size = 14
+
+[node name="StaminaBar" type="ProgressBar" parent="BottomLeft"]
+offset_left = 84.0
+offset_top = 111.0
+offset_right = 300.0
+offset_bottom = 132.0
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="TempLabel" type="Label" parent="BottomLeft"]
+offset_left = 12.0
+offset_top = 141.0
+offset_right = 300.0
+offset_bottom = 165.0
+text = "温度：舒适"
+theme_override_font_sizes/font_size = 13
+
+[node name="SanityLabel" type="Label" parent="BottomLeft"]
+offset_left = 12.0
+offset_top = 168.0
+offset_right = 300.0
+offset_bottom = 186.0
+text = "理智：100"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.7, 0.7, 0.9, 1)
+
+[node name="TopRight" type="Panel" parent="."]
+offset_left = 1620.0
+offset_top = 24.0
+offset_right = 1896.0
+offset_bottom = 108.0
+
+[node name="TimeLabel" type="Label" parent="TopRight"]
+offset_left = 12.0
+offset_top = 9.0
+offset_right = 252.0
+offset_bottom = 42.0
+horizontal_alignment = 1
+text = "12:00"
+theme_override_font_sizes/font_size = 28
+
+[node name="DayLabel" type="Label" parent="TopRight"]
+offset_left = 12.0
+offset_top = 45.0
+offset_right = 252.0
+offset_bottom = 72.0
+horizontal_alignment = 1
+text = "第 1 天"
+theme_override_font_sizes/font_size = 18
+
+[node name="SeasonLabel" type="Label" parent="TopRight"]
+offset_left = 12.0
+offset_top = 72.0
+offset_right = 252.0
+offset_bottom = 90.0
+horizontal_alignment = 1
+text = "春季 | 晴"
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.8, 0.85, 0.7, 1)
+
+[node name="BottomRight" type="Panel" parent="."]
+offset_left = 1590.0
+offset_top = 840.0
+offset_right = 1896.0
+offset_bottom = 1056.0
+
+[node name="Title" type="Label" parent="BottomRight"]
+offset_left = 12.0
+offset_top = 6.0
+offset_right = 294.0
+offset_bottom = 30.0
+text = "玩家列表"
+theme_override_font_sizes/font_size = 16
+
+[node name="PlayerList" type="VBoxContainer" parent="BottomRight"]
+offset_left = 12.0
+offset_top = 36.0
+offset_right = 294.0
+offset_bottom = 210.0
+theme_override_constants/separation = 4
+
+[node name="Chat" type="Panel" parent="."]
+offset_left = 24.0
+offset_top = 450.0
+offset_right = 540.0
+offset_bottom = 840.0
+
+[node name="Scroll" type="ScrollContainer" parent="Chat"]
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 510.0
+offset_bottom = 339.0
+horizontal_scroll_mode = 0
+
+[node name="ChatBox" type="VBoxContainer" parent="Chat/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="ChatInput" type="LineEdit" parent="Chat"]
+offset_left = 6.0
+offset_top = 348.0
+offset_right = 510.0
+offset_bottom = 378.0
+placeholder_text = "按 Enter 聊天..."
+theme_override_font_sizes/font_size = 14
+
+[node name="Notification" type="Label" parent="."]
+offset_left = 510.0
+offset_top = 150.0
+offset_right = 1410.0
+offset_bottom = 210.0
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+visible = false

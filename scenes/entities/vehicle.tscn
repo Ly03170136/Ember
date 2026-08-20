@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://m2opp4udj7s7"]
+
+[ext_resource type="Script" uid="uid://ce8fi7pvk351t" path="res://scripts/world/vehicle.gd" id="1_vehicle"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vehicle"]
+size = Vector2(48, 32)
+
+[node name="Vehicle" type="CharacterBody2D" unique_id=897327961]
+script = ExtResource("1_vehicle")
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=2108345683]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=576043010]
+shape = SubResource("RectangleShape2D_vehicle")

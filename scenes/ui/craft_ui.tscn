@@ -1,0 +1,120 @@
+[gd_scene format=3 uid="uid://bcraftui001"]
+
+[ext_resource type="Script" path="res://scripts/ui/craft_ui.gd" id="1_craft"]
+
+[node name="CraftUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_craft")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -280.0
+offset_right = 320.0
+offset_bottom = 280.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Header" type="HBoxContainer" parent="Panel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 10.0
+offset_right = 628.0
+offset_bottom = 45.0
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="Panel/Header"]
+layout_mode = 2
+text = "制作台"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.95, 0.85, 0.6, 1)
+
+[node name="StationLabel" type="Label" parent="Panel/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "当前: 徒手制作"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+
+[node name="CloseBtn" type="Button" parent="Panel/Header"]
+layout_mode = 2
+text = "X"
+custom_minimum_size = Vector2(35, 28)
+
+[node name="CategoryBar" type="HBoxContainer" parent="Panel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 50.0
+offset_right = 628.0
+offset_bottom = 80.0
+theme_override_constants/separation = 5
+
+[node name="AllBtn" type="Button" parent="Panel/CategoryBar"]
+layout_mode = 2
+text = "全部"
+custom_minimum_size = Vector2(60, 26)
+
+[node name="ToolBtn" type="Button" parent="Panel/CategoryBar"]
+layout_mode = 2
+text = "工具"
+custom_minimum_size = Vector2(60, 26)
+
+[node name="WeaponBtn" type="Button" parent="Panel/CategoryBar"]
+layout_mode = 2
+text = "武器"
+custom_minimum_size = Vector2(60, 26)
+
+[node name="FoodBtn" type="Button" parent="Panel/CategoryBar"]
+layout_mode = 2
+text = "食物"
+custom_minimum_size = Vector2(60, 26)
+
+[node name="MedBtn" type="Button" parent="Panel/CategoryBar"]
+layout_mode = 2
+text = "药品"
+custom_minimum_size = Vector2(60, 26)
+
+[node name="MatBtn" type="Button" parent="Panel/CategoryBar"]
+layout_mode = 2
+text = "材料"
+custom_minimum_size = Vector2(60, 26)
+
+[node name="Scroll" type="ScrollContainer" parent="Panel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 85.0
+offset_right = 628.0
+offset_bottom = 510.0
+horizontal_scroll_mode = 0
+
+[node name="RecipeList" type="VBoxContainer" parent="Panel/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="Footer" type="HBoxContainer" parent="Panel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 515.0
+offset_right = 628.0
+offset_bottom = 545.0
+theme_override_constants/separation = 10
+
+[node name="HintLabel" type="Label" parent="Panel/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "按 E 关闭 | 点击配方制作"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)

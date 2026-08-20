@@ -1,0 +1,361 @@
+[gd_scene load_steps=4 format=3 uid="uid://bmainmenu01"]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_background.jpg" id="2_bg"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.12, 0.12, 0.16, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.25, 0.15, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.2, 0.18, 0.15, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.35, 0.2, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Vignette" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.3)
+mouse_filter = 2
+
+[node name="MainPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -260.0
+offset_right = 220.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="MainPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 25.0
+offset_top = 25.0
+offset_right = -25.0
+offset_bottom = -25.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+text = "余烬 EMBER"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 0.65, 0.2, 1)
+theme_override_font_sizes/font_size = 42
+theme_override_constants/line_spacing = 0
+
+[node name="Subtitle" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+text = "末日生存 · 局域网联机"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="HSeparator1" type="HSeparator" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/separator_color = Color(0.3, 0.25, 0.15, 0.5)
+
+[node name="NameLabel" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+text = "玩家名字"
+theme_override_colors/font_color = Color(0.8, 0.75, 0.65, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="NameInput" type="LineEdit" parent="MainPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 36)
+placeholder_text = "输入你的名字"
+placeholder_alpha = 0.5
+theme_override_colors/font_color = Color(0.9, 0.9, 0.85, 1)
+theme_override_colors/selection_color = Color(1, 0.65, 0.2, 0.3)
+
+[node name="HostButton" type="Button" parent="MainPanel/VBox"]
+layout_mode = 2
+text = "创建主机"
+custom_minimum_size = Vector2(0, 44)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(1, 0.85, 0.6, 1)
+theme_override_colors/font_hover_color = Color(1, 0.95, 0.7, 1)
+theme_override_font_sizes/font_size = 16
+
+[node name="HSeparator2" type="HSeparator" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/separator_color = Color(0.3, 0.25, 0.15, 0.5)
+
+[node name="JoinLabel" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+text = "加入游戏"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.7, 0.65, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+
+[node name="IPRow" type="HBoxContainer" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="IPInput" type="LineEdit" parent="MainPanel/VBox/IPRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 36)
+size_flags_horizontal = 3
+placeholder_text = "192.168.x.x"
+placeholder_alpha = 0.5
+theme_override_colors/font_color = Color(0.9, 0.9, 0.85, 1)
+
+[node name="JoinButton" type="Button" parent="MainPanel/VBox/IPRow"]
+layout_mode = 2
+text = "加入"
+custom_minimum_size = Vector2(80, 36)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="StatusLabel" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_font_sizes/font_size = 12
+custom_minimum_size = Vector2(0, 20)
+
+[node name="HelpLabel" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+text = "WASD移动 · Shift冲刺 · E制作 · B建造 · TAB背包 · F采集 · M地图 · T科技树 · I属性"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.4, 0.4, 0.45, 1)
+theme_override_font_sizes/font_size = 9
+autowrap_mode = 2
+
+[node name="VersionLabel" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+text = "v0.1.0 Alpha"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.3, 0.3, 0.35, 1)
+theme_override_font_sizes/font_size = 9
+
+[node name="ClassSelectPanel" type="Panel" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -320.0
+offset_right = 280.0
+offset_bottom = 320.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="ClassSelectPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 25.0
+offset_top = 25.0
+offset_right = -25.0
+offset_bottom = -25.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="ClassSelectPanel/VBox"]
+layout_mode = 2
+text = "选择你的职业"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 0.65, 0.2, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="PlayerNameLabel" type="Label" parent="ClassSelectPanel/VBox"]
+layout_mode = 2
+text = "玩家："
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.75, 0.75, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="HSeparator" type="HSeparator" parent="ClassSelectPanel/VBox"]
+layout_mode = 2
+theme_override_colors/separator_color = Color(0.3, 0.25, 0.15, 0.5)
+
+[node name="ClassGrid" type="GridContainer" parent="ClassSelectPanel/VBox"]
+layout_mode = 2
+columns = 4
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="ClassWarrior" type="Button" parent="ClassSelectPanel/VBox/ClassGrid"]
+layout_mode = 2
+text = "战士"
+custom_minimum_size = Vector2(0, 40)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.9, 0.5, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="ClassCraftsman" type="Button" parent="ClassSelectPanel/VBox/ClassGrid"]
+layout_mode = 2
+text = "工匠"
+custom_minimum_size = Vector2(0, 40)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.7, 0.6, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="ClassDoctor" type="Button" parent="ClassSelectPanel/VBox/ClassGrid"]
+layout_mode = 2
+text = "医生"
+custom_minimum_size = Vector2(0, 40)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.5, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="ClassFarmer" type="Button" parent="ClassSelectPanel/VBox/ClassGrid"]
+layout_mode = 2
+text = "农民"
+custom_minimum_size = Vector2(0, 40)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.6, 0.8, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="ClassMechanic" type="Button" parent="ClassSelectPanel/VBox/ClassGrid"]
+layout_mode = 2
+text = "汽修工"
+custom_minimum_size = Vector2(0, 40)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="ClassChef" type="Button" parent="ClassSelectPanel/VBox/ClassGrid"]
+layout_mode = 2
+text = "厨师"
+custom_minimum_size = Vector2(0, 40)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.9, 0.7, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="ClassLumberjack" type="Button" parent="ClassSelectPanel/VBox/ClassGrid"]
+layout_mode = 2
+text = "伐木工"
+custom_minimum_size = Vector2(0, 40)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.5, 0.6, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="ClassEngineer" type="Button" parent="ClassSelectPanel/VBox/ClassGrid"]
+layout_mode = 2
+text = "工程师"
+custom_minimum_size = Vector2(0, 40)
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.5, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="SelectedClassLabel" type="Label" parent="ClassSelectPanel/VBox"]
+layout_mode = 2
+text = "当前职业：战士"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.5, 0.9, 0.5, 1)
+theme_override_font_sizes/font_size = 15
+
+[node name="ClassDescLabel" type="Label" parent="ClassSelectPanel/VBox"]
+layout_mode = 2
+text = "战斗属性高，能把普通武器升级改造为高级武器"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.65, 0.65, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 2
+custom_minimum_size = Vector2(0, 40)
+
+[node name="ButtonRow" type="HBoxContainer" parent="ClassSelectPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BackButton" type="Button" parent="ClassSelectPanel/VBox/ButtonRow"]
+layout_mode = 2
+text = "返回"
+custom_minimum_size = Vector2(0, 40)
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="StartButton" type="Button" parent="ClassSelectPanel/VBox/ButtonRow"]
+layout_mode = 2
+text = "开始游戏"
+custom_minimum_size = Vector2(0, 40)
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
+theme_override_colors/font_color = Color(1, 0.85, 0.5, 1)
+theme_override_font_sizes/font_size = 15

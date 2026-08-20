@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://bqrea255ks0qn"]
+
+[ext_resource type="Script" uid="uid://doyogrurrj7m1" path="res://scripts/world/resource_node.gd" id="1_res"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_berry"]
+radius = 16.0
+
+[node name="Berry" type="StaticBody2D" unique_id=1462535355]
+collision_layer = 4
+collision_mask = 10
+script = ExtResource("1_res")
+resource_name = "BerryBush"
+max_health = 30.0
+drop_item = "berry"
+hit_count = 1
+respawn_time = 90.0
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=1922548498]
+modulate = Color(0.3, 0.6, 0.3, 1)
+scale = Vector2(1.2, 1.2)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1811490349]
+shape = SubResource("CircleShape_berry")
+
+[node name="Area2D" type="Area2D" parent="." unique_id=2129455401]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=165759789]
+shape = SubResource("CircleShape_berry")

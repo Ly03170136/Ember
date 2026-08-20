@@ -1,0 +1,30 @@
+[gd_scene load_steps=3 format=3 uid="uid://btree00001"]
+
+[ext_resource type="Script" path="res://scripts/world/resource_node.gd" id="1_res"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_tree"]
+size = Vector2(32, 32)
+
+[node name="Tree" type="StaticBody2D"]
+script = ExtResource("1_res")
+collision_layer = 4
+collision_mask = 10
+resource_name = "Tree"
+max_health = 60.0
+drop_item = "wood"
+drop_count = 3
+hit_count = 4
+respawn_time = 120.0
+
+[node name="Sprite" type="Sprite2D" parent="."]
+scale = Vector2(1.5, 2)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_tree")
+
+[node name="Area2D" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("RectShape_tree")
