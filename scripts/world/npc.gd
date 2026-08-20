@@ -1,4 +1,4 @@
-﻿## 人类NPC系统：普通市民、警察
+## 人类NPC系统：普通市民、警察
 ## NPC可以被感染，感染后变成僵尸
 ## 警察会攻击攻击未感染NPC的玩家
 
@@ -86,17 +86,24 @@ func _physics_process(delta: float) -> void:
 
 func _civilian_behavior(delta: float) -> void:
 	## 市民行为：随机漫游，被攻击时逃跑
-	# 如果被感染，行为不变（直到变成僵尸）
+	# 感染后行动迟缓（速度降低50%），但不会攻击玩家
+	var current_speed: float = _type_config.speed
+	if is_infected:
+		current_speed *= 0.5
 	# 随机漫游
 	wander_timer -= delta
 	if wander_timer <= 0:
 		wander_timer = randf_range(2.0, 5.0)
 		wander_direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
-	velocity = wander_direction * _type_config.speed
+	velocity = wander_direction * current_speed
 
 
 func _police_behavior(delta: float) -> void:
 	## 警察行为：优先攻击丧尸，犯罪玩家才会被追击
+	# 感染后行动迟缓（速度降低50%），且不再追击玩家，只攻击丧尸
+	var current_speed: float = _type_config.speed
+	if is_infected:
+		current_speed *= 0.5
 	attack_timer = max(0, attack_timer - delta)
 	var world: Node = get_tree().current_scene
 	if not world or not world.has_node("WorldLayer"):
@@ -113,23 +120,24 @@ func _police_behavior(delta: float) -> void:
 			if dist < nearest_zombie_dist:
 				nearest_zombie_dist = dist
 				nearest_zombie = child
-	# 2. 检查是否有犯罪目标（攻击过平民的玩家）
-	_update_criminal_target()
-	# 3. 优先攻击丧尸，其次追击犯罪玩家
+	# 2. 检查是否有犯罪目标（攻击过平民的玩家）- 感染后不再追击玩家
+	if not is_infected:
+		_update_criminal_target()
+	# 3. 优先攻击丧尸，其次追击犯罪玩家（未感染时）
 	if nearest_zombie:
 		# 追击并攻击丧尸
 		var dir: Vector2 = (nearest_zombie.position - position).normalized()
-		velocity = dir * _type_config.speed
+		velocity = dir * current_speed
 		if nearest_zombie_dist < _type_config.attack_range and attack_timer <= 0:
 			attack_timer = _type_config.attack_cooldown
 			if nearest_zombie.has_method("take_damage"):
 				nearest_zombie.take_damage(_type_config.damage, self)
 				print("[Police] 警察攻击丧尸，造成%d伤害" % _type_config.damage)
-	elif criminal_target and is_instance_valid(criminal_target):
-		# 追击犯罪玩家
+	elif not is_infected and criminal_target and is_instance_valid(criminal_target):
+		# 追击犯罪玩家（仅未感染时）
 		var dist: float = position.distance_to(criminal_target.position)
 		var dir: Vector2 = (criminal_target.position - position).normalized()
-		velocity = dir * _type_config.speed
+		velocity = dir * current_speed
 		if dist < _type_config.attack_range and attack_timer <= 0:
 			attack_timer = _type_config.attack_cooldown
 			if criminal_target.has_method("take_damage"):
@@ -146,7 +154,10 @@ func _patrol(delta: float) -> void:
 	if wander_timer <= 0:
 		wander_timer = randf_range(3.0, 6.0)
 		wander_direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
-	velocity = wander_direction * _type_config.speed * 0.5
+	var patrol_speed: float = _type_config.speed * 0.5
+	if is_infected:
+		patrol_speed *= 0.5  # 感染后再降低50%
+	velocity = wander_direction * patrol_speed
 
 
 func _update_criminal_target() -> void:
@@ -233,10 +244,13 @@ func infect() -> void:
 	if is_infected:
 		return
 	is_infected = true
-	infection_timer = 900.0  # 一个季节（15分钟*4=60分钟？简化为900秒=15分钟）
-	print("[NPC] %s 被感染，将在%.0f秒后变成僵尸" % [_type_config.name, infection_timer])
-	# 感染后颜色变化
+	# 感染到变为丧尸的时间：游戏内12-24小时随机
+	# 游戏内一天=900秒（15分钟），所以12小时=450秒，24小时=900秒
+	infection_timer = randf_range(450.0, 900.0)
+	print("[NPC] %s 被感染，将在%.0f秒后（%.1f-%.1f游戏内小时）变成僵尸" % [_type_config.name, infection_timer, infection_timer/900.0*24, infection_timer/900.0*24])
+	# 感染后颜色变化（稍微变绿，表示感染）
 	if sprite:
+		sprite.modulate = Color(0.7, 0.9, 0.7, 1.0)
 		sprite.modulate = Color(0.5, 0.7, 0.4)
 
 
@@ -251,6 +265,10 @@ func _turn_into_zombie() -> void:
 		zombie.name = "InfectedZombie_%d" % randi()
 		get_parent().add_child(zombie)
 		zombie.add_to_group("zombie")
+		# 注册到分块加载系统
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_register_chunk_entity"):
+			main._register_chunk_entity(zombie)
 	queue_free()
 
 

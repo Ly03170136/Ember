@@ -269,6 +269,17 @@ func restore_thirst(amount: float) -> void:
 func _input(event: InputEvent) -> void:
 	if not is_local() or is_down:
 		return
+	# 鼠标滚轮缩放（正常等比例缩放）
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		var new_zoom: float = min(camera.zoom.x + 0.2, 4.0)
+		camera.zoom = Vector2(new_zoom, new_zoom)
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		var new_zoom: float = max(camera.zoom.x - 0.2, 0.5)
+		camera.zoom = Vector2(new_zoom, new_zoom)
+		get_viewport().set_input_as_handled()
+		return
 	# 鼠标左键攻击
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		# 检查是否有UI菜单打开（建造/背包/制作），如果有则不攻击，让按钮接收点击

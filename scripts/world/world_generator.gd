@@ -2,8 +2,12 @@ extends Node2D
 ## 世界地图生成器：写实风格地面，单一大纹理渲染（简单可靠）
 
 const TILE_SIZE := 64
-const MAP_WIDTH := 100
-const MAP_HEIGHT := 100
+const MAP_WIDTH := 200
+const MAP_HEIGHT := 200
+
+# 固定地形种子（设置为固定值后，每次生成的地形都一样；改为randi()可恢复随机）
+const TERRAIN_SEED := 12345
+const USE_FIXED_TERRAIN := true  # true=固定地形，false=随机地形
 
 @onready var ground_layer: Node2D = $GroundLayer
 
@@ -51,22 +55,28 @@ func find_safe_spawn_position(center: Vector2, max_attempts: int = 50) -> Vector
 
 
 func _generate_noise() -> void:
+	# 根据USE_FIXED_TERRAIN决定使用固定种子还是随机种子
+	var base_seed: int = TERRAIN_SEED if USE_FIXED_TERRAIN else randi()
+	if USE_FIXED_TERRAIN:
+		print("[WorldGen] 使用固定地形种子: %d" % base_seed)
+	else:
+		print("[WorldGen] 使用随机地形种子: %d" % base_seed)
 	_noise = FastNoiseLite.new()
 	_noise.noise_type = FastNoiseLite.TYPE_PERLIN
 	_noise.frequency = 0.004  # 更低频率，地形变化更大
-	_noise.seed = randi()
+	_noise.seed = base_seed
 	_biome_noise = FastNoiseLite.new()
 	_biome_noise.noise_type = FastNoiseLite.TYPE_PERLIN
 	_biome_noise.frequency = 0.002  # 更低频率，生物群系变化更大
-	_biome_noise.seed = randi() + 1000
+	_biome_noise.seed = base_seed + 1000
 	_detail_noise = FastNoiseLite.new()
 	_detail_noise.noise_type = FastNoiseLite.TYPE_PERLIN
 	_detail_noise.frequency = 0.06
-	_detail_noise.seed = randi() + 2000
+	_detail_noise.seed = base_seed + 2000
 	_micro_noise = FastNoiseLite.new()
 	_micro_noise.noise_type = FastNoiseLite.TYPE_PERLIN
 	_micro_noise.frequency = 0.15
-	_micro_noise.seed = randi() + 3000
+	_micro_noise.seed = base_seed + 3000
 
 
 func _preload_tile_textures() -> void:

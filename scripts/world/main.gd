@@ -34,6 +34,11 @@ const ZOMBIE_SCENE := preload("res://scenes/entities/zombie.tscn")
 const VEHICLE_SCENE := preload("res://scenes/entities/vehicle.tscn")
 const NPC_SCENE := preload("res://scenes/entities/npc.tscn")
 
+# 固定地图场景（玩家在编辑器中手动设计）
+const FIXED_MAP_SCENE := preload("res://scenes/world/fixed_map.tscn")
+var fixed_map: Node2D = null
+const USE_FIXED_MAP := true  # 设置为true使用固定地图，false使用随机生成
+
 const MAX_ZOMBIES := 100
 const ZOMBIE_SPAWN_INTERVAL := 5.0
 var zombie_spawn_timer: float = 0.0
@@ -87,9 +92,23 @@ const HORDE_INTERVAL_DAYS := 40  # 每40天（1年）一次尸潮
 # 病毒传播系统
 var lab_position: Vector2 = Vector2.ZERO  # 实验室位置
 var infection_level: float = 0.0  # 感染程度 0.0-1.0（1.0=全图感染）
-var infection_spread_rate: float = 0.025  # 每天感染扩散速度（40天=1季全图感染）
+var infection_radius: float = 0.0  # 病毒扩散半径（从实验室向外扩散）
+var _full_infection_notified: bool = false  # 全图感染提示是否已发送
+var infection_spread_rate: float = 0.025  # 每天感染扩散速度（保留兼容）
 var is_lab_destroyed: bool = false  # 实验室是否被摧毁
-var lab_spawn_timer: float = 0.0  # 实验室僵尸刷新计时器
+var lab_spawn_timer: float = 0.0  # 实验室僵尸刷新计时器（保留兼容）
+var map_w: float = 6400.0  # 地图宽度（100瓦片*64像素）
+var map_h: float = 6400.0  # 地图高度（100瓦片*64像素）
+
+# ==================== 分块加载系统（参考僵尸毁灭工程） ====================
+const CHUNK_SIZE := 1024.0  # 每个chunk大小（像素），16x16瓦片
+const CHUNK_ACTIVATION_RANGE := 2  # 玩家周围激活的chunk范围（2=5x5=25个chunk）
+var chunk_entities: Dictionary = {}  # 存储每个chunk的实体列表 {Vector2i: [Node, ...]}
+var chunk_update_timer: float = 0.0  # chunk更新计时器
+const CHUNK_UPDATE_INTERVAL := 0.5  # 每0.5秒更新一次chunk激活状态
+var last_player_chunk: Vector2i = Vector2i(-999, -999)  # 上次玩家所在的chunk（用于检测是否需要更新）
+var total_frozen_entities: int = 0  # 统计冻结的实体数量（调试用）
+var total_active_entities: int = 0  # 统计激活的实体数量（调试用）
 
 # 季节生存效果
 const SEASON_EFFECTS := {
@@ -154,6 +173,11 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if game_over:
 		return
+	# 分块加载系统更新（每隔0.5秒）
+	chunk_update_timer += delta
+	if chunk_update_timer >= CHUNK_UPDATE_INTERVAL:
+		chunk_update_timer = 0.0
+		_update_chunks()
 	if GameManager.is_server:
 		_update_day_night(delta)
 		_update_zombie_spawn(delta)
@@ -329,6 +353,12 @@ func _update_food_rot(delta: float) -> void:
 
 
 func _update_zombie_spawn(delta: float) -> void:
+	# 病毒全图感染前，不随机刷新丧尸（只有感染NPC转变的丧尸）
+	if infection_level < 1.0:
+		return
+	# 实验室已被摧毁，停止刷新
+	if is_lab_destroyed:
+		return
 	zombie_spawn_timer -= delta
 	if zombie_spawn_timer > 0:
 		return
@@ -342,28 +372,26 @@ func _update_zombie_spawn(delta: float) -> void:
 		return
 	# 夜晚生成更快
 	var is_night := current_time < 0.2 or current_time > 0.8
-	zombie_spawn_timer = 2.0 if is_night else ZOMBIE_SPAWN_INTERVAL
-	_spawn_zombie()
+	zombie_spawn_timer = 3.0 if is_night else ZOMBIE_SPAWN_INTERVAL
+	_spawn_zombie_from_lab()
 
 
-func _spawn_zombie() -> void:
-	# 在随机玩家附近生成，但不要太近
-	var players: Array = []
-	for pid: int in GameManager.players.keys():
-		var p: Node2D = GameManager.players[pid]
-		if is_instance_valid(p):
-			players.append(p)
-	if players.is_empty():
-		return
-	var target_player: Node2D = players[randi() % players.size()]
+func _spawn_zombie_from_lab() -> void:
+	# 从实验室附近生成丧尸，向周围扩散
 	var angle: float = randf() * TAU
-	var distance: float = randf_range(300, 500)
-	var spawn_pos: Vector2 = target_player.position + Vector2(cos(angle), sin(angle)) * distance
+	var distance: float = randf_range(50, 150)
+	var spawn_pos: Vector2 = lab_position + Vector2(cos(angle), sin(angle)) * distance
 	var zombie: Node2D = ZOMBIE_SCENE.instantiate()
 	zombie.position = spawn_pos
-	zombie.name = "Zombie_%d" % randi()
+	zombie.name = "LabZombie_%d" % randi()
+	# 实验室丧尸更强大，随机类型
+	if zombie.has_method("set_zombie_type"):
+		var types: Array = ["normal", "fast", "fat", "spitter"]
+		zombie.set_zombie_type(types[randi() % types.size()])
 	world_layer.add_child(zombie)
 	zombie.add_to_group("zombie")
+	# 注册到分块加载系统
+	_register_chunk_entity(zombie)
 
 
 # ==================== 尸潮系统 ====================
@@ -439,48 +467,40 @@ func _update_infection(delta: float) -> void:
 	# 如果实验室已被摧毁，停止感染扩散
 	if is_lab_destroyed:
 		return
-	# 感染扩散（每天增加一点，40天=1季全图感染）
-	infection_level = min(1.0, infection_level + infection_spread_rate * delta / day_length)
-	# 感染NPC（感染程度越高，NPC被感染的概率越大）
-	if infection_level > 0.1:
+	# 病毒从实验室向外扩散，扩散半径随时间增加（游戏内30天扩散到全图）
+	# 地图最大距离约为 sqrt(map_w^2 + map_h^2) / 2
+	var max_radius: float = sqrt(map_w * map_w + map_h * map_h) / 2.0
+	infection_radius = min(max_radius, infection_radius + (max_radius / 30.0) * delta / day_length)
+	infection_level = infection_radius / max_radius  # 感染程度用于UI显示
+	# 感染扩散半径内的NPC
+	if infection_radius > 100:
 		_infect_npcs(delta)
-	# 全图感染后，实验室开始刷新僵尸
-	if infection_level >= 1.0:
-		lab_spawn_timer -= delta
-		if lab_spawn_timer <= 0:
-			lab_spawn_timer = 8.0  # 每8秒刷新一只僵尸
-			_spawn_zombie_from_lab()
 	# 感染达到50%时提示玩家
 	if infection_level >= 0.5 and infection_level < 0.51:
-		GameManager.send_chat.rpc("空气中弥漫着不祥的气息...病毒正在蔓延")
+		GameManager.send_chat.rpc("空气中弥漫着不祥的气息...病毒正在从实验室蔓延")
+	# 全图感染后提示
+	if infection_level >= 1.0 and not _full_infection_notified:
+		_full_infection_notified = true
+		GameManager.send_chat.rpc("病毒已扩散至全图！所有未撤离的人类都将被感染")
 
 
 func _infect_npcs(delta: float) -> void:
-	## 感染附近的NPC
+	## 感染实验室扩散半径内的NPC
 	if not world_layer:
 		return
-	# 感染概率随感染程度增加
-	var infect_chance: float = infection_level * 0.001 * delta
+	# 基础感染概率（距离实验室越近，概率越高）
+	var base_infect_chance: float = 0.0005 * delta
 	for child in world_layer.get_children():
 		if child.is_in_group("npc") and not child.is_infected:
-			# 距离实验室越近，感染概率越高
+			# 只感染在扩散半径内的NPC
 			var dist_to_lab: float = child.position.distance_to(lab_position)
-			var dist_factor: float = max(0.1, 1.0 - dist_to_lab / 3000.0)
-			if randf() < infect_chance * dist_factor:
+			if dist_to_lab > infection_radius:
+				continue
+			# 距离实验室越近，感染概率越高（半径边缘概率为0，中心概率最高）
+			var dist_factor: float = 1.0 - (dist_to_lab / infection_radius)
+			dist_factor = clamp(dist_factor, 0.1, 1.0)
+			if randf() < base_infect_chance * dist_factor:
 				child.infect()
-
-
-func _spawn_zombie_from_lab() -> void:
-	# 从实验室位置生成僵尸
-	var zombie: Node2D = ZOMBIE_SCENE.instantiate()
-	zombie.position = lab_position + Vector2(randf_range(-30, 30), randf_range(-30, 30))
-	zombie.name = "LabZombie_%d" % randi()
-	# 实验室僵尸更强大
-	if zombie.has_method("set_zombie_type"):
-		var types: Array = ["normal", "fast", "fat", "spitter"]
-		zombie.set_zombie_type(types[randi() % types.size()])
-	world_layer.add_child(zombie)
-	zombie.add_to_group("zombie")
 
 
 func destroy_lab() -> void:
@@ -490,6 +510,78 @@ func destroy_lab() -> void:
 	GameManager.send_chat.rpc("实验室已被摧毁！病毒停止传播，你们拯救了世界！")
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX.SUCCESS)
+
+
+# ==================== 分块加载系统（参考僵尸毁灭工程） ====================
+func _get_chunk_coord(position: Vector2) -> Vector2i:
+	## 获取世界坐标对应的chunk坐标
+	return Vector2i(int(position.x / CHUNK_SIZE), int(position.y / CHUNK_SIZE))
+
+
+func _register_chunk_entity(entity: Node) -> void:
+	## 注册实体到分块加载系统（NPC、僵尸、资源节点、载具等）
+	if not entity or not is_instance_valid(entity):
+		return
+	var chunk_coord: Vector2i = _get_chunk_coord(entity.position)
+	if not chunk_entities.has(chunk_coord):
+		chunk_entities[chunk_coord] = []
+	chunk_entities[chunk_coord].append(entity)
+	# 初始状态：根据是否在玩家附近决定是否激活
+	var player: Node = GameManager.get_local_player()
+	if player:
+		var player_chunk: Vector2i = _get_chunk_coord(player.position)
+		if _is_chunk_active(chunk_coord.x, chunk_coord.y, player_chunk):
+			entity.process_mode = Node.PROCESS_MODE_INHERIT
+		else:
+			entity.process_mode = Node.PROCESS_MODE_DISABLED
+
+
+func _unregister_chunk_entity(entity: Node) -> void:
+	## 从分块加载系统移除实体（实体被销毁时调用）
+	if not entity:
+		return
+	for key in chunk_entities.keys():
+		var entities: Array = chunk_entities[key]
+		if entities.has(entity):
+			entities.erase(entity)
+			if entities.is_empty():
+				chunk_entities.erase(key)
+			break
+
+
+func _is_chunk_active(chunk_x: int, chunk_y: int, player_chunk: Vector2i) -> bool:
+	## 检查chunk是否在玩家激活范围内
+	return abs(chunk_x - player_chunk.x) <= CHUNK_ACTIVATION_RANGE and abs(chunk_y - player_chunk.y) <= CHUNK_ACTIVATION_RANGE
+
+
+func _update_chunks() -> void:
+	## 更新所有chunk的激活状态（冻结远处实体，激活附近实体）
+	var player: Node = GameManager.get_local_player()
+	if not player or not is_instance_valid(player):
+		return
+	var player_chunk: Vector2i = _get_chunk_coord(player.position)
+	# 如果玩家没有移动到新的chunk，跳过更新
+	if player_chunk == last_player_chunk:
+		return
+	last_player_chunk = player_chunk
+	total_active_entities = 0
+	total_frozen_entities = 0
+	# 遍历所有chunk，更新实体状态
+	for chunk_coord in chunk_entities.keys():
+		var entities: Array = chunk_entities[chunk_coord]
+		var is_active: bool = _is_chunk_active(chunk_coord.x, chunk_coord.y, player_chunk)
+		for entity in entities:
+			if not entity or not is_instance_valid(entity):
+				continue
+			if is_active:
+				if entity.process_mode != Node.PROCESS_MODE_INHERIT:
+					entity.process_mode = Node.PROCESS_MODE_INHERIT
+				total_active_entities += 1
+			else:
+				if entity.process_mode != Node.PROCESS_MODE_DISABLED:
+					entity.process_mode = Node.PROCESS_MODE_DISABLED
+				total_frozen_entities += 1
+	print("[Chunk] 玩家在chunk(%d,%d)，激活%d个实体，冻结%d个实体" % [player_chunk.x, player_chunk.y, total_active_entities, total_frozen_entities])
 
 
 func _update_day_night(delta: float) -> void:
@@ -508,19 +600,59 @@ func _update_day_night(delta: float) -> void:
 			GameManager.send_chat.rpc("天亮了，第%d天开始" % day_count)
 
 
+func _load_fixed_map() -> void:
+	## 加载固定地图场景（玩家在编辑器中手动设计）
+	print("[FixedMap] 正在加载固定地图...")
+	map_w = 50.0 * 64.0
+	map_h = 50.0 * 64.0
+	# 加载固定地图场景
+	fixed_map = FIXED_MAP_SCENE.instantiate()
+	fixed_map.name = "FixedMap"
+	world_layer.add_child(fixed_map)
+	# 注册所有实体到分块加载系统
+	var entities: Array = fixed_map.get_all_entities()
+	for entity in entities:
+		_register_chunk_entity(entity)
+	print("[FixedMap] 已注册%d个实体到分块加载系统" % entities.size())
+	# 获取实验室位置
+	lab_position = fixed_map.get_laboratory_position()
+	if lab_position == Vector2.ZERO:
+		print("[FixedMap] 警告：固定地图中没有放置实验室！病毒传播系统将无法正常工作。")
+	else:
+		print("[FixedMap] 实验室位置：", lab_position)
+	print("[FixedMap] 固定地图加载完成！")
+
+
 func _generate_initial_resources() -> void:
+	# 如果使用固定地图，加载固定地图场景并注册实体
+	if USE_FIXED_MAP:
+		_load_fixed_map()
+		return
 	# 地图中心和范围（100x100瓦片，每瓦片64像素）
-	var map_w: float = 100.0 * 64.0
-	var map_h: float = 100.0 * 64.0
+	map_w = 50.0 * 64.0
+	map_h = 50.0 * 64.0
 	var center_x: float = map_w / 2.0
 	var center_y: float = map_h / 2.0
 	var range_x: float = map_w * 0.4
 	var range_y: float = map_h * 0.4
-	# 生成实验室位置（在地图边缘随机位置，远离出生点）
-	var lab_angle: float = randf() * TAU
-	var lab_dist: float = map_w * 0.35
-	lab_position = Vector2(center_x + cos(lab_angle) * lab_dist, center_y + sin(lab_angle) * lab_dist)
-	print("[Virus] 实验室位置：", lab_position)
+	# 生成实验室位置（全图唯一，随机出现在地图四条边的附近）
+	# 先检查是否已经有实验室存在，防止重复生成
+	var existing_labs: Array = get_tree().get_nodes_in_group("laboratory")
+	if existing_labs.size() > 0:
+		print("[Virus] 已存在实验室，跳过生成")
+		return
+	var edge_margin: float = 150.0  # 距离边缘的距离
+	var edge_side: int = randi() % 4  # 0=上边, 1=下边, 2=左边, 3=右边
+	match edge_side:
+		0:  # 上边
+			lab_position = Vector2(randf_range(edge_margin, map_w - edge_margin), edge_margin)
+		1:  # 下边
+			lab_position = Vector2(randf_range(edge_margin, map_w - edge_margin), map_h - edge_margin)
+		2:  # 左边
+			lab_position = Vector2(edge_margin, randf_range(edge_margin, map_h - edge_margin))
+		3:  # 右边
+			lab_position = Vector2(map_w - edge_margin, randf_range(edge_margin, map_h - edge_margin))
+	print("[Virus] 实验室位置（边缘附近）：", lab_position, " 边：", edge_side)
 	# 创建实验室建筑（全地图只生成一个，使用building.tscn）
 	var lab_building: Node2D = BUILDING_SCENE.instantiate()
 	lab_building.building_id = "laboratory"
@@ -536,16 +668,19 @@ func _generate_initial_resources() -> void:
 		var tree: Node2D = TREE_SCENE.instantiate()
 		tree.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
 		world_layer.add_child(tree)
+		_register_chunk_entity(tree)
 	# 生成随机石头（增加数量）
 	for i in range(100):
 		var rock: Node2D = ROCK_SCENE.instantiate()
 		rock.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
 		world_layer.add_child(rock)
+		_register_chunk_entity(rock)
 	# 生成浆果丛（增加数量）
 	for i in range(60):
 		var berry: Node2D = BERRY_SCENE.instantiate()
 		berry.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
 		world_layer.add_child(berry)
+		_register_chunk_entity(berry)
 	# 生成废弃载具残骸（15辆，分布在地图各处）
 	var vehicle_types: Array = ["bicycle", "motorcycle", "car", "truck", "armored"]
 	for i in range(15):
@@ -554,32 +689,38 @@ func _generate_initial_resources() -> void:
 		vehicle.is_wreck = true
 		vehicle.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
 		world_layer.add_child(vehicle)
+		_register_chunk_entity(vehicle)
 	print("[World] 生成了15辆废弃载具残骸")
-	# 生成人类NPC（100个市民，20个警察，分布在地图各处）
-	for i in range(100):
+	# 生成人类NPC（大量增加：500个市民，80个警察，分布在地图各处）
+	for i in range(500):
 		var npc: Node2D = NPC_SCENE.instantiate()
 		npc.npc_type = "civilian"
 		npc.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
 		world_layer.add_child(npc)
-	for i in range(20):
+		_register_chunk_entity(npc)
+	for i in range(80):
 		var police: Node2D = NPC_SCENE.instantiate()
 		police.npc_type = "police"
 		police.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
 		world_layer.add_child(police)
-	print("[World] 生成了100个市民和20个警察")
+		_register_chunk_entity(police)
+	print("[World] 生成了500个市民和80个警察")
 	# 在玩家出生点附近额外生成一些资源，确保玩家一开始就能看到
 	for i in range(30):
 		var tree: Node2D = TREE_SCENE.instantiate()
 		tree.position = Vector2(center_x + randf_range(-400, 400), center_y + randf_range(-400, 400))
 		world_layer.add_child(tree)
+		_register_chunk_entity(tree)
 	for i in range(15):
 		var rock: Node2D = ROCK_SCENE.instantiate()
 		rock.position = Vector2(center_x + randf_range(-400, 400), center_y + randf_range(-400, 400))
 		world_layer.add_child(rock)
+		_register_chunk_entity(rock)
 	for i in range(10):
 		var berry: Node2D = BERRY_SCENE.instantiate()
 		berry.position = Vector2(center_x + randf_range(-400, 400), center_y + randf_range(-400, 400))
 		world_layer.add_child(berry)
+		_register_chunk_entity(berry)
 	print("[World] Generated initial resources: 230树木, 115石头, 70浆果")
 
 
