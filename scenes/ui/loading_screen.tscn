@@ -2,6 +2,18 @@
 
 [ext_resource type="Script" path="res://scripts/ui/loading_screen.gd" id="1_ld"]
 
+[sub_resource type="Shader" id="Shader_vignette"]
+code = "shader_type canvas_item;
+void fragment() {
+	vec2 uv = UV;
+	float dist = distance(uv, vec2(0.5));
+	float vignette = smoothstep(0.3, 0.8, dist);
+	COLOR.a = vignette * 0.6;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vignette"]
+shader = SubResource("Shader_vignette")
+
 [node name="LoadingScreen" type="Control"]
 visible = false
 process_mode = 3
@@ -21,7 +33,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.08, 0.08, 0.1, 1)
+color = Color(0.05, 0.05, 0.07, 1)
+
+[node name="Vignette" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.4)
+material = SubResource("ShaderMaterial_vignette")
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -30,52 +52,53 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -100.0
-offset_right = 200.0
-offset_bottom = 100.0
+offset_left = -250.0
+offset_top = -150.0
+offset_right = 250.0
+offset_bottom = 150.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 18
 
 [node name="Title" type="Label" parent="VBox"]
 layout_mode = 2
 text = "余烬 EMBER"
 horizontal_alignment = 1
-theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
-theme_override_font_sizes/font_size = 42
+theme_override_colors/font_color = Color(1, 0.65, 0.25, 1)
+theme_override_font_sizes/font_size = 48
 
 [node name="Subtitle" type="Label" parent="VBox"]
 layout_mode = 2
 text = "正在加载世界..."
 horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.75, 0.7, 0.6, 1)
+theme_override_font_sizes/font_size = 18
 
 [node name="StageLabel" type="Label" parent="VBox"]
 layout_mode = 2
 text = ""
 horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.9, 0.8, 0.5, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.95, 0.85, 0.55, 1)
+theme_override_font_sizes/font_size = 14
 
 [node name="ProgressBar" type="ProgressBar" parent="VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 28)
 max_value = 100.0
 value = 0.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 
 [node name="ProgressLabel" type="Label" parent="VBox"]
 layout_mode = 2
 text = "0%"
 horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.85, 0.8, 0.7, 1)
+theme_override_font_sizes/font_size = 16
 
 [node name="TipLabel" type="Label" parent="VBox"]
 layout_mode = 2
 text = "提示：按B打开建造菜单，按E打开制作菜单"
 horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.55, 0.5, 0.45, 1)
+theme_override_font_sizes/font_size = 12
 autowrap_mode = 2
