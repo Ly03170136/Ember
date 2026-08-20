@@ -118,6 +118,17 @@ func _ready() -> void:
 	# 把所有UI移到HUD的CanvasLayer里，固定在屏幕上不跟随相机
 	inventory_ui.reparent(hud)
 	quickbar.reparent(hud)
+	# 确保快捷栏可见并在屏幕底部中央（1920x1080分辨率）
+	quickbar.visible = true
+	quickbar.anchor_left = 0.5
+	quickbar.anchor_top = 1.0
+	quickbar.anchor_right = 0.5
+	quickbar.anchor_bottom = 1.0
+	quickbar.offset_left = -300.0
+	quickbar.offset_top = -75.0
+	quickbar.offset_right = 300.0
+	quickbar.offset_bottom = -5.0
+	print("[Main] 快捷栏已reparent到HUD，visible=", quickbar.visible, " size=", quickbar.size, " pos=", quickbar.position)
 	craft_ui.reparent(hud)
 	build_ui.reparent(hud)
 	map_ui.reparent(hud)
