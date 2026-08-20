@@ -19,9 +19,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -330.0
-offset_top = -300.0
+offset_top = -375.0
 offset_right = 330.0
-offset_bottom = 300.0
+offset_bottom = 375.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -239,12 +239,165 @@ custom_minimum_size = Vector2(28, 22)
 layout_mode = 2
 text = "+"
 
+[node name="Separator2" type="HSeparator" parent="Panel" unique_id=1919957877]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 475.0
+offset_right = 428.0
+offset_bottom = 479.0
+
+[node name="EquipTitle" type="Label" parent="Panel" unique_id=556308326]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 482.0
+offset_right = 428.0
+offset_bottom = 502.0
+theme_override_colors/font_color = Color(0.85, 0.75, 0.5, 1)
+theme_override_font_sizes/font_size = 14
+text = "装备"
+
+[node name="Equipment" type="HBoxContainer" parent="Panel" unique_id=1186258237]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 505.0
+offset_right = 428.0
+offset_bottom = 600.0
+theme_override_constants/separation = 10
+
+[node name="HelmetSlot" type="Panel" parent="Panel/Equipment" unique_id=1393515345]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="Panel/Equipment/HelmetSlot" unique_id=1678196562]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = -20.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SlotLabel" type="Label" parent="Panel/Equipment/HelmetSlot" unique_id=331527174]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -30.0
+offset_top = -18.0
+offset_right = 30.0
+offset_bottom = -2.0
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 10
+text = "头盔"
+horizontal_alignment = 1
+
+[node name="ArmorSlot" type="Panel" parent="Panel/Equipment" unique_id=277389]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="Panel/Equipment/ArmorSlot" unique_id=1032859303]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = -20.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SlotLabel" type="Label" parent="Panel/Equipment/ArmorSlot" unique_id=174440003]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -30.0
+offset_top = -18.0
+offset_right = 30.0
+offset_bottom = -2.0
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 10
+text = "护甲"
+horizontal_alignment = 1
+
+[node name="WeaponSlot" type="Panel" parent="Panel/Equipment" unique_id=1974967790]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="Panel/Equipment/WeaponSlot" unique_id=2123454333]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = -20.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SlotLabel" type="Label" parent="Panel/Equipment/WeaponSlot" unique_id=455018103]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -30.0
+offset_top = -18.0
+offset_right = 30.0
+offset_bottom = -2.0
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 10
+text = "武器"
+horizontal_alignment = 1
+
+[node name="ToolSlot" type="Panel" parent="Panel/Equipment" unique_id=177282704]
+custom_minimum_size = Vector2(90, 90)
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="Panel/Equipment/ToolSlot" unique_id=668760535]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = -20.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SlotLabel" type="Label" parent="Panel/Equipment/ToolSlot" unique_id=1330552490]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -30.0
+offset_top = -18.0
+offset_right = 30.0
+offset_bottom = -2.0
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 10
+text = "工具"
+horizontal_alignment = 1
+
 [node name="Footer" type="HBoxContainer" parent="Panel" unique_id=712768432]
 layout_mode = 0
 offset_left = 12.0
-offset_top = 530.0
+offset_top = 680.0
 offset_right = 428.0
-offset_bottom = 560.0
+offset_bottom = 710.0
 theme_override_constants/separation = 10
 
 [node name="HintLabel" type="Label" parent="Panel/Footer" unique_id=735964706]

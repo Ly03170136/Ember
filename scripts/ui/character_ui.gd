@@ -18,6 +18,12 @@ var player: Node = null
 @onready var vitality_label: Label = $Panel/Attributes/Vitality/Value
 @onready var stealth_label: Label = $Panel/Attributes/Stealth/Value
 
+# 装备栏引用
+@onready var helmet_icon: TextureRect = $Panel/Equipment/HelmetSlot/Icon
+@onready var armor_icon: TextureRect = $Panel/Equipment/ArmorSlot/Icon
+@onready var weapon_icon: TextureRect = $Panel/Equipment/WeaponSlot/Icon
+@onready var tool_icon: TextureRect = $Panel/Equipment/ToolSlot/Icon
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -102,6 +108,46 @@ func refresh() -> void:
 		$Panel/Attributes/Vitality/Bonus.text = "+%d 生命" % int((player.vitality - 5) * 10)
 	if has_node("Panel/Attributes/Stealth/Bonus"):
 		$Panel/Attributes/Stealth/Bonus.text = "-%d%% 被发现" % int((1.0 - player.get_stealth_multiplier()) * 100)
+	# 更新装备栏显示
+	_update_equipment()
+
+
+func _update_equipment() -> void:
+	## 更新装备栏显示（如果玩家有装备系统）
+	if not player or not is_instance_valid(player):
+		return
+	# 检查玩家是否有equipment变量
+	if not "equipment" in player:
+		return
+	var equip: Dictionary = player.equipment
+	# 头盔
+	var helmet_val = equip.get("helmet", null)
+	var helmet_id: String = "" if helmet_val == null else str(helmet_val)
+	if helmet_id != "" and ArtAssets:
+		helmet_icon.texture = ArtAssets.get_item_icon(helmet_id)
+	else:
+		helmet_icon.texture = null
+	# 护甲
+	var armor_val = equip.get("armor", null)
+	var armor_id: String = "" if armor_val == null else str(armor_val)
+	if armor_id != "" and ArtAssets:
+		armor_icon.texture = ArtAssets.get_item_icon(armor_id)
+	else:
+		armor_icon.texture = null
+	# 武器
+	var weapon_val = equip.get("weapon", null)
+	var weapon_id: String = "" if weapon_val == null else str(weapon_val)
+	if weapon_id != "" and ArtAssets:
+		weapon_icon.texture = ArtAssets.get_item_icon(weapon_id)
+	else:
+		weapon_icon.texture = null
+	# 工具
+	var tool_val = equip.get("tool", null)
+	var tool_id: String = "" if tool_val == null else str(tool_val)
+	if tool_id != "" and ArtAssets:
+		tool_icon.texture = ArtAssets.get_item_icon(tool_id)
+	else:
+		tool_icon.texture = null
 
 
 func _on_add_strength() -> void:
