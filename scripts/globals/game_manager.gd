@@ -87,7 +87,8 @@ func disconnect_game() -> void:
 
 func _start_game() -> void:
 	game_started.emit()
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	# 先播放过场动画，然后进入游戏
+	get_tree().change_scene_to_file("res://scenes/ui/cutscene.tscn")
 
 
 func set_game_world(world: Node2D) -> void:
