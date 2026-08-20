@@ -281,6 +281,7 @@ func _generate_lab_only() -> void:
 		3:
 			lab_position = Vector2(6368 - edge_margin, randf_range(edge_margin, 6368 - edge_margin))
 	print("[Virus] 实验室位置：", lab_position, " 边：", edge_side)
+	# 暂时使用building.tscn生成实验室（确保加载不卡住）
 	var lab_building: Node2D = BUILDING_SCENE.instantiate()
 	lab_building.building_id = "laboratory"
 	lab_building.position = lab_position
@@ -288,7 +289,7 @@ func _generate_lab_only() -> void:
 	lab_building.add_to_group("laboratory")
 	world_layer.add_child(lab_building)
 	lab_building.call_deferred("set_building_complete")
-	print("[Virus] 实验室建筑已创建，全地图唯一")
+	print("[Virus] 实验室建筑已创建（使用building.tscn），全地图唯一")
 
 
 func _generate_resources_only() -> void:
@@ -714,6 +715,14 @@ func destroy_lab() -> void:
 		AudioManager.play_sfx(AudioManager.SFX.SUCCESS)
 
 
+func enter_lab_dungeon(lab_building: Node2D) -> void:
+	## 玩家进入实验室副本
+	print("[Main] 玩家进入实验室副本")
+	# 保存当前世界状态（用于返回）
+	# 切换到副本场景
+	get_tree().change_scene_to_file("res://scenes/world/lab_dungeon.tscn")
+
+
 # ==================== 分块加载系统（参考僵尸毁灭工程） ====================
 func _get_chunk_coord(position: Vector2) -> Vector2i:
 	## 获取世界坐标对应的chunk坐标
@@ -864,14 +873,13 @@ func _generate_initial_resources() -> void:
 		3:  # 右边（右部顶点附近）
 			lab_position = Vector2(6368 - edge_margin, randf_range(edge_margin, 6368 - edge_margin))
 	print("[Virus] 实验室位置（边缘附近）：", lab_position, " 边：", edge_side)
-	# 创建实验室建筑（全地图只生成一个，使用building.tscn）
+	# 暂时使用building.tscn生成实验室（确保加载不卡住）
 	var lab_building: Node2D = BUILDING_SCENE.instantiate()
 	lab_building.building_id = "laboratory"
 	lab_building.position = lab_position
 	lab_building.name = "Laboratory"
 	lab_building.add_to_group("laboratory")
 	world_layer.add_child(lab_building)
-	# 延迟设置建筑完成状态，确保_ready执行后再更新外观
 	lab_building.call_deferred("set_building_complete")
 	print("[Virus] 实验室建筑已创建（使用building.tscn），全地图唯一")
 	# 生成随机树木（增加数量）

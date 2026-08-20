@@ -21,6 +21,11 @@ var local_peer_id := 0
 var local_player_class: String = "warrior"
 var game_world: Node2D = null
 var chat_history: Array = []
+var player_name: String = "幸存者"  # 玩家名称
+
+# 游戏状态
+var infection_complete: bool = false  # 病毒是否已扩散全图
+var game_completed: bool = false  # 游戏是否通关（实验室被摧毁）
 
 # 玩家颜色（用于区分不同玩家）
 const PLAYER_COLORS := [

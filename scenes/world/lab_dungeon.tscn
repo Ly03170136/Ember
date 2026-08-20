@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3 uid="uid://lab_dungeon_001"]
+
+[ext_resource type="Script" path="res://scripts/world/lab_dungeon.gd" id="1_dungeon"]
+
+[node name="LabDungeon" type="Node2D"]
+script = ExtResource("1_dungeon")
+
+[node name="DungeonLayer" type="Node2D" parent="."]
+
+[node name="EnemyLayer" type="Node2D" parent="."]
+
+[node name="ExitArea" type="Area2D" parent="."]
+
+[node name="Camera2D" type="Camera2D" parent="."]
