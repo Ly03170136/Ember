@@ -123,8 +123,24 @@ func _police_behavior(delta: float) -> void:
 	# 2. 检查是否有犯罪目标（攻击过平民的玩家）- 感染后不再追击玩家
 	if not is_infected:
 		_update_criminal_target()
-	# 3. 优先攻击丧尸，其次追击犯罪玩家（未感染时）
-	if nearest_zombie:
+	# 3. 优先攻击：犯罪玩家很近时优先追击，否则优先攻击丧尸
+	var criminal_near: bool = false
+	if not is_infected and criminal_target and is_instance_valid(criminal_target):
+		var criminal_dist: float = position.distance_to(criminal_target.position)
+		if criminal_dist < 150:
+			criminal_near = true
+
+	if criminal_near:
+		# 犯罪玩家很近，优先追击
+		var dist: float = position.distance_to(criminal_target.position)
+		var dir: Vector2 = (criminal_target.position - position).normalized()
+		velocity = dir * current_speed
+		if dist < _type_config.attack_range and attack_timer <= 0:
+			attack_timer = _type_config.attack_cooldown
+			if criminal_target.has_method("take_damage"):
+				criminal_target.take_damage(_type_config.damage)
+				print("[Police] 警察攻击犯罪玩家，造成%d伤害" % _type_config.damage)
+	elif nearest_zombie:
 		# 追击并攻击丧尸
 		var dir: Vector2 = (nearest_zombie.position - position).normalized()
 		velocity = dir * current_speed
@@ -165,10 +181,10 @@ func _update_criminal_target() -> void:
 	# 如果当前目标已失效或不再是罪犯，清除
 	if criminal_target and (not is_instance_valid(criminal_target) or not _is_criminal(criminal_target)):
 		criminal_target = null
-	# 寻找最近的犯罪玩家
+	# 寻找最近的犯罪玩家（扩大范围到500像素）
 	if not criminal_target:
 		var nearest: Node2D = null
-		var nearest_dist: float = 300.0
+		var nearest_dist: float = 500.0
 		for pid: int in GameManager.players.keys():
 			var p: Node2D = GameManager.players[pid]
 			if is_instance_valid(p) and _is_criminal(p):
@@ -214,17 +230,19 @@ func take_damage(amount: float, attacker: Node2D = null) -> void:
 
 
 func _notify_police(attacker: Node2D) -> void:
-	## 通知附近警察有罪犯
+	## 通知附近警察有罪犯（扩大范围到600像素）
 	var world: Node = get_tree().current_scene
 	if not world or not world.has_node("WorldLayer"):
 		return
 	var world_layer: Node = world.get_node("WorldLayer")
+	var notified_count: int = 0
 	for child in world_layer.get_children():
 		if child.is_in_group("npc") and child.npc_type == "police":
 			var dist: float = position.distance_to(child.position)
-			if dist < 400:
+			if dist < 600:
 				child.criminal_target = attacker
-				print("[Police] 附近警察收到警报，前往追捕罪犯")
+				notified_count += 1
+	print("[Police] 通知了%d个警察前往追捕罪犯" % notified_count)
 
 
 func _die() -> void:

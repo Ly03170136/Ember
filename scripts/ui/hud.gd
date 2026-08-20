@@ -72,7 +72,7 @@ func _update_player_list() -> void:
 			continue
 		var label := Label.new()
 		var status_icon := "●" if not player.is_down else "✕"
-		var status := "倒地" if player.is_down else "存活"
+		var status := "重伤" if player.is_down else "存活"
 		label.text = "%s %s - %s (HP:%d)" % [status_icon, player.player_name, status, int(player.health)]
 		label.add_theme_font_size_override("font_size", 12)
 		# 根据状态设置颜色

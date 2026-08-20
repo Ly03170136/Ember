@@ -83,6 +83,8 @@ var inventory: Node = null
 
 
 func _ready() -> void:
+	# 添加到玩家组（用于NPC识别玩家）
+	add_to_group("player")
 	# 使用职业精灵
 	if sprite:
 		sprite.texture = PlayerSprite.get_player_sprite(player_class)
@@ -230,7 +232,7 @@ func _on_health_depleted() -> void:
 	print("[Player] %s is down!" % player_name)
 	# 通知服务器/其他玩家
 	if is_local():
-		GameManager.send_chat.rpc("我倒地了！需要救援！")
+		GameManager.send_chat.rpc("重伤，请等待救援！")
 
 
 func _update_health_bar() -> void:
@@ -1000,7 +1002,7 @@ const SELF_REVIVE_TIME := 30.0  # 医生倒地30秒后可自救
 func go_down() -> void:
 	is_down = true
 	down_timer = 0.0
-	GameManager.send_chat.rpc("%s 倒地了！需要救援！" % player_name)
+	GameManager.send_chat.rpc("%s 重伤，请等待救援！" % player_name)
 	# 医生自救被动计时
 	if player_class == "doctor" and can_self_revive:
 		self_revive_timer = 0.0
