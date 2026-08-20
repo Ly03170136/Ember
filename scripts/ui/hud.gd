@@ -9,16 +9,21 @@ extends CanvasLayer
 @onready var day_label: Label = $TopRight/DayLabel
 @onready var chat_box: VBoxContainer = $Chat/Scroll/ChatBox
 @onready var chat_input: LineEdit = $Chat/ChatInput
+@onready var chat_panel: Control = $Chat
 @onready var notification: Label = $Notification
 @onready var player_list: VBoxContainer = $BottomRight/PlayerList
 
 var notification_timer: float = 0.0
 var chat_visible: bool = false
+var chat_hide_timer: float = 0.0  # 聊天窗口自动隐藏计时器
+const CHAT_AUTO_HIDE_TIME := 5.0  # 5秒后自动隐藏
 
 
 func _ready() -> void:
 	GameManager.chat_received.connect(_on_chat_received)
 	chat_input.text_submitted.connect(_on_chat_submitted)
+	# 初始隐藏聊天窗口
+	chat_panel.hide()
 	chat_input.hide()
 	# 初始显示
 	_add_chat_message("系统", "欢迎来到余烬！WASD移动，Enter聊天")
@@ -33,6 +38,11 @@ func _process(delta: float) -> void:
 		notification_timer -= delta
 		if notification_timer <= 0:
 			notification.visible = false
+	# 聊天窗口自动隐藏计时
+	if chat_hide_timer > 0:
+		chat_hide_timer -= delta
+		if chat_hide_timer <= 0:
+			_hide_chat()
 
 
 func _update_stats() -> void:
@@ -84,27 +94,61 @@ func _update_player_list() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# 检测Enter键（同时支持chat动作和直接按键检测）
+	var is_enter: bool = false
 	if event.is_action_pressed("chat"):
-		chat_visible = not chat_visible
-		if chat_visible:
-			chat_input.show()
-			chat_input.grab_focus()
-		else:
-			chat_input.hide()
+		is_enter = true
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			is_enter = true
+	if is_enter:
+		# 如果输入框已经有焦点，不重复触发（让text_submitted处理）
+		if chat_input and chat_input.has_focus():
+			return
+		_show_chat()
+		get_viewport().set_input_as_handled()
+
+
+func _show_chat() -> void:
+	## 显示聊天窗口
+	chat_visible = true
+	chat_panel.show()
+	chat_input.show()
+	chat_input.grab_focus()
+	# 重置自动隐藏计时器（用户正在输入，不自动隐藏）
+	chat_hide_timer = 0.0
+
+
+func _hide_chat() -> void:
+	## 隐藏聊天窗口
+	chat_visible = false
+	chat_panel.hide()
+	chat_input.hide()
+	chat_hide_timer = 0.0
 
 
 func _on_chat_submitted(text: String) -> void:
 	if text.strip_edges().is_empty():
+		# 空内容直接隐藏
+		_hide_chat()
 		return
 	GameManager.send_chat.rpc(text)
 	chat_input.clear()
-	chat_input.hide()
-	chat_visible = false
+	# 发送后启动5秒自动隐藏计时器
+	chat_hide_timer = CHAT_AUTO_HIDE_TIME
+	# 保持聊天窗口可见，但输入框失去焦点
+	chat_input.release_focus()
 
 
 func _on_chat_received(peer_id: int, message: String) -> void:
 	var name: String = GameManager.player_names.get(peer_id, "Unknown")
 	_add_chat_message(name, message)
+	# 收到新消息时显示聊天窗口，并启动5秒自动隐藏
+	if not chat_visible:
+		chat_panel.show()
+		chat_visible = true
+	# 重置自动隐藏计时器（有新消息，延长显示时间）
+	chat_hide_timer = CHAT_AUTO_HIDE_TIME
 
 
 func _add_chat_message(name: String, message: String) -> void:
