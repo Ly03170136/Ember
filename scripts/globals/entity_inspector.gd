@@ -106,36 +106,84 @@ func _try_select_entity(click_pos: Vector2) -> void:
 	## 尝试选中点击位置的实体
 	var main_scene = get_tree().current_scene
 	if not main_scene:
+		print("[EntityInspector] 未找到主场景")
 		return
 
 	# 将屏幕坐标转换为世界坐标
-	var camera = main_scene.find_child("Camera2D", true, false)
+	# 方法1：使用get_viewport().get_camera_2d()获取当前活动相机
+	var camera = get_viewport().get_camera_2d()
 	var world_pos = click_pos
 	if camera:
 		world_pos = camera.get_global_mouse_position()
+		print("[EntityInspector] 通过get_viewport找到相机，世界坐标: (%.1f, %.1f)" % [world_pos.x, world_pos.y])
+	else:
+		# 方法2：按类型查找Camera2D节点（使用find_children）
+		var cameras = main_scene.find_children("*", "Camera2D", true, false)
+		if cameras.size() > 0:
+			camera = cameras[0]
+			world_pos = camera.get_global_mouse_position()
+			print("[EntityInspector] 通过find_children找到相机: %s，世界坐标: (%.1f, %.1f)" % [camera.name, world_pos.x, world_pos.y])
+		else:
+			print("[EntityInspector] 未找到相机，使用屏幕坐标: (%.1f, %.1f)" % [world_pos.x, world_pos.y])
 
 	# 遍历所有可能的实体，找到点击位置最近的
 	var candidates = []
 	var all_nodes = main_scene.find_children("*", "", true, false)
+	print("[EntityInspector] 找到 %d 个节点" % all_nodes.size())
+	
+	var node_types = {}
 	for node in all_nodes:
 		if not is_instance_valid(node):
 			continue
-		# 只检查有位置信息的节点
-		if not (node is Node2D or node is Control):
+		if not (node is Node2D):
 			continue
-		var node_pos = node.global_position if node is Node2D else node.global_position
+		var node_name = str(node.name)
+		var node_type = node.get_class()
+		# 统计节点类型
+		if not node_types.has(node_type):
+			node_types[node_type] = 0
+		node_types[node_type] += 1
+		
+		var node_pos = node.global_position
 		var distance = world_pos.distance_to(node_pos)
-		# 检查是否在点击范围内（32像素）
-		if distance < 32.0:
-			candidates.append({"node": node, "distance": distance})
+		# 检查是否在点击范围内（100像素，更大范围）
+		if distance < 100.0:
+			# 不过滤任何节点，全部加入候选
+			var priority = 0
+			if node_name.begins_with("Player_") or node_name == "Player":
+				priority = 100
+			elif node_name.find("NPC") >= 0 or node_name.find("Citizen") >= 0 or node_name.find("Police") >= 0 or node_name.find("Human") >= 0:
+				priority = 90
+			elif node_name.find("Zombie") >= 0 or node_name.find("zombie") >= 0:
+				priority = 80
+			elif node is CharacterBody2D:
+				priority = 70
+			elif node is RigidBody2D:
+				priority = 60
+			elif node is StaticBody2D:
+				priority = 50
+			elif node is Node2D:
+				priority = 10
+			candidates.append({"node": node, "distance": distance, "priority": priority})
+			print("[EntityInspector] 候选: %s (%s) 距离: %.1f 优先级: %d" % [node_name, node_type, distance, priority])
 
-	# 按距离排序，选中最近的
-	candidates.sort_custom(func(a, b): return a.distance < b.distance)
+	# 输出节点类型统计
+	print("[EntityInspector] 节点类型统计:")
+	for node_type in node_types.keys():
+		print("  %s: %d个" % [node_type, node_types[node_type]])
+
+	# 按优先级排序，优先级相同按距离排序
+	candidates.sort_custom(func(a, b):
+		if a.priority != b.priority:
+			return a.priority > b.priority
+		return a.distance < b.distance)
 
 	if candidates.size() > 0:
 		select_entity(candidates[0].node)
+		print("[EntityInspector] 选中: %s (距离: %.1f, 优先级: %d)" % [candidates[0].node.name, candidates[0].distance, candidates[0].priority])
 	else:
 		deselect()
+		print("[EntityInspector] 未找到实体，世界坐标: (%.1f, %.1f)，100像素范围内无Node2D节点" % [world_pos.x, world_pos.y])
 
 
 func _update_info() -> void:
