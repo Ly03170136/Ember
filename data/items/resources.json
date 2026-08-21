@@ -1,0 +1,89 @@
+{
+  "_comment": "资源材料类物品配置",
+  "_category": "resources",
+  "_version": "1.0.0",
+
+  "wood": {
+    "name": "木材",
+    "desc": "基础建材，可用于建造和制作工具",
+    "type": "resource",
+    "max_stack": 99,
+    "weight": 0.5,
+    "color": [0.55, 0.35, 0.15],
+    "icon": "res://assets/icons/items/wood.png"
+  },
+  "stone": {
+    "name": "石头",
+    "desc": "坚硬的石块，可用于建造和制作工具",
+    "type": "resource",
+    "max_stack": 99,
+    "weight": 1.0,
+    "color": [0.55, 0.55, 0.6],
+    "icon": "res://assets/icons/items/stone.png"
+  },
+  "fiber": {
+    "name": "纤维",
+    "desc": "从植物中获取的纤维，可用于制作绳子和布料",
+    "type": "resource",
+    "max_stack": 99,
+    "weight": 0.1,
+    "color": [0.7, 0.7, 0.4],
+    "icon": "res://assets/icons/items/fiber.png"
+  },
+  "metal": {
+    "name": "金属锭",
+    "desc": "熔炼后的金属锭，用于制作高级工具和武器",
+    "type": "resource",
+    "max_stack": 50,
+    "weight": 2.0,
+    "color": [0.7, 0.7, 0.75],
+    "icon": "res://assets/icons/items/metal.png"
+  },
+  "cloth": {
+    "name": "布料",
+    "desc": "可用于制作衣服、绷带和帐篷",
+    "type": "resource",
+    "max_stack": 50,
+    "weight": 0.3,
+    "color": [0.85, 0.8, 0.75],
+    "icon": "res://assets/icons/items/cloth.png"
+  },
+  "scrap": {
+    "name": "废铁",
+    "desc": "从废墟中找到的废铁，可熔炼为金属锭",
+    "type": "resource",
+    "max_stack": 99,
+    "weight": 1.5,
+    "color": [0.5, 0.5, 0.55],
+    "icon": "res://assets/icons/items/scrap.png"
+  },
+  "electronic": {
+    "name": "电子零件",
+    "desc": "从电子设备中拆解的零件，用于制作电力设备",
+    "type": "resource",
+    "max_stack": 50,
+    "weight": 0.2,
+    "color": [0.3, 0.7, 0.9],
+    "icon": "res://assets/icons/items/electronic.png"
+  },
+  "herb": {
+    "name": "草药",
+    "desc": "野外采集的草药，用于制作药品",
+    "type": "resource",
+    "max_stack": 50,
+    "weight": 0.1,
+    "color": [0.4, 0.8, 0.4],
+    "icon": "res://assets/icons/items/herb.png"
+  },
+  "raw_meat": {
+    "name": "生肉",
+    "desc": "未烹饪的肉，直接食用可能会生病",
+    "type": "resource",
+    "max_stack": 20,
+    "weight": 0.5,
+    "color": [0.8, 0.3, 0.3],
+    "perishable": true,
+    "rot_time": 300,
+    "icon": "res://assets/icons/items/raw_meat.png"
+  }
+}

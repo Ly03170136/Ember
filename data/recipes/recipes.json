@@ -1,0 +1,112 @@
+{
+  "_comment": "配方配置文件 - 所有制作配方在此定义，修改后热重载生效",
+  "_version": "1.0.0",
+
+  "stone_axe": {
+    "name": "石斧",
+    "output": {"id": "stone_axe", "count": 1},
+    "ingredients": [
+      {"id": "wood", "count": 3},
+      {"id": "stone", "count": 2},
+      {"id": "fiber", "count": 1}
+    ],
+    "required_station": "workbench",
+    "craft_time": 5,
+    "required_profession": null,
+    "required_tech": null,
+    "unlocked_by_default": true
+  },
+  "stone_pickaxe": {
+    "name": "石镐",
+    "output": {"id": "stone_pickaxe", "count": 1},
+    "ingredients": [
+      {"id": "wood", "count": 3},
+      {"id": "stone", "count": 3},
+      {"id": "fiber", "count": 1}
+    ],
+    "required_station": "workbench",
+    "craft_time": 5,
+    "required_profession": null,
+    "required_tech": null,
+    "unlocked_by_default": true
+  },
+  "wooden_spear": {
+    "name": "木矛",
+    "output": {"id": "wooden_spear", "count": 1},
+    "ingredients": [
+      {"id": "wood", "count": 4},
+      {"id": "fiber", "count": 2}
+    ],
+    "required_station": null,
+    "craft_time": 3,
+    "required_profession": null,
+    "required_tech": null,
+    "unlocked_by_default": true
+  },
+  "bandage": {
+    "name": "绷带",
+    "output": {"id": "bandage", "count": 2},
+    "ingredients": [
+      {"id": "cloth", "count": 1}
+    ],
+    "required_station": null,
+    "craft_time": 2,
+    "required_profession": null,
+    "required_tech": null,
+    "unlocked_by_default": true
+  },
+  "cooked_meat": {
+    "name": "烤肉",
+    "output": {"id": "cooked_meat", "count": 1},
+    "ingredients": [
+      {"id": "raw_meat", "count": 1}
+    ],
+    "required_station": "campfire",
+    "craft_time": 5,
+    "required_profession": null,
+    "required_tech": null,
+    "unlocked_by_default": true
+  },
+  "iron_axe": {
+    "name": "铁斧",
+    "output": {"id": "iron_axe", "count": 1},
+    "ingredients": [
+      {"id": "wood", "count": 2},
+      {"id": "metal", "count": 3},
+      {"id": "fiber", "count": 1}
+    ],
+    "required_station": "workbench",
+    "craft_time": 10,
+    "required_profession": null,
+    "required_tech": "iron_tools",
+    "unlocked_by_default": false
+  },
+  "iron_sword": {
+    "name": "铁剑",
+    "output": {"id": "iron_sword", "count": 1},
+    "ingredients": [
+      {"id": "wood", "count": 1},
+      {"id": "metal", "count": 4},
+      {"id": "fiber", "count": 1}
+    ],
+    "required_station": "workbench",
+    "craft_time": 10,
+    "required_profession": "warrior",
+    "required_tech": "iron_weapons",
+    "unlocked_by_default": false
+  },
+  "basic_kit": {
+    "name": "简易急救包",
+    "output": {"id": "basic_kit", "count": 1},
+    "ingredients": [
+      {"id": "cloth", "count": 3},
+      {"id": "bandage", "count": 2},
+      {"id": "herb", "count": 2}
+    ],
+    "required_station": "med_station",
+    "craft_time": 8,
+    "required_profession": "doctor",
+    "required_tech": null,
+    "unlocked_by_default": true
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "_comment": "弹药类物品配置",
+  "_category": "ammo",
+  "_version": "1.0.0",
+
+  "arrow": {
+    "name": "箭",
+    "desc": "弓和弩使用的箭矢",
+    "type": "ammo",
+    "max_stack": 50,
+    "weight": 0.05,
+    "color": [0.6, 0.5, 0.4],
+    "ammo_type": "arrow",
+    "damage": 5,
+    "icon": "res://assets/icons/items/arrow.png"
+  },
+  "bullet": {
+    "name": "子弹",
+    "desc": "手枪和步枪使用的子弹",
+    "type": "ammo",
+    "max_stack": 100,
+    "weight": 0.02,
+    "color": [0.7, 0.7, 0.6],
+    "ammo_type": "bullet",
+    "damage": 8,
+    "icon": "res://assets/icons/items/bullet.png"
+  },
+  "shell": {
+    "name": "霰弹",
+    "desc": "霰弹枪使用的弹药",
+    "type": "ammo",
+    "max_stack": 30,
+    "weight": 0.05,
+    "color": [0.8, 0.6, 0.4],
+    "ammo_type": "shell",
+    "damage": 15,
+    "pellets": 8,
+    "spread": 0.3,
+    "icon": "res://assets/icons/items/shell.png"
+  },
+  "grenade": {
+    "name": "手榴弹",
+    "desc": "投掷类爆炸武器",
+    "type": "ammo",
+    "max_stack": 5,
+    "weight": 0.4,
+    "color": [0.4, 0.5, 0.3],
+    "ammo_type": "grenade",
+    "explosion_damage": 50,
+    "explosion_radius": 100,
+    "fuse_time": 3.0,
+    "icon": "res://assets/icons/items/grenade.png"
+  }
+}

@@ -72,6 +72,7 @@ CrashReporter="*res://scripts/globals/crash_reporter.gd"
 InputManager="*res://scripts/globals/input_manager.gd"
 EventBus="*res://scripts/globals/event_bus.gd"
 ObjectPool="*res://scripts/globals/object_pool.gd"
+DataLoader="*res://scripts/globals/data_loader.gd"
 
 [display]
 

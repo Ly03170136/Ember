@@ -1,0 +1,96 @@
+{
+  "_comment": "世界配置文件 - 地图生成、季节天气、病毒传播等全局参数在此定义",
+  "_version": "1.0.0",
+
+  "map": {
+    "width": 400,
+    "height": 300,
+    "tile_size": 64,
+    "chunk_size": 1024,
+    "chunk_activation_range": 2,
+    "use_fixed_map": false,
+    "fixed_map_path": "res://scenes/world/fixed_map.tscn"
+  },
+
+  "time": {
+    "day_length": 900,
+    "days_per_month": 4,
+    "months_per_season": 3,
+    "seasons_per_year": 4,
+    "day_start": 0.2,
+    "night_start": 0.8
+  },
+
+  "weather": {
+    "types": ["clear", "cloudy", "rain", "storm", "snow", "fog"],
+    "change_interval": [60, 180],
+    "season_weights": {
+      "spring": {"clear": 0.3, "cloudy": 0.3, "rain": 0.3, "storm": 0.05, "snow": 0.0, "fog": 0.05},
+      "summer": {"clear": 0.5, "cloudy": 0.2, "rain": 0.2, "storm": 0.08, "snow": 0.0, "fog": 0.02},
+      "autumn": {"clear": 0.3, "cloudy": 0.35, "rain": 0.25, "storm": 0.03, "snow": 0.02, "fog": 0.05},
+      "winter": {"clear": 0.2, "cloudy": 0.3, "rain": 0.1, "storm": 0.02, "snow": 0.3, "fog": 0.08}
+    }
+  },
+
+  "season_effects": {
+    "spring": {
+      "hunger_mod": 1.0,
+      "thirst_mod": 1.0,
+      "stamina_regen": 1.0,
+      "zombie_speed": 1.0,
+      "temperature_range": [5, 20]
+    },
+    "summer": {
+      "hunger_mod": 0.9,
+      "thirst_mod": 1.5,
+      "stamina_regen": 0.8,
+      "zombie_speed": 1.1,
+      "temperature_range": [20, 35]
+    },
+    "autumn": {
+      "hunger_mod": 1.0,
+      "thirst_mod": 0.9,
+      "stamina_regen": 1.0,
+      "zombie_speed": 1.0,
+      "temperature_range": [0, 15]
+    },
+    "winter": {
+      "hunger_mod": 1.2,
+      "thirst_mod": 1.1,
+      "stamina_regen": 0.7,
+      "zombie_speed": 0.6,
+      "temperature_range": [-25, 5]
+    }
+  },
+
+  "virus": {
+    "spread_speed": 0.5,
+    "infection_range": 200,
+    "incubation_time": [43200, 86400],
+    "lab_spawn_interval": 30,
+    "lab_spawn_count": 3,
+    "horde_trigger_day": 7,
+    "horde_size": [50, 200]
+  },
+
+  "resources": {
+    "tree_count": 230,
+    "rock_count": 115,
+    "berry_count": 70,
+    "vehicle_count": 15,
+    "npc_count": 500,
+    "police_count": 80
+  },
+
+  "lod": {
+    "near_distance": 800,
+    "mid_distance": 1600,
+    "update_interval": 0.3
+  },
+
+  "performance": {
+    "max_fps": 60,
+    "vsync": true,
+    "chunk_update_interval": 0.5
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "_comment": "建筑配置文件 - 所有建筑属性在此定义，修改后热重载生效",
+  "_version": "1.0.0",
+
+  "campfire": {
+    "name": "篝火",
+    "desc": "提供照明、简单烹饪和取暖",
+    "category": "basic",
+    "size": [1, 1],
+    "max_health": 50,
+    "build_time": 1,
+    "build_materials": [
+      {"id": "wood", "count": 2},
+      {"id": "stone", "count": 3}
+    ],
+    "required_profession": null,
+    "required_tech": null,
+    "unlocked_by_default": true,
+    "upgrade_levels": 3,
+    "upgrade_materials": [
+      [{"id": "wood", "count": 10}, {"id": "stone", "count": 5}],
+      [{"id": "metal", "count": 5}, {"id": "stone", "count": 10}],
+      [{"id": "metal", "count": 10}, {"id": "scrap", "count": 5}]
+    ],
+    "upgrade_effects": [
+      {"light_range": 100, "cooking_speed": 1.0},
+      {"light_range": 150, "cooking_speed": 1.5},
+      {"light_range": 200, "cooking_speed": 2.0}
+    ],
+    "functions": ["cooking", "lighting", "heating"],
+    "scene": "res://scenes/buildings/campfire.tscn",
+    "icon": "res://assets/icons/buildings/campfire.png"
+  },
+  "wooden_wall": {
+    "name": "木墙",
+    "desc": "基础防御建筑，阻挡丧尸",
+    "category": "defense",
+    "size": [1, 1],
+    "max_health": 100,
+    "build_time": 1,
+    "build_materials": [
+      {"id": "wood", "count": 10}
+    ],
+    "required_profession": null,
+    "required_tech": null,
+    "unlocked_by_default": true,
+    "upgrade_levels": 3,
+    "upgrade_materials": [
+      [{"id": "wood", "count": 15}, {"id": "stone", "count": 5}],
+      [{"id": "stone", "count": 20}, {"id": "metal", "count": 5}],
+      [{"id": "metal", "count": 15}, {"id": "scrap", "count": 10}]
+    ],
+    "upgrade_effects": [
+      {"max_health": 100, "material": "wood"},
+      {"max_health": 200, "material": "stone"},
+      {"max_health": 400, "material": "metal"}
+    ],
+    "functions": ["defense"],
+    "scene": "res://scenes/buildings/wooden_wall.tscn",
+    "icon": "res://assets/icons/buildings/wooden_wall.png"
+  },
+  "workbench": {
+    "name": "工作台",
+    "desc": "制作工具和武器的必备建筑",
+    "category": "production",
+    "size": [2, 1],
+    "max_health": 80,
+    "build_time": 1,
+    "build_materials": [
+      {"id": "wood", "count": 15},
+      {"id": "stone", "count": 5}
+    ],
+    "required_profession": null,
+    "required_tech": null,
+    "unlocked_by_default": true,
+    "upgrade_levels": 2,
+    "upgrade_materials": [
+      [{"id": "metal", "count": 10}, {"id": "wood", "count": 10}],
+      [{"id": "metal", "count": 20}, {"id": "electronic", "count": 5}]
+    ],
+    "upgrade_effects": [
+      {"craft_speed": 1.0, "recipes": "basic"},
+      {"craft_speed": 1.5, "recipes": "advanced"},
+      {"craft_speed": 2.0, "recipes": "all"}
+    ],
+    "functions": ["crafting"],
+    "scene": "res://scenes/buildings/workbench.tscn",
+    "icon": "res://assets/icons/buildings/workbench.png"
+  },
+  "storage_box": {
+    "name": "储物箱",
+    "desc": "存储物品的基础建筑",
+    "category": "storage",
+    "size": [1, 1],
+    "max_health": 60,
+    "build_time": 1,
+    "build_materials": [
+      {"id": "wood", "count": 8}
+    ],
+    "required_profession": null,
+    "required_tech": null,
+    "unlocked_by_default": true,
+    "upgrade_levels": 3,
+    "upgrade_materials": [
+      [{"id": "wood", "count": 10}],
+      [{"id": "metal", "count": 5}, {"id": "wood", "count": 5}],
+      [{"id": "metal", "count": 10}]
+    ],
+    "upgrade_effects": [
+      {"slots": 20},
+      {"slots": 40},
+      {"slots": 80}
+    ],
+    "functions": ["storage"],
+    "scene": "res://scenes/buildings/storage_box.tscn",
+    "icon": "res://assets/icons/buildings/storage_box.png"
+  },
+  "generator": {
+    "name": "发电机",
+    "desc": "消耗燃料为周围设备供电",
+    "category": "power",
+    "size": [2, 2],
+    "max_health": 120,
+    "build_time": 2,
+    "build_materials": [
+      {"id": "metal", "count": 10},
+      {"id": "scrap", "count": 15},
+      {"id": "electronic", "count": 5}
+    ],
+    "required_profession": "engineer",
+    "required_tech": "electrical_system",
+    "unlocked_by_default": false,
+    "upgrade_levels": 2,
+    "upgrade_materials": [
+      [{"id": "metal", "count": 15}, {"id": "electronic", "count": 10}],
+      [{"id": "metal", "count": 25}, {"id": "electronic", "count": 15}, {"id": "scrap", "count": 20}]
+    ],
+    "upgrade_effects": [
+      {"power_output": 1000, "fuel_consumption": 1.0, "range": 200},
+      {"power_output": 2000, "fuel_consumption": 0.8, "range": 300},
+      {"power_output": 4000, "fuel_consumption": 0.6, "range": 400}
+    ],
+    "functions": ["power_generation"],
+    "fuel_type": "gasoline",
+    "scene": "res://scenes/buildings/generator.tscn",
+    "icon": "res://assets/icons/buildings/generator.png"
+  }
+}

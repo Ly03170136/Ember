@@ -1,0 +1,186 @@
+{
+  "_comment": "科技树配置文件 - 所有科技节点和解锁关系在此定义，修改后热重载生效",
+  "_version": "1.0.0",
+
+  "trees": {
+    "warrior_tech": {
+      "name": "战士科技树",
+      "profession": "warrior",
+      "description": "提升战斗能力和武器改造",
+      "nodes": {
+        "basic_combat": {
+          "name": "基础战斗",
+          "desc": "提升近战伤害10%",
+          "cost": 1,
+          "requires": [],
+          "effects": {"melee_damage": 0.1},
+          "icon": "res://assets/icons/tech/basic_combat.png"
+        },
+        "weapon_upgrade": {
+          "name": "武器改造",
+          "desc": "解锁武器升级功能",
+          "cost": 2,
+          "requires": ["basic_combat"],
+          "effects": {"unlock_weapon_upgrade": true},
+          "icon": "res://assets/icons/tech/weapon_upgrade.png"
+        },
+        "toughness": {
+          "name": "坚韧",
+          "desc": "提升最大生命值20%",
+          "cost": 2,
+          "requires": ["basic_combat"],
+          "effects": {"max_health": 0.2},
+          "icon": "res://assets/icons/tech/toughness.png"
+        },
+        "iron_weapons": {
+          "name": "铁制武器",
+          "desc": "解锁铁制武器制作",
+          "cost": 3,
+          "requires": ["weapon_upgrade"],
+          "effects": {"unlock_recipes": ["iron_sword", "iron_axe"]},
+          "icon": "res://assets/icons/tech/iron_weapons.png"
+        },
+        "berserker": {
+          "name": "狂战士",
+          "desc": "生命值低于30%时伤害提升50%",
+          "cost": 4,
+          "requires": ["toughness", "iron_weapons"],
+          "effects": {"berserker_mode": true},
+          "icon": "res://assets/icons/tech/berserker.png"
+        }
+      }
+    },
+    "craftsman_tech": {
+      "name": "工匠科技树",
+      "profession": "craftsman",
+      "description": "提升建造效率和解锁高级建筑",
+      "nodes": {
+        "basic_building": {
+          "name": "基础建造",
+          "desc": "建造速度提升20%",
+          "cost": 1,
+          "requires": [],
+          "effects": {"build_speed": 0.2},
+          "icon": "res://assets/icons/tech/basic_building.png"
+        },
+        "advanced_building": {
+          "name": "高级建造",
+          "desc": "解锁高级建筑",
+          "cost": 2,
+          "requires": ["basic_building"],
+          "effects": {"unlock_buildings": ["stone_wall", "warehouse"]},
+          "icon": "res://assets/icons/tech/advanced_building.png"
+        },
+        "repair_mastery": {
+          "name": "修理精通",
+          "desc": "修理效率提升50%",
+          "cost": 2,
+          "requires": ["basic_building"],
+          "effects": {"repair_efficiency": 0.5},
+          "icon": "res://assets/icons/tech/repair_mastery.png"
+        },
+        "metal_construction": {
+          "name": "金属建筑",
+          "desc": "解锁金属建筑",
+          "cost": 3,
+          "requires": ["advanced_building"],
+          "effects": {"unlock_buildings": ["metal_wall", "metal_door"]},
+          "icon": "res://assets/icons/tech/metal_construction.png"
+        }
+      }
+    },
+    "doctor_tech": {
+      "name": "医生科技树",
+      "profession": "doctor",
+      "description": "提升医疗能力和制药技术",
+      "nodes": {
+        "basic_medicine": {
+          "name": "基础医疗",
+          "desc": "治疗效果提升20%",
+          "cost": 1,
+          "requires": [],
+          "effects": {"heal_effectiveness": 0.2},
+          "icon": "res://assets/icons/tech/basic_medicine.png"
+        },
+        "pharmacy": {
+          "name": "制药学",
+          "desc": "解锁药品制作",
+          "cost": 2,
+          "requires": ["basic_medicine"],
+          "effects": {"unlock_recipes": ["basic_kit", "antibiotic"]},
+          "icon": "res://assets/icons/tech/pharmacy.png"
+        },
+        "surgery": {
+          "name": "外科学",
+          "desc": "解锁手术包制作，可复活倒地玩家",
+          "cost": 3,
+          "requires": ["pharmacy"],
+          "effects": {"unlock_recipes": ["surgical_kit"], "can_revive": true},
+          "icon": "res://assets/icons/tech/surgery.png"
+        }
+      }
+    },
+    "engineer_tech": {
+      "name": "工程师科技树",
+      "profession": "engineer",
+      "description": "电力系统和自动化防御",
+      "nodes": {
+        "basic_electrical": {
+          "name": "基础电学",
+          "desc": "解锁基础电力设备",
+          "cost": 1,
+          "requires": [],
+          "effects": {"unlock_buildings": ["generator", "electric_light"]},
+          "icon": "res://assets/icons/tech/basic_electrical.png"
+        },
+        "automated_defense": {
+          "name": "自动化防御",
+          "desc": "解锁自动炮塔",
+          "cost": 2,
+          "requires": ["basic_electrical"],
+          "effects": {"unlock_buildings": ["turret"]},
+          "icon": "res://assets/icons/tech/automated_defense.png"
+        },
+        "power_grid": {
+          "name": "电网优化",
+          "desc": "电力传输范围提升50%",
+          "cost": 2,
+          "requires": ["basic_electrical"],
+          "effects": {"power_range": 0.5},
+          "icon": "res://assets/icons/tech/power_grid.png"
+        }
+      }
+    }
+  },
+
+  "general_tech": {
+    "name": "通用科技",
+    "description": "所有职业都可以学习的通用科技",
+    "nodes": {
+      "survival_basics": {
+        "name": "生存基础",
+        "desc": "饥饿和口渴消耗降低10%",
+        "cost": 1,
+        "requires": [],
+        "effects": {"hunger_mod": -0.1, "thirst_mod": -0.1},
+        "icon": "res://assets/icons/tech/survival_basics.png"
+      },
+      "improved_carry": {
+        "name": "负重提升",
+        "desc": "最大负重提升20%",
+        "cost": 2,
+        "requires": ["survival_basics"],
+        "effects": {"max_weight": 0.2},
+        "icon": "res://assets/icons/tech/improved_carry.png"
+      },
+      "fast_learner": {
+        "name": "快速学习",
+        "desc": "经验获取提升25%",
+        "cost": 2,
+        "requires": ["survival_basics"],
+        "effects": {"exp_boost": 0.25},
+        "icon": "res://assets/icons/tech/fast_learner.png"
+      }
+    }
+  }
+}

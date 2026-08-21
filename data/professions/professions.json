@@ -1,0 +1,189 @@
+{
+  "_comment": "职业配置文件 - 所有职业属性和技能在此定义，修改后热重载生效",
+  "_version": "1.0.0",
+
+  "warrior": {
+    "name": "战士/退伍军人",
+    "desc": "战斗属性高，能把普通武器升级改造为高级武器",
+    "color": [0.8, 0.2, 0.2],
+    "base_stats": {
+      "health": 120,
+      "stamina": 100,
+      "strength": 15,
+      "agility": 10,
+      "stealth": 5
+    },
+    "perks": [
+      "weapon_upgrade",
+      "melee_damage_boost",
+      "toughness"
+    ],
+    "starting_items": [
+      {"id": "iron_sword", "count": 1},
+      {"id": "bandage", "count": 3}
+    ],
+    "skill_tree": "warrior_tech",
+    "icon": "res://assets/icons/professions/warrior.png"
+  },
+  "craftsman": {
+    "name": "工匠/建筑工",
+    "desc": "建造时间减半，能建造高级建筑，其他人不能",
+    "color": [0.6, 0.5, 0.3],
+    "base_stats": {
+      "health": 100,
+      "stamina": 120,
+      "strength": 12,
+      "agility": 8,
+      "stealth": 5
+    },
+    "perks": [
+      "build_speed_boost",
+      "advanced_building",
+      "repair_efficiency"
+    ],
+    "starting_items": [
+      {"id": "stone_hammer", "count": 1},
+      {"id": "wood", "count": 20}
+    ],
+    "skill_tree": "craftsman_tech",
+    "icon": "res://assets/icons/professions/craftsman.png"
+  },
+  "doctor": {
+    "name": "医生",
+    "desc": "能治疗/制药，救人，其他人不能",
+    "color": [0.2, 0.6, 0.8],
+    "base_stats": {
+      "health": 90,
+      "stamina": 90,
+      "strength": 8,
+      "agility": 10,
+      "stealth": 8
+    },
+    "perks": [
+      "medical_treatment",
+      "pharmacy",
+      "revive_player"
+    ],
+    "starting_items": [
+      {"id": "basic_kit", "count": 2},
+      {"id": "bandage", "count": 5}
+    ],
+    "skill_tree": "doctor_tech",
+    "icon": "res://assets/icons/professions/doctor.png"
+  },
+  "farmer": {
+    "name": "农民",
+    "desc": "能种植，其他人不能",
+    "color": [0.4, 0.7, 0.3],
+    "base_stats": {
+      "health": 100,
+      "stamina": 110,
+      "strength": 10,
+      "agility": 9,
+      "stealth": 6
+    },
+    "perks": [
+      "farming",
+      "crop_yield_boost",
+      "animal_handling"
+    ],
+    "starting_items": [
+      {"id": "hoe", "count": 1},
+      {"id": "seed_berry", "count": 5}
+    ],
+    "skill_tree": "farmer_tech",
+    "icon": "res://assets/icons/professions/farmer.png"
+  },
+  "mechanic": {
+    "name": "汽修工",
+    "desc": "能修车/改装载具，其他人不能",
+    "color": [0.5, 0.5, 0.6],
+    "base_stats": {
+      "health": 100,
+      "stamina": 100,
+      "strength": 11,
+      "agility": 9,
+      "stealth": 5
+    },
+    "perks": [
+      "vehicle_repair",
+      "vehicle_modification",
+      "fuel_efficiency"
+    ],
+    "starting_items": [
+      {"id": "wrench", "count": 1},
+      {"id": "scrap", "count": 10}
+    ],
+    "skill_tree": "mechanic_tech",
+    "icon": "res://assets/icons/professions/mechanic.png"
+  },
+  "chef": {
+    "name": "厨师",
+    "desc": "能做高级食物，烹饪效率高，高级食物可以恢复生命值",
+    "color": [0.9, 0.6, 0.2],
+    "base_stats": {
+      "health": 95,
+      "stamina": 100,
+      "strength": 9,
+      "agility": 10,
+      "stealth": 7
+    },
+    "perks": [
+      "advanced_cooking",
+      "cooking_speed_boost",
+      "food_quality_boost"
+    ],
+    "starting_items": [
+      {"id": "cooking_pot", "count": 1},
+      {"id": "cooked_meat", "count": 3}
+    ],
+    "skill_tree": "chef_tech",
+    "icon": "res://assets/icons/professions/chef.png"
+  },
+  "lumberjack": {
+    "name": "伐木工人",
+    "desc": "力量高，获取资源效率高",
+    "color": [0.4, 0.5, 0.3],
+    "base_stats": {
+      "health": 110,
+      "stamina": 130,
+      "strength": 14,
+      "agility": 8,
+      "stealth": 4
+    },
+    "perks": [
+      "logging_efficiency",
+      "mining_efficiency",
+      "carry_weight_boost"
+    ],
+    "starting_items": [
+      {"id": "stone_axe", "count": 1},
+      {"id": "wood", "count": 10}
+    ],
+    "skill_tree": "lumberjack_tech",
+    "icon": "res://assets/icons/professions/lumberjack.png"
+  },
+  "engineer": {
+    "name": "工程师/电工",
+    "desc": "能造电力系统/自动化防御",
+    "color": [0.3, 0.4, 0.7],
+    "base_stats": {
+      "health": 90,
+      "stamina": 95,
+      "strength": 8,
+      "agility": 11,
+      "stealth": 9
+    },
+    "perks": [
+      "electrical_system",
+      "automated_defense",
+      "generator_upgrade"
+    ],
+    "starting_items": [
+      {"id": "screwdriver", "count": 1},
+      {"id": "scrap", "count": 15}
+    ],
+    "skill_tree": "engineer_tech",
+    "icon": "res://assets/icons/professions/engineer.png"
+  }
+}

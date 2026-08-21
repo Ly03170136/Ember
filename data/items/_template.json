@@ -1,0 +1,139 @@
+{
+  "_comment": "物品模板文件 - 复制此模板创建新物品，删除不需要的字段",
+  "_template_version": "1.0.0",
+  "_usage": "复制 example_item 条目，修改字段值，保存到对应类别的JSON文件中",
+
+  "_field_descriptions": {
+    "name": "物品显示名称（字符串，必填）",
+    "desc": "物品描述（字符串，必填）",
+    "type": "物品类型：resource/tool/weapon/food/medicine/ammo/misc（字符串，必填）",
+    "max_stack": "最大堆叠数量（整数，必填，默认99）",
+    "weight": "单个物品重量（浮点数，必填，默认1.0）",
+    "color": "物品颜色 [R, G, B]，用于UI显示（数组，可选）",
+    "icon": "物品图标路径（字符串，可选）",
+    "durability": "耐久度（整数，工具/武器必填）",
+    "tool_type": "工具类型：axe/pickaxe/hammer/wrench/screwdriver/cooking/hoe/fishing（字符串，工具类必填）",
+    "efficiency": "采集效率（浮点数，工具类可选）",
+    "weapon_type": "武器类型：melee/ranged（字符串，武器类必填）",
+    "damage": "基础伤害（浮点数，武器/工具必填）",
+    "attack_range": "攻击范围（浮点数，武器类必填）",
+    "attack_speed": "攻击速度（浮点数，武器类可选，默认1.0）",
+    "knockback": "击退力度（浮点数，武器类可选，默认0）",
+    "ammo_type": "弹药类型：arrow/bullet/shell（字符串，远程武器必填）",
+    "magazine_size": "弹匣容量（整数，枪械类可选）",
+    "reload_time": "装填时间（浮点数，枪械类可选）",
+    "hunger_restore": "饥饿恢复值（浮点数，食物类可选）",
+    "thirst_restore": "口渴恢复值（浮点数，食物/饮品类可选）",
+    "health_restore": "生命恢复值（浮点数，食物/药品类可选）",
+    "stamina_restore": "体力恢复值（浮点数，食物/饮品类可选）",
+    "perishable": "是否易腐烂（布尔值，食物类可选，默认false）",
+    "rot_time": "腐烂时间（秒，整数，易腐烂物品必填）",
+    "stop_bleeding": "是否止血（布尔值，药品类可选）",
+    "cure_infection": "是否治疗感染（布尔值，药品类可选）",
+    "prevent_infection": "是否预防感染（布尔值，药品类可选）",
+    "can_revive": "是否可复活倒地玩家（布尔值，高级药品可选）",
+    "use_time": "使用时间（秒，浮点数，药品/食物类可选）",
+    "required_profession": "所需职业（字符串，可选，如doctor/chef/warrior）",
+    "required_tech": "所需科技（字符串，可选）",
+    "rarity": "稀有度：common/uncommon/rare/epic/legendary（字符串，可选）"
+  },
+
+  "example_resource": {
+    "name": "示例资源",
+    "desc": "这是一个资源类物品的示例",
+    "type": "resource",
+    "max_stack": 99,
+    "weight": 1.0,
+    "color": [0.5, 0.5, 0.5],
+    "icon": "res://assets/icons/items/example_resource.png"
+  },
+
+  "example_tool": {
+    "name": "示例工具",
+    "desc": "这是一个工具类物品的示例",
+    "type": "tool",
+    "max_stack": 1,
+    "weight": 2.0,
+    "color": [0.6, 0.5, 0.4],
+    "durability": 100,
+    "tool_type": "axe",
+    "efficiency": 1.5,
+    "damage": 8,
+    "icon": "res://assets/icons/items/example_tool.png"
+  },
+
+  "example_weapon_melee": {
+    "name": "示例近战武器",
+    "desc": "这是一个近战武器的示例",
+    "type": "weapon",
+    "max_stack": 1,
+    "weight": 2.0,
+    "color": [0.7, 0.7, 0.75],
+    "durability": 100,
+    "weapon_type": "melee",
+    "damage": 15,
+    "attack_range": 50,
+    "attack_speed": 1.2,
+    "knockback": 8.0,
+    "icon": "res://assets/icons/items/example_weapon.png"
+  },
+
+  "example_weapon_ranged": {
+    "name": "示例远程武器",
+    "desc": "这是一个远程武器的示例",
+    "type": "weapon",
+    "max_stack": 1,
+    "weight": 3.0,
+    "color": [0.5, 0.5, 0.55],
+    "durability": 200,
+    "weapon_type": "ranged",
+    "damage": 20,
+    "attack_range": 300,
+    "attack_speed": 1.0,
+    "ammo_type": "arrow",
+    "knockback": 5.0,
+    "icon": "res://assets/icons/items/example_ranged.png"
+  },
+
+  "example_food": {
+    "name": "示例食物",
+    "desc": "这是一个食物类物品的示例",
+    "type": "food",
+    "max_stack": 10,
+    "weight": 0.3,
+    "color": [0.7, 0.5, 0.3],
+    "hunger_restore": 25,
+    "thirst_restore": 5,
+    "health_restore": 5,
+    "perishable": true,
+    "rot_time": 600,
+    "icon": "res://assets/icons/items/example_food.png"
+  },
+
+  "example_medicine": {
+    "name": "示例药品",
+    "desc": "这是一个药品类物品的示例",
+    "type": "medicine",
+    "max_stack": 5,
+    "weight": 0.5,
+    "color": [0.9, 0.8, 0.8],
+    "health_restore": 30,
+    "stop_bleeding": true,
+    "cure_infection": false,
+    "use_time": 3.0,
+    "required_profession": "doctor",
+    "icon": "res://assets/icons/items/example_medicine.png"
+  },
+
+  "example_ammo": {
+    "name": "示例弹药",
+    "desc": "这是一个弹药类物品的示例",
+    "type": "ammo",
+    "max_stack": 50,
+    "weight": 0.05,
+    "color": [0.7, 0.7, 0.6],
+    "ammo_type": "bullet",
+    "damage": 8,
+    "icon": "res://assets/icons/items/example_ammo.png"
+  }
+}
