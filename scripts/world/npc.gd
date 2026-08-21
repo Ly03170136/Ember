@@ -216,13 +216,21 @@ static func mark_criminal(player: Node2D, duration: float = 120.0) -> void:
 
 
 func take_damage(amount: float, attacker: Node2D = null) -> void:
-	## NPC受伤
+	## NPC受伤（只有真正造成伤害时才会触发警察）
 	if is_dead:
 		return
+	# 确保伤害值大于0
+	if amount <= 0:
+		return
 	health -= amount
-	print("[NPC] %s 受到%.0f伤害，剩余%.0f生命" % [_type_config.name, amount, health])
-	# 如果是平民被玩家攻击，标记玩家为罪犯
+	print("[NPC] %s 受到%.0f伤害，剩余%.0f生命，攻击者: %s" % [
+		_type_config.name, amount, health,
+		attacker.name if attacker else "Unknown"
+	])
+	# 只有平民被玩家攻击时，才标记玩家为罪犯并通知警察
+	# 警察被攻击不会触发（警察内部矛盾不触发犯罪系统）
 	if attacker and attacker.is_in_group("player") and not _type_config.is_police:
+		print("[Police] 平民被玩家攻击，标记玩家为罪犯并通知附近警察")
 		mark_criminal(attacker, 120.0)
 		_notify_police(attacker)
 	if health <= 0:
