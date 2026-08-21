@@ -261,6 +261,9 @@ func _generate_map_texture() -> void:
 					if px >= 0 and px < img_w and py >= 0 and py < img_h:
 						img.set_pixel(px, py, color)
 	
+	# 绘制地图边界（菱形边框）
+	_draw_map_border(img, map_w, map_h, scale_x, scale_y, min_screen_x, min_screen_y, img_w, img_h)
+	
 	_map_texture = ImageTexture.create_from_image(img)
 	map_image.texture = _map_texture
 	map_image.custom_minimum_size = Vector2(img_w, img_h)
@@ -348,3 +351,128 @@ func _update_player_marker() -> void:
 	# 玩家方向箭头
 	player_arrow.visible = true
 	player_arrow.position = Vector2(marker_x - 2, marker_y - 14)
+
+
+# ==================== 地图边界绘制 ====================
+
+func _draw_map_border(img: Image, map_w: int, map_h: int, scale_x: float, scale_y: float, min_screen_x: float, min_screen_y: float, img_w: int, img_h: int) -> void:
+	# 计算等距地图四个顶点的屏幕坐标
+	# 顶部顶点：(0, 0)
+	var top_x: float = (0 - 0) * scale_x - min_screen_x + 10
+	var top_y: float = (0 + 0) * scale_y - min_screen_y + 10
+	# 右侧顶点：(map_w-1, 0)
+	var right_x: float = (map_w - 1 - 0) * scale_x - min_screen_x + 10
+	var right_y: float = (map_w - 1 + 0) * scale_y - min_screen_y + 10
+	# 底部顶点：(map_w-1, map_h-1)
+	var bottom_x: float = (map_w - 1 - (map_h - 1)) * scale_x - min_screen_x + 10
+	var bottom_y: float = (map_w - 1 + (map_h - 1)) * scale_y - min_screen_y + 10
+	# 左侧顶点：(0, map_h-1)
+	var left_x: float = (0 - (map_h - 1)) * scale_x - min_screen_x + 10
+	var left_y: float = (0 + (map_h - 1)) * scale_y - min_screen_y + 10
+	
+	# 绘制边界外的阴影（边界外区域变暗）
+	_draw_border_shadow(img, top_x, top_y, right_x, right_y, bottom_x, bottom_y, left_x, left_y, img_w, img_h)
+	
+	# 绘制外层边框（金色，较粗）
+	var border_color_outer: Color = Color(1.0, 0.85, 0.3, 0.9)
+	_draw_line(img, top_x, top_y, right_x, right_y, border_color_outer, 3)
+	_draw_line(img, right_x, right_y, bottom_x, bottom_y, border_color_outer, 3)
+	_draw_line(img, bottom_x, bottom_y, left_x, left_y, border_color_outer, 3)
+	_draw_line(img, left_x, left_y, top_x, top_y, border_color_outer, 3)
+	
+	# 绘制内层边框（白色，较细）
+	var border_color_inner: Color = Color(0.95, 0.95, 0.9, 0.8)
+	_draw_line(img, top_x, top_y, right_x, right_y, border_color_inner, 1)
+	_draw_line(img, right_x, right_y, bottom_x, bottom_y, border_color_inner, 1)
+	_draw_line(img, bottom_x, bottom_y, left_x, left_y, border_color_inner, 1)
+	_draw_line(img, left_x, left_y, top_x, top_y, border_color_inner, 1)
+	
+	# 在四个顶点绘制标记点
+	var corner_color: Color = Color(1.0, 0.9, 0.4, 1.0)
+	_draw_corner_marker(img, top_x, top_y, corner_color)
+	_draw_corner_marker(img, right_x, right_y, corner_color)
+	_draw_corner_marker(img, bottom_x, bottom_y, corner_color)
+	_draw_corner_marker(img, left_x, left_y, corner_color)
+	
+	print("[MapUI] 地图边界绘制完成")
+
+
+func _draw_border_shadow(img: Image, top_x: float, top_y: float, right_x: float, right_y: float, bottom_x: float, bottom_y: float, left_x: float, left_y: float, img_w: int, img_h: int) -> void:
+	# 绘制边界外的阴影效果（边界外区域变暗）
+	# 使用简单的扫描线算法，判断每个像素是否在菱形内
+	var shadow_color: Color = Color(0, 0, 0, 0.4)
+	
+	# 为了性能，只处理边界附近的区域
+	var min_x: int = max(0, int(min(top_x, left_x) - 10))
+	var max_x: int = min(img_w, int(max(right_x, bottom_x) + 10))
+	var min_y: int = max(0, int(top_y - 10))
+	var max_y: int = min(img_h, int(bottom_y + 10))
+	
+	for px in range(min_x, max_x):
+		for py in range(min_y, max_y):
+			# 判断点是否在菱形内（使用叉积法）
+			if not _point_in_diamond(px, py, top_x, top_y, right_x, right_y, bottom_x, bottom_y, left_x, left_y):
+				var original: Color = img.get_pixel(px, py)
+				img.set_pixel(px, py, original.lerp(shadow_color, shadow_color.a))
+
+
+func _point_in_diamond(px: float, py: float, top_x: float, top_y: float, right_x: float, right_y: float, bottom_x: float, bottom_y: float, left_x: float, left_y: float) -> bool:
+	# 判断点是否在菱形内（使用叉积法，凸多边形）
+	# 检查点是否在所有边的同一侧
+	var d1: float = _cross_product(px, py, top_x, top_y, right_x, right_y)
+	var d2: float = _cross_product(px, py, right_x, right_y, bottom_x, bottom_y)
+	var d3: float = _cross_product(px, py, bottom_x, bottom_y, left_x, left_y)
+	var d4: float = _cross_product(px, py, left_x, left_y, top_x, top_y)
+	
+	var has_neg: bool = (d1 < 0) or (d2 < 0) or (d3 < 0) or (d4 < 0)
+	var has_pos: bool = (d1 > 0) or (d2 > 0) or (d3 > 0) or (d4 > 0)
+	
+	return not (has_neg and has_pos)
+
+
+func _cross_product(px: float, py: float, x1: float, y1: float, x2: float, y2: float) -> float:
+	# 计算叉积 (x2-x1)*(py-y1) - (y2-y1)*(px-x1)
+	return (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1)
+
+
+func _draw_line(img: Image, x1: float, y1: float, x2: float, y2: float, color: Color, thickness: int) -> void:
+	# 绘制直线（Bresenham算法）
+	var dx: float = abs(x2 - x1)
+	var dy: float = abs(y2 - y1)
+	var sx: float = 1.0 if x1 < x2 else -1.0
+	var sy: float = 1.0 if y1 < y2 else -1.0
+	var err: float = dx - dy
+	
+	var px: float = x1
+	var py: float = y1
+	
+	while true:
+		# 绘制厚度
+		for t_x in range(-thickness, thickness + 1):
+			for t_y in range(-thickness, thickness + 1):
+				var draw_x: int = int(px) + t_x
+				var draw_y: int = int(py) + t_y
+				if draw_x >= 0 and draw_x < img.get_width() and draw_y >= 0 and draw_y < img.get_height():
+					img.set_pixel(draw_x, draw_y, color)
+		
+		if abs(px - x2) < 0.5 and abs(py - y2) < 0.5:
+			break
+		
+		var e2: float = 2.0 * err
+		if e2 > -dy:
+			err -= dy
+			px += sx
+		if e2 < dx:
+			err += dx
+			py += sy
+
+
+func _draw_corner_marker(img: Image, x: float, y: float, color: Color) -> void:
+	# 在顶点绘制一个小方块标记
+	var size: int = 4
+	for dx in range(-size, size + 1):
+		for dy in range(-size, size + 1):
+			var px: int = int(x) + dx
+			var py: int = int(y) + dy
+			if px >= 0 and px < img.get_width() and py >= 0 and py < img.get_height():
+				img.set_pixel(px, py, color)
