@@ -23,6 +23,11 @@ var game_world: Node2D = null
 var chat_history: Array = []
 var player_name: String = "幸存者"  # 玩家名称
 
+# 断线重连系统
+var disconnected_players: Dictionary = {}  # player_name -> {peer_id, position, health, hunger, thirst, stamina, level, experience, class, color, disconnect_time}
+var reconnect_timeout: float = -1.0  # 重连超时时间（秒），-1表示永不超时，玩家可随时离开随时加入
+var _reconnect_timer: float = 0.0  # 清理超时断线玩家的计时器
+
 # 游戏状态
 var infection_complete: bool = false  # 病毒是否已扩散全图
 var game_completed: bool = false  # 游戏是否通关（实验室被摧毁）
@@ -40,6 +45,17 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+
+
+func _process(delta: float) -> void:
+	# 定期清理超时的断线玩家（每10秒检查一次，reconnect_timeout为-1时跳过）
+	if reconnect_timeout < 0:
+		return
+	_reconnect_timer += delta
+	if _reconnect_timer >= 10.0:
+		_reconnect_timer = 0.0
+		if is_server and not disconnected_players.is_empty():
+			_cleanup_timeout_disconnected_players()
 
 
 # ==================== 主机/客户端 ====================
@@ -169,6 +185,120 @@ func _despawn_player(peer_id: int) -> void:
 		print("[Despawn] Player %d removed" % peer_id)
 
 
+# ==================== 断线重连系统 ====================
+
+func _save_disconnected_player(peer_id: int) -> void:
+	# 保存断线玩家的数据，用于重连
+	if not players.has(peer_id):
+		return
+	var player = players[peer_id]
+	if not is_instance_valid(player):
+		return
+	# 保存物品栏数据
+	var inventory_data = []
+	var selected_slot = 0
+	if player.has_node("Inventory"):
+		var inv = player.get_node("Inventory")
+		if inv and inv.has_method("get_inventory_data"):
+			inventory_data = inv.get_inventory_data()
+		if inv and "selected_slot" in inv:
+			selected_slot = inv.selected_slot
+	var player_data = {
+		"peer_id": peer_id,
+		"name": player_names.get(peer_id, "Player"),
+		"class": player_classes.get(peer_id, "warrior"),
+		"color": player.player_color,
+		"position": player.position,
+		"health": player.health,
+		"max_health": player.max_health,
+		"hunger": player.hunger,
+		"thirst": player.thirst,
+		"stamina": player.stamina,
+		"level": player.level,
+		"experience": player.experience,
+		"attribute_points": player.attribute_points,
+		"tech_points": player.tech_points,
+		"strength": player.strength,
+		"agility": player.agility,
+		"vitality": player.vitality,
+		"stealth": player.stealth,
+		"sanity": player.sanity,
+		"is_sick": player.is_sick,
+		"sickness_type": player.sickness_type,
+		"inventory_slots": inventory_data,
+		"selected_slot": selected_slot,
+		"disconnect_time": Time.get_ticks_msec() / 1000.0
+	}
+	var name = player_names.get(peer_id, "Player")
+	disconnected_players[name] = player_data
+	print("[Reconnect] Saved disconnected player '%s' (peer_id=%d) with %d inventory items for reconnection" % [name, peer_id, inventory_data.size()])
+
+
+func _restore_disconnected_player(peer_id: int, player_data: Dictionary) -> void:
+	# 恢复断线玩家的数据
+	if not players.has(peer_id):
+		return
+	var player = players[peer_id]
+	if not is_instance_valid(player):
+		return
+	player.position = player_data.get("position", Vector2.ZERO)
+	player.health = player_data.get("health", 100.0)
+	player.max_health = player_data.get("max_health", 100.0)
+	player.hunger = player_data.get("hunger", 100.0)
+	player.thirst = player_data.get("thirst", 100.0)
+	player.stamina = player_data.get("stamina", 100.0)
+	player.level = player_data.get("level", 1)
+	player.experience = player_data.get("experience", 0.0)
+	player.attribute_points = player_data.get("attribute_points", 0)
+	player.tech_points = player_data.get("tech_points", 0)
+	player.strength = player_data.get("strength", 5)
+	player.agility = player_data.get("agility", 5)
+	player.vitality = player_data.get("vitality", 5)
+	player.stealth = player_data.get("stealth", 5)
+	player.sanity = player_data.get("sanity", 100.0)
+	player.is_sick = player_data.get("is_sick", false)
+	player.sickness_type = player_data.get("sickness_type", "")
+	# 恢复物品栏数据
+	if player.has_node("Inventory"):
+		var inv = player.get_node("Inventory")
+		var inventory_data = player_data.get("inventory_slots", [])
+		var selected_slot = player_data.get("selected_slot", 0)
+		if inv and inv.has_method("load_inventory_data"):
+			inv.load_inventory_data(inventory_data)
+		if inv and "selected_slot" in inv:
+			inv.selected_slot = selected_slot
+		print("[Reconnect] Restored %d inventory items for player '%s'" % [inventory_data.size(), player_names.get(peer_id, "Player")])
+	print("[Reconnect] Restored player '%s' data (peer_id=%d)" % [player_names.get(peer_id, "Player"), peer_id])
+
+
+func _cleanup_timeout_disconnected_players() -> void:
+	# 清理超时的断线玩家数据（reconnect_timeout为-1时永不清理）
+	if reconnect_timeout < 0:
+		return
+	var current_time = Time.get_ticks_msec() / 1000.0
+	var to_remove = []
+	for name in disconnected_players.keys():
+		var data = disconnected_players[name]
+		var disconnect_time = data.get("disconnect_time", 0.0)
+		if current_time - disconnect_time > reconnect_timeout:
+			to_remove.append(name)
+	for name in to_remove:
+		disconnected_players.erase(name)
+		print("[Reconnect] Removed timeout disconnected player '%s'" % name)
+
+
+func is_player_disconnected(player_name: String) -> bool:
+	# 检查玩家是否在断线列表中
+	return disconnected_players.has(player_name)
+
+
+func get_disconnected_player_data(player_name: String) -> Dictionary:
+	# 获取断线玩家的数据
+	if disconnected_players.has(player_name):
+		return disconnected_players[player_name]
+	return {}
+
+
 # ==================== 网络回调 ====================
 
 func _on_peer_connected(peer_id: int) -> void:
@@ -188,6 +318,9 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	GameLogger.info("玩家离开，peer_id: %d" % peer_id, "Network")
 	player_left.emit(peer_id)
 	if is_server:
+		# 保存断线玩家数据用于重连
+		_save_disconnected_player(peer_id)
+		# 移除玩家角色
 		_despawn_player(peer_id)
 		player_names.erase(peer_id)
 		player_classes.erase(peer_id)
@@ -230,10 +363,36 @@ func _register_name(name: String) -> void:
 	var pid := multiplayer.get_remote_sender_id()
 	if pid == 0:
 		pid = local_peer_id
+	# 检查是否是断线重连
+	if is_server and disconnected_players.has(name):
+		var old_data = disconnected_players[name]
+		var old_peer_id = old_data.get("peer_id", 0)
+		print("[Reconnect] Player '%s' is reconnecting! Old peer_id=%d, New peer_id=%d" % [name, old_peer_id, pid])
+		GameLogger.info("玩家重连: %s, 旧peer_id=%d, 新peer_id=%d" % [name, old_peer_id, pid], "Network")
+		# 从断线列表中移除
+		disconnected_players.erase(name)
+		# 恢复玩家职业
+		player_classes[pid] = old_data.get("class", "warrior")
+		# 延迟恢复玩家数据（等待玩家角色生成完成）
+		_restore_player_data_delayed.rpc_id(pid, old_data)
 	player_names[pid] = name
 	print("[Name] Player %d registered as '%s'" % [pid, name])
 	if is_server:
 		_sync_player_names.rpc()
+		_sync_player_classes.rpc()
+
+
+@rpc("any_peer")
+func _restore_player_data_delayed(player_data: Dictionary) -> void:
+	# 延迟恢复玩家数据（等待角色生成完成）
+	var pid = multiplayer.get_remote_sender_id()
+	if pid == 0:
+		pid = local_peer_id
+	# 等待一帧让玩家角色生成完成
+	await get_tree().process_frame
+	if players.has(pid):
+		_restore_disconnected_player(pid, player_data)
+		print("[Reconnect] Player data restored for peer_id=%d" % pid)
 
 
 @rpc("any_peer")
