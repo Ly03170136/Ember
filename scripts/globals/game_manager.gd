@@ -46,6 +46,8 @@ func _ready() -> void:
 
 func host_game(player_name: String = "Player", player_class: String = "warrior") -> void:
 	local_player_class = player_class
+	# 先重置网络状态，避免重复创建导致失败
+	reset_network_state()
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_server(PORT, MAX_PLAYERS)
 	if err != OK:
@@ -90,6 +92,20 @@ func disconnect_game() -> void:
 	players.clear()
 	player_names.clear()
 	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+
+
+func reset_network_state() -> void:
+	## 重置网络状态（返回主菜单时调用，不切换场景）
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer.close()
+	multiplayer.multiplayer_peer = null
+	is_connected = false
+	is_server = false
+	players.clear()
+	player_names.clear()
+	player_classes.clear()
+	game_world = null
+	print("[GameManager] 网络状态已重置")
 
 
 # ==================== 游戏世界 ====================

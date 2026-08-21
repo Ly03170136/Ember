@@ -693,7 +693,19 @@ func _on_controls() -> void:
 	shortcuts_panel.visible = true
 
 func _on_quit() -> void:
+	# 完全重置游戏状态
 	get_tree().paused = false
+	is_open = false
+	visible = false
+	settings_panel.visible = false
+	shortcuts_panel.visible = false
+	# 重置GameManager网络状态
+	if GameManager and GameManager.has_method("reset_network_state"):
+		GameManager.reset_network_state()
+	# 重置LoadManager状态（如果存在）
+	if LoadManager and LoadManager.has_method("reset"):
+		LoadManager.reset()
+	# 切换到主菜单
 	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 
 func _on_close_shortcuts() -> void:

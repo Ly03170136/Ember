@@ -42,6 +42,8 @@ const CLASS_DESC := {
 
 
 func _ready() -> void:
+	# 确保游戏未暂停（从游戏返回主菜单时可能处于暂停状态）
+	get_tree().paused = false
 	# 一级菜单按钮
 	host_button.pressed.connect(_on_host_pressed)
 	join_button.pressed.connect(_on_join_pressed)

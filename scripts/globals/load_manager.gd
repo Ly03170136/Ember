@@ -73,6 +73,20 @@ func _ready() -> void:
 
 # ==================== 公共API（统一入口） ====================
 
+func reset() -> void:
+	## 重置加载管理器状态（返回主菜单时调用）
+	current_state = LoadState.IDLE
+	current_progress = 0.0
+	current_message = ""
+	current_scene_path = ""
+	current_load_data = {}
+	auto_switch_scene = true
+	_load_start_time = 0.0
+	_load_callback = Callable()
+	_load_complete = false
+	print("[LoadingManager] 状态已重置")
+
+
 func load_scene(scene_path: String, data: Dictionary = {}, auto_switch: bool = true) -> void:
 	## 统一场景加载入口
 	## scene_path: 目标场景路径
