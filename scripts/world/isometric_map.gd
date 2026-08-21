@@ -12,10 +12,11 @@ const MAP_HEIGHT := 200
 var _world_ready: bool = false
 var _terrain_textures: Dictionary = {}  # 地形类型 -> Texture2D
 var _tile_data: Array = []  # 存储每个瓦片的地形类型
+var _full_map_mode: bool = false  # 是否使用完整大图模式
+var _full_map_size: Vector2 = Vector2.ZERO  # 大图尺寸
 
 
 func _ready() -> void:
-	print("[IsoMap] ===== 开始生成等距地图: %dx%d瓦片 =====" % [MAP_WIDTH, MAP_HEIGHT])
 	# 安全获取map_container
 	if map_container == null:
 		map_container = get_node_or_null("MapContainer") as Node2D
@@ -23,6 +24,15 @@ func _ready() -> void:
 		map_container = Node2D.new()
 		map_container.name = "MapContainer"
 		add_child(map_container)
+	
+	# 优先使用完整大图模式
+	var bg_path := "res://assets/terrain/map_background.png"
+	if ResourceLoader.exists(bg_path):
+		_load_full_map_image(bg_path)
+		return
+	
+	# 回退：程序生成等距瓦片
+	print("[IsoMap] ===== 开始生成等距地图: %dx%d瓦片 =====" % [MAP_WIDTH, MAP_HEIGHT])
 	_create_terrain_textures()
 	_generate_map()
 	_world_ready = true
@@ -58,15 +68,8 @@ func _create_isometric_tile_texture(terrain_type: String) -> Texture2D:
 	
 	var center := Vector2(TILE_WIDTH / 2.0, TILE_HEIGHT / 2.0)
 	
-	# 基础颜色
-	var base_color: Color = Color.GREEN
-	match terrain_type:
-		"grass": base_color = Color(0.45, 0.65, 0.3)
-		"dirt": base_color = Color(0.55, 0.4, 0.25)
-		"stone": base_color = Color(0.5, 0.5, 0.55)
-		"sand": base_color = Color(0.8, 0.7, 0.45)
-		"water": base_color = Color(0.2, 0.4, 0.7)
-		"concrete": base_color = Color(0.5, 0.5, 0.5)
+	# 基础颜色（统一默认灰色，无地形区分）
+	var base_color: Color = Color(0.5, 0.5, 0.5)
 	
 	# 绘制菱形
 	for y in range(TILE_HEIGHT):
@@ -120,17 +123,8 @@ func _generate_map() -> void:
 			var height: float = noise.get_noise_2d(float(x), float(y))
 			var biome: float = biome_noise.get_noise_2d(float(x), float(y))
 			
-			var terrain_type: String = "grass"
-			if height < -0.3:
-				terrain_type = "water"
-			elif height > 0.4:
-				terrain_type = "stone"
-			elif biome > 0.3 and biome < 0.48:
-				terrain_type = "concrete"
-			elif biome > 0.65:
-				terrain_type = "sand"
-			elif height > 0.25 and height < 0.4:
-				terrain_type = "dirt"
+			# 统一默认地形，无任何地形区分
+			var terrain_type: String = "default"
 			
 			_tile_data[y * MAP_WIDTH + x] = terrain_type
 			
@@ -167,21 +161,74 @@ func _generate_map() -> void:
 	print("[IsoMap] 地图瓦片生成完成，共%d个瓦片，合并为1个Sprite2D" % (MAP_WIDTH * MAP_HEIGHT))
 
 
+func _load_full_map_image(bg_path: String) -> void:
+	## 完整大图模式：加载一张图片作为整个地图底面
+	_full_map_mode = true
+	var tex: Texture2D = load(bg_path) as Texture2D
+	if tex == null:
+		print("[IsoMap] 错误: 大图加载失败，回退到瓦片模式")
+		_full_map_mode = false
+		_create_terrain_textures()
+		_generate_map()
+		_world_ready = true
+		return
+	_full_map_size = Vector2(tex.get_width(), tex.get_height())
+	
+	# 计算等距地图整体边界尺寸
+	var map_total_width: float = (MAP_WIDTH + MAP_HEIGHT) * TILE_WIDTH / 2.0
+	var map_total_height: float = (MAP_WIDTH + MAP_HEIGHT) * TILE_HEIGHT / 2.0
+	# 计算缩放比例，使图片覆盖整个地图区域（保持宽高比）
+	var scale_x: float = map_total_width / tex.get_width()
+	var scale_y: float = map_total_height / tex.get_height()
+	var map_scale: float = max(scale_x, scale_y)
+	
+	# 创建Sprite2D显示大图，中心与原等距地图中心对齐(0, 3200)
+	var map_sprite: Sprite2D = Sprite2D.new()
+	map_sprite.texture = tex
+	map_sprite.position = Vector2(0, (MAP_WIDTH + MAP_HEIGHT) * TILE_HEIGHT / 4.0)
+	map_sprite.centered = true
+	map_sprite.scale = Vector2(map_scale, map_scale)
+	map_container.add_child(map_sprite)
+	print("[IsoMap] 地图缩放比例: %.2f (原图 %dx%d -> 显示 %dx%d)" % [map_scale, tex.get_width(), tex.get_height(), int(tex.get_width() * map_scale), int(tex.get_height() * map_scale)])
+	
+	# 填充_tile_data为全default，保证小地图系统不崩溃
+	_tile_data.resize(MAP_WIDTH * MAP_HEIGHT)
+	for i in range(_tile_data.size()):
+		_tile_data[i] = "default"
+	
+	_world_ready = true
+	print("[IsoMap] ===== 完整大图模式已加载: %dx%d =====" % [tex.get_width(), tex.get_height()])
+
+
 func get_tile_type_at_world_position(world_pos: Vector2) -> String:
-	## 根据世界坐标获取瓦片类型（等距坐标反算）
+	## 根据世界坐标获取瓦片类型
+	if _full_map_mode:
+		return "default"
 	var tile_x: float = (world_pos.x / (TILE_WIDTH / 2.0) + world_pos.y / (TILE_HEIGHT / 2.0)) / 2.0
 	var tile_y: float = (world_pos.y / (TILE_HEIGHT / 2.0) - world_pos.x / (TILE_WIDTH / 2.0)) / 2.0
 	var tx: int = int(tile_x)
 	var ty: int = int(tile_y)
 	if tx < 0 or tx >= MAP_WIDTH or ty < 0 or ty >= MAP_HEIGHT:
-		return "grass"
+		return "default"
 	return _tile_data[ty * MAP_WIDTH + tx]
 
 
 func find_safe_spawn_position(center: Vector2, max_attempts: int = 50) -> Vector2:
-	## 寻找一个草地出生点（避免水域）
+	## 寻找一个安全出生点
+	if _full_map_mode:
+		# 大图模式：在中心附近随机，限制在大图范围内
+		var half_w: float = _full_map_size.x / 2.0
+		var half_h: float = _full_map_size.y / 2.0
+		for i in range(max_attempts):
+			var offset: Vector2 = Vector2(randf_range(-half_w * 0.3, half_w * 0.3), randf_range(-half_h * 0.3, half_h * 0.3))
+			var pos: Vector2 = center + offset
+			# 检查是否在大图范围内
+			var relative: Vector2 = pos - Vector2(0, (MAP_WIDTH + MAP_HEIGHT) * TILE_HEIGHT / 4.0)
+			if abs(relative.x) < half_w * 0.9 and abs(relative.y) < half_h * 0.9:
+				return pos
+		return center
+	# 瓦片模式：在中心附近随机
 	for i in range(max_attempts):
 		var pos: Vector2 = center + Vector2(randf_range(-200, 200), randf_range(-200, 200))
-		if get_tile_type_at_world_position(pos) != "water":
-			return pos
+		return pos
 	return center
