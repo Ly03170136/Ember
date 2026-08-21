@@ -30,6 +30,9 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		# 检查是否有文本输入框获得焦点（聊天输入框等）
+		if _is_text_input_focused():
+			return
 		if event.keycode == KEY_T:
 			# T键打开或关闭科技树
 			toggle()
@@ -38,6 +41,14 @@ func _input(event: InputEvent) -> void:
 			# ESC键只在科技树打开时关闭
 			toggle()
 			get_viewport().set_input_as_handled()
+
+
+func _is_text_input_focused() -> bool:
+	## 检查是否有文本输入控件获得焦点（聊天输入框等）
+	var focused: Node = get_viewport().gui_get_focus_owner()
+	if focused and (focused is LineEdit or focused is TextEdit):
+		return true
+	return false
 
 
 func toggle() -> void:
