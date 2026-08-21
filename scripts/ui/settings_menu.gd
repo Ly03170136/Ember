@@ -91,10 +91,8 @@ func _deferred_load_settings() -> void:
 	if is_inside_tree() and get_tree():
 		await get_tree().process_frame
 	_load_settings()
-	# 再延迟一帧后确保窗口在单个屏幕内（防止跨屏渲染冲突）
-	if is_inside_tree() and get_tree():
-		await get_tree().process_frame
-	_ensure_window_in_single_screen()
+	# 注意：不再自动调整窗口位置，保持用户放置的位置
+	# 只有用户在视频设置中点击"应用"时才会调整窗口位置
 
 
 func _ensure_window_in_single_screen() -> void:
@@ -626,11 +624,21 @@ func _on_apply_video_settings() -> void:
 	# 保存启动屏幕设置
 	settings_data["startup_screen"] = temp_startup_screen
 
+	# 实际应用启动屏幕设置（把窗口移到用户选择的屏幕）
+	var screen_count: int = DisplayServer.get_screen_count()
+	if temp_startup_screen >= 0 and temp_startup_screen < screen_count:
+		var target_screen_pos: Vector2i = DisplayServer.screen_get_position(temp_startup_screen)
+		var target_screen_size: Vector2i = DisplayServer.screen_get_size(temp_startup_screen)
+		var current_window_size: Vector2i = DisplayServer.window_get_size()
+		# 把窗口移到目标屏幕居中
+		var new_x: int = target_screen_pos.x + (target_screen_size.x - current_window_size.x) / 2
+		var new_y: int = target_screen_pos.y + (target_screen_size.y - current_window_size.y) / 2
+		DisplayServer.window_set_position(Vector2i(new_x, new_y))
+		print("[Settings] 窗口已移到屏幕 ", temp_startup_screen + 1, ": 位置(", new_x, ",", new_y, ")")
+
 	# 保存
 	_save_settings()
 	print("[Settings] 视频设置已保存")
-	# 确保窗口在单个屏幕内（暂时注释掉，先验证分辨率修改是否生效）
-	# _ensure_window_in_single_screen()
 	# 关闭设置面板
 	settings_panel.visible = false
 	print("[Settings] ===== 应用完成 =====")
@@ -714,7 +722,7 @@ func _load_settings() -> void:
 				# 应用全屏设置
 				if settings_data.fullscreen:
 					DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-				# 应用分辨率设置（只设置大小，不改变位置）
+				# 应用分辨率设置（在当前屏幕居中，防止跑到左上角或另一个屏幕）
 				if settings_data.has("screen_width") and settings_data.has("screen_height"):
 					var w: int = int(settings_data.screen_width)
 					var h: int = int(settings_data.screen_height)
@@ -724,7 +732,15 @@ func _load_settings() -> void:
 						# 设置窗口大小
 						DisplayServer.window_set_size(Vector2i(w, h))
 						get_viewport().size = Vector2i(w, h)
-						print("[Settings] 加载保存的分辨率: ", w, "x", h)
+						# 获取当前窗口所在的屏幕（保持在用户放置的屏幕）
+						var current_screen: int = DisplayServer.window_get_current_screen()
+						var screen_pos: Vector2i = DisplayServer.screen_get_position(current_screen)
+						var screen_size: Vector2i = DisplayServer.screen_get_size(current_screen)
+						# 在当前屏幕居中
+						var new_x: int = screen_pos.x + (screen_size.x - w) / 2
+						var new_y: int = screen_pos.y + (screen_size.y - h) / 2
+						DisplayServer.window_set_position(Vector2i(new_x, new_y))
+						print("[Settings] 加载保存的分辨率: ", w, "x", h, "，在屏幕", current_screen + 1, "居中: (", new_x, ",", new_y, ")")
 				# 应用VSync设置
 				if settings_data.has("vsync"):
 					if settings_data.vsync:
