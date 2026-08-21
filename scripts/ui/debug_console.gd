@@ -156,6 +156,12 @@ func _register_commands() -> void:
 	commands["perfreset"] = _cmd_perf_reset
 	commands["perflog"] = _cmd_perf_log
 
+	# 错误捕获与崩溃报告相关
+	commands["errors"] = _cmd_errors
+	commands["crashreports"] = _cmd_crash_reports
+	commands["exportcrash"] = _cmd_export_crash
+	commands["clearerrors"] = _cmd_clear_errors
+
 
 func _input(event: InputEvent) -> void:
 	## 处理输入（控制台打开时的特殊按键）
@@ -376,6 +382,11 @@ func _cmd_help(args: Array) -> void:
 	_print("  perfstats  - 显示详细性能统计")
 	_print("  perfreset  - 重置性能统计数据")
 	_print("  perflog    - 记录当前性能到日志")
+	_print("【错误捕获命令】", Color(0.6, 1.0, 0.6))
+	_print("  errors     - 查看错误统计")
+	_print("  crashreports - 查看崩溃报告列表")
+	_print("  exportcrash - 导出最近一次崩溃报告")
+	_print("  clearerrors - 清除错误统计")
 	_print("====================", Color(0.8, 0.8, 1.0))
 
 
@@ -860,6 +871,65 @@ func _cmd_perf_log(args: Array) -> void:
 		_print("性能数据已记录到日志", Color(0.5, 1.0, 0.5))
 	else:
 		_print("PerformanceMonitor 不可用", Color(1.0, 0.5, 0.5))
+
+
+# ==================== 错误捕获与崩溃报告命令 ====================
+
+func _cmd_errors(args: Array) -> void:
+	## 查看错误统计
+	if CrashReporter and CrashReporter.has_method("get_error_stats"):
+		var stats: Dictionary = CrashReporter.get_error_stats()
+		_print("=== 错误统计 ===", Color(0.8, 0.8, 1.0))
+		_print("总错误数: %d" % stats.total_errors)
+		_print("总警告数: %d" % stats.total_warnings)
+		_print("致命错误数: %d" % stats.fatal_errors)
+		_print("按类型统计:", Color(0.7, 0.7, 0.7))
+		for error_type in stats.by_type.keys():
+			_print("  %s: %d" % [error_type, stats.by_type[error_type]])
+		if not stats.last_error.is_empty():
+			_print("最近错误: %s" % stats.last_error.get("message", ""), Color(1, 0.5, 0.5))
+		_print("================", Color(0.8, 0.8, 1.0))
+	else:
+		_print("CrashReporter 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_crash_reports(args: Array) -> void:
+	## 查看崩溃报告列表
+	if CrashReporter and CrashReporter.has_method("get_crash_reports"):
+		var reports: Array = CrashReporter.get_crash_reports()
+		if reports.is_empty():
+			_print("暂无崩溃报告", Color(0.7, 0.7, 0.7))
+		else:
+			_print("=== 崩溃报告列表 (%d个) ===" % reports.size(), Color(0.8, 0.8, 1.0))
+			for i in range(reports.size()):
+				_print("%d. %s" % [i + 1, reports[i]])
+			_print("============================", Color(0.8, 0.8, 1.0))
+	else:
+		_print("CrashReporter 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_export_crash(args: Array) -> void:
+	## 导出最近一次崩溃报告
+	if CrashReporter and CrashReporter.has_method("export_latest_report"):
+		var report: String = CrashReporter.export_latest_report()
+		_print("=== 最近崩溃报告 ===", Color(0.8, 0.8, 1.0))
+		_print(report)
+		_print("====================", Color(0.8, 0.8, 1.0))
+	else:
+		_print("CrashReporter 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_clear_errors(args: Array) -> void:
+	## 清除错误统计
+	if CrashReporter:
+		CrashReporter.error_count = 0
+		CrashReporter.warning_count = 0
+		CrashReporter.fatal_error_count = 0
+		CrashReporter.error_stats.clear()
+		CrashReporter.last_error = {}
+		_print("错误统计已清除", Color(0.5, 1.0, 0.5))
+	else:
+		_print("CrashReporter 不可用", Color(1.0, 0.5, 0.5))
 
 
 # ==================== 辅助函数 ====================

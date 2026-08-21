@@ -68,6 +68,7 @@ LoadManager="*res://scripts/globals/load_manager.gd"
 LoadingScreen="*res://scenes/ui/loading_screen.tscn"
 GameLogger="*res://scripts/globals/logger.gd"
 PerformanceMonitor="*res://scripts/globals/performance_monitor.gd"
+CrashReporter="*res://scripts/globals/crash_reporter.gd"
 
 [display]
 
