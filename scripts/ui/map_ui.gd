@@ -38,6 +38,11 @@ var _map_min_y: float = 0.0
 var _map_img_w: int = 0
 var _map_img_h: int = 0
 
+# 大图模式参数
+var _full_map_mode: bool = false
+var _full_map_world_size: Vector2 = Vector2.ZERO  # 大图在世界中的显示尺寸
+var _full_map_center: Vector2 = Vector2.ZERO  # 大图中心的世界坐标
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -222,6 +227,31 @@ func _generate_map_texture() -> void:
 	var iso_map = main.get_node("IsometricMap")
 	if not iso_map:
 		return
+	
+	# 大图模式：直接使用主地面大图作为小地图
+	if "_full_map_mode" in iso_map and iso_map._full_map_mode:
+		_full_map_mode = true
+		var bg_path := "res://assets/terrain/map_background.png"
+		if ResourceLoader.exists(bg_path):
+			var tex: Texture2D = load(bg_path) as Texture2D
+			if tex:
+				map_image.texture = tex
+				map_image.custom_minimum_size = Vector2(tex.get_width(), tex.get_height())
+				map_original_size = Vector2(tex.get_width(), tex.get_height())
+				# 计算大图在世界中的显示尺寸和中心（与isometric_map.gd中一致）
+				var map_total_width: float = (iso_map.MAP_WIDTH + iso_map.MAP_HEIGHT) * iso_map.TILE_WIDTH / 2.0
+				var map_total_height: float = (iso_map.MAP_WIDTH + iso_map.MAP_HEIGHT) * iso_map.TILE_HEIGHT / 2.0
+				var scale_x: float = map_total_width / tex.get_width()
+				var scale_y: float = map_total_height / tex.get_height()
+				var map_scale: float = max(scale_x, scale_y)
+				_full_map_world_size = Vector2(tex.get_width() * map_scale, tex.get_height() * map_scale)
+				_full_map_center = Vector2(0, (iso_map.MAP_WIDTH + iso_map.MAP_HEIGHT) * iso_map.TILE_HEIGHT / 4.0)
+				_map_generated = true
+				print("[MapUI] 大图模式小地图已加载: %dx%d" % [tex.get_width(), tex.get_height()])
+				return
+		print("[MapUI] 警告: 大图模式但找不到地图图片，回退到瓦片缩略图")
+		_full_map_mode = false
+	
 	var map_w: int = iso_map.MAP_WIDTH
 	var map_h: int = iso_map.MAP_HEIGHT
 	print("[MapUI] 地图大小: %dx%d" % [map_w, map_h])
@@ -325,6 +355,23 @@ func _update_player_marker() -> void:
 	
 	var tile_w: int = iso_map.TILE_WIDTH
 	var tile_h: int = iso_map.TILE_HEIGHT
+	
+	# 大图模式：基于大图的坐标映射
+	if _full_map_mode:
+		if map_original_size.x <= 0 or map_original_size.y <= 0 or _full_map_world_size.x <= 0:
+			return
+		# 玩家相对于大图中心的偏移
+		var relative: Vector2 = player.position - _full_map_center
+		# 映射到0-1范围，再映射到小图像素
+		var rel_x: float = relative.x / _full_map_world_size.x + 0.5
+		var rel_y: float = relative.y / _full_map_world_size.y + 0.5
+		var marker_x: float = rel_x * map_original_size.x - 6
+		var marker_y: float = rel_y * map_original_size.y - 6
+		player_marker.visible = true
+		player_marker.position = Vector2(marker_x, marker_y)
+		player_arrow.visible = true
+		player_arrow.position = Vector2(marker_x - 2, marker_y - 14)
+		return
 	
 	# 将玩家等距世界坐标反算为瓦片坐标
 	var tile_x: float = (player.position.x / (tile_w / 2.0) + player.position.y / (tile_h / 2.0)) / 2.0
