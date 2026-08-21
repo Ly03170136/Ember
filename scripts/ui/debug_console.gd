@@ -801,7 +801,7 @@ func _cmd_perf(args: Array) -> void:
 	## 切换性能监控显示
 	if PerformanceMonitor and PerformanceMonitor.has_method("toggle"):
 		PerformanceMonitor.toggle()
-		_print("性能监控已%s" % ["隐藏", "显示"][PerformanceMonitor.is_visible], Color(0.5, 1.0, 0.5))
+		_print("性能监控已%s" % ["隐藏", "显示"][int(PerformanceMonitor.is_visible)], Color(0.5, 1.0, 0.5))
 	else:
 		_print("PerformanceMonitor 不可用", Color(1.0, 0.5, 0.5))
 

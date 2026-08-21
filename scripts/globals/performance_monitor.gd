@@ -44,7 +44,8 @@ var total_frames: int = 0
 var warning_count: int = 0
 
 # UI节点
-var _monitor_panel: Panel = null
+var _canvas_layer: CanvasLayer = null
+var _monitor_panel: Control = null
 var _fps_label: Label = null
 var _frame_time_label: Label = null
 var _memory_label: Label = null
@@ -217,7 +218,7 @@ func _update_ui() -> void:
 		return
 
 	_fps_label.text = "FPS: %d" % current_fps
-	_fps_label.add_theme_color_override("font_color", _get_fps_color(current_fps))
+	_fps_label.add_theme_color_override("font_color", Color(1, 1, 1))  # 白色字体
 
 	_frame_time_label.text = "帧时间: %.1fms" % current_frame_time
 	_memory_label.text = "内存: %.1fMB" % (float(current_memory) / 1024.0)
@@ -246,34 +247,24 @@ func _get_fps_color(fps: int) -> Color:
 # ==================== UI创建 ====================
 
 func _create_ui() -> void:
-	## 创建性能监控UI
-	if not get_tree() or not get_tree().current_scene:
-		# 延迟到场景加载后再创建
-		get_tree().scene_changed.connect(_on_scene_changed)
-		return
+	## 创建性能监控UI（直接在PerformanceMonitor节点下创建，不依赖主场景）
+	# 如果已经创建过，先销毁
+	if _canvas_layer and is_instance_valid(_canvas_layer):
+		_canvas_layer.queue_free()
+		_canvas_layer = null
 
-	# 查找HUD的CanvasLayer
-	var canvas_layer: CanvasLayer = null
-	var main_scene: Node = get_tree().current_scene
-	if main_scene and main_scene.has_node("HUD"):
-		var hud: Node = main_scene.get_node("HUD")
-		if hud and hud.has_node("CanvasLayer"):
-			canvas_layer = hud.get_node("CanvasLayer") as CanvasLayer
+	# 创建自己的CanvasLayer（直接作为PerformanceMonitor的子节点）
+	_canvas_layer = CanvasLayer.new()
+	_canvas_layer.layer = 1000  # 确保在最上层
+	add_child(_canvas_layer)
 
-	if canvas_layer == null:
-		# 创建自己的CanvasLayer
-		canvas_layer = CanvasLayer.new()
-		canvas_layer.layer = 100
-		main_scene.add_child(canvas_layer)
-
-	# 创建监控面板
-	_monitor_panel = Panel.new()
-	_monitor_panel.name = "PerformanceMonitor"
+	# 创建监控面板（用Control代替Panel，无默认背景）
+	_monitor_panel = Control.new()
+	_monitor_panel.name = "PerformanceMonitorPanel"
 	_monitor_panel.visible = is_visible
 	_monitor_panel.custom_minimum_size = Vector2(280, 200)
 	_monitor_panel.position = Vector2(10, 10)
-	_monitor_panel.modulate = Color(0.1, 0.1, 0.1, 0.85)
-	canvas_layer.add_child(_monitor_panel)
+	_canvas_layer.add_child(_monitor_panel)
 
 	# 创建布局
 	var vbox: VBoxContainer = VBoxContainer.new()
@@ -282,40 +273,45 @@ func _create_ui() -> void:
 	vbox.custom_minimum_size = Vector2(264, 184)
 	_monitor_panel.add_child(vbox)
 
-	# 标题
+	# 标题（白色）
 	var title_label: Label = Label.new()
 	title_label.text = "=== 性能监控 ==="
-	title_label.add_theme_color_override("font_color", Color(0.8, 0.8, 1))
+	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	title_label.add_theme_font_size_override("font_size", 12)
 	vbox.add_child(title_label)
 
-	# FPS
+	# FPS（白色）
 	_fps_label = Label.new()
 	_fps_label.text = "FPS: 0"
+	_fps_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	_fps_label.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(_fps_label)
 
-	# 帧时间
+	# 帧时间（白色）
 	_frame_time_label = Label.new()
 	_frame_time_label.text = "帧时间: 0.0ms"
+	_frame_time_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	_frame_time_label.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(_frame_time_label)
 
-	# 内存
+	# 内存（白色）
 	_memory_label = Label.new()
 	_memory_label.text = "内存: 0.0MB"
+	_memory_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	_memory_label.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(_memory_label)
 
-	# Draw Calls
+	# Draw Calls（白色）
 	_draw_calls_label = Label.new()
 	_draw_calls_label.text = "Draw Calls: 0"
+	_draw_calls_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	_draw_calls_label.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(_draw_calls_label)
 
-	# 对象数量
+	# 对象数量（白色）
 	_objects_label = Label.new()
 	_objects_label.text = "对象: 0 | 节点: 0"
+	_objects_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	_objects_label.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(_objects_label)
 
@@ -351,15 +347,12 @@ func _create_ui() -> void:
 	_warning_label.add_theme_font_size_override("font_size", 10)
 	vbox.add_child(_warning_label)
 
-	print("[PerformanceMonitor] UI创建完成")
+	print("[PerformanceMonitor] UI创建完成（直接挂载在Autoload节点下，透明背景，白色字体）")
 
 
 func _on_scene_changed() -> void:
-	## 场景变化时重新创建UI
-	if _monitor_panel and is_instance_valid(_monitor_panel):
-		_monitor_panel.queue_free()
-		_monitor_panel = null
-	call_deferred("_create_ui")
+	## 场景变化时不需要重新创建UI（因为UI直接挂载在PerformanceMonitor节点下）
+	pass
 
 
 # ==================== 图表绘制 ====================
@@ -372,8 +365,7 @@ func _draw_fps_chart() -> void:
 	var max_fps_val: float = 120.0
 	var bar_width: float = size.x / float(HISTORY_LENGTH)
 
-	# 背景
-	_fps_chart.draw_rect(Rect2(0, 0, size.x, size.y), Color(0, 0, 0, 0.3))
+	# 无背景（透明）
 
 	# 绘制历史曲线
 	for i in range(fps_history.size()):
@@ -403,8 +395,7 @@ func _draw_frame_time_chart() -> void:
 	var max_frame_time: float = 100.0
 	var bar_width: float = size.x / float(HISTORY_LENGTH)
 
-	# 背景
-	_frame_time_chart.draw_rect(Rect2(0, 0, size.x, size.y), Color(0, 0, 0, 0.3))
+	# 无背景（透明）
 
 	# 绘制历史曲线
 	for i in range(frame_time_history.size()):
@@ -434,8 +425,7 @@ func _draw_memory_chart() -> void:
 	var max_memory: float = 2048.0  # 2GB
 	var bar_width: float = size.x / float(HISTORY_LENGTH)
 
-	# 背景
-	_memory_chart.draw_rect(Rect2(0, 0, size.x, size.y), Color(0, 0, 0, 0.3))
+	# 无背景（透明）
 
 	# 绘制历史曲线
 	for i in range(memory_history.size()):
