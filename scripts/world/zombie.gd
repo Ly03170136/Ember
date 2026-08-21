@@ -29,6 +29,11 @@ var _type_config: Dictionary = {}
 var stun_timer: float = 0.0
 var knockback_velocity: Vector2 = Vector2.ZERO
 
+# LOD系统：AI更新间隔控制
+var ai_update_interval: float = 0.0  # AI更新间隔（0=每帧更新，0.2=每0.2秒更新一次）
+var ai_update_timer: float = 0.0  # AI更新计时器
+var entity_type: String = "zombie"  # 实体类型（用于LOD系统识别）
+
 @onready var sprite: Sprite2D = $Sprite
 @onready var synchronizer: MultiplayerSynchronizer = $MultiplayerSynchronizer
 
@@ -97,8 +102,21 @@ func _physics_process(delta: float) -> void:
 			knockback_velocity = knockback_velocity.lerp(Vector2.ZERO, delta * 8.0)
 		# 僵直时不运行AI
 		return
-	_update_behavior(delta)
+	# LOD系统：AI更新间隔控制
+	if ai_update_interval > 0.0:
+		ai_update_timer += delta
+		if ai_update_timer >= ai_update_interval:
+			ai_update_timer = 0.0
+			_update_behavior(delta)
+	else:
+		_update_behavior(delta)
 	_move(delta)
+
+
+func set_ai_update_interval(interval: float) -> void:
+	## LOD系统：设置AI更新间隔（0=每帧更新，0.2=每0.2秒更新一次）
+	ai_update_interval = interval
+	ai_update_timer = 0.0
 
 
 func _update_behavior(delta: float) -> void:

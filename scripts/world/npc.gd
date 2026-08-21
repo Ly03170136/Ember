@@ -39,6 +39,11 @@ var attack_timer: float = 0.0
 var is_dead: bool = false
 var criminal_target: Node2D = null  # 犯罪目标（攻击过平民的玩家）
 
+# LOD系统：AI更新间隔控制
+var ai_update_interval: float = 0.0  # AI更新间隔（0=每帧更新，0.2=每0.2秒更新一次）
+var ai_update_timer: float = 0.0  # AI更新计时器
+var entity_type: String = "npc"  # 实体类型（用于LOD系统识别）
+
 # 静态犯罪玩家列表（所有警察共享）
 static var criminal_players: Dictionary = {}  # {player_id: expire_time}
 
@@ -68,20 +73,37 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if is_dead:
 		return
-	# 感染处理
+	# 感染处理（每帧执行，因为感染计时需要精确）
 	if is_infected:
 		infection_timer -= delta
 		if infection_timer <= 0:
 			_turn_into_zombie()
 			return
-	# 行为逻辑
-	if _type_config.is_police:
-		_police_behavior(delta)
+	# LOD系统：AI更新间隔控制
+	if ai_update_interval > 0.0:
+		ai_update_timer += delta
+		if ai_update_timer >= ai_update_interval:
+			ai_update_timer = 0.0
+			# 行为逻辑
+			if _type_config.is_police:
+				_police_behavior(delta)
+			else:
+				_civilian_behavior(delta)
 	else:
-		_civilian_behavior(delta)
-	# 移动
+		# 行为逻辑
+		if _type_config.is_police:
+			_police_behavior(delta)
+		else:
+			_civilian_behavior(delta)
+	# 移动（每帧执行，保持平滑）
 	if velocity.length() > 0.1:
 		move_and_slide()
+
+
+func set_ai_update_interval(interval: float) -> void:
+	## LOD系统：设置AI更新间隔（0=每帧更新，0.2=每0.2秒更新一次）
+	ai_update_interval = interval
+	ai_update_timer = 0.0
 
 
 func _civilian_behavior(delta: float) -> void:

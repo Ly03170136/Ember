@@ -127,6 +127,13 @@ var last_player_chunk: Vector2i = Vector2i(-999, -999)  # 上次玩家所在的c
 var total_frozen_entities: int = 0  # 统计冻结的实体数量（调试用）
 var total_active_entities: int = 0  # 统计激活的实体数量（调试用）
 
+# ==================== 视锥剔除/LOD系统 ====================
+const LOD_DISTANCE_NEAR := 800.0  # 近距离阈值（像素），LOD0：完整AI和渲染
+const LOD_DISTANCE_MID := 1600.0  # 中距离阈值（像素），LOD1：降低AI频率，简化渲染
+const LOD_UPDATE_INTERVAL := 0.3  # 每0.3秒更新一次LOD状态
+var lod_update_timer: float = 0.0  # LOD更新计时器
+var lod_stats: Dictionary = {"lod0": 0, "lod1": 0, "lod2": 0, "culled": 0}  # LOD统计
+
 # 季节生存效果
 const SEASON_EFFECTS := {
 	"spring": {"hunger_mod": 1.0, "thirst_mod": 1.0, "stamina_regen": 1.0, "zombie_speed": 1.0},
@@ -407,6 +414,11 @@ func _process(delta: float) -> void:
 	if chunk_update_timer >= CHUNK_UPDATE_INTERVAL:
 		chunk_update_timer = 0.0
 		_update_chunks()
+	# 视锥剔除/LOD系统更新（每隔0.3秒）
+	lod_update_timer += delta
+	if lod_update_timer >= LOD_UPDATE_INTERVAL:
+		lod_update_timer = 0.0
+		_update_lod()
 	if GameManager.is_server:
 		_update_day_night(delta)
 		_update_zombie_spawn(delta)
@@ -866,6 +878,126 @@ func _update_chunks() -> void:
 					entity.process_mode = Node.PROCESS_MODE_DISABLED
 				total_frozen_entities += 1
 	print("[Chunk] 玩家在chunk(%d,%d)，激活%d个实体，冻结%d个实体" % [player_chunk.x, player_chunk.y, total_active_entities, total_frozen_entities])
+
+
+# ==================== 视锥剔除/LOD系统 ====================
+
+func _update_lod() -> void:
+	## 更新所有实体的LOD级别（视锥剔除+距离LOD）
+	var player: Node = GameManager.get_local_player()
+	if not player or not is_instance_valid(player):
+		return
+	var camera: Camera2D = player.get_node_or_null("Camera2D")
+	if not camera:
+		return
+	# 重置统计
+	lod_stats = {"lod0": 0, "lod1": 0, "lod2": 0, "culled": 0}
+	# 获取相机可见范围
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var camera_zoom: Vector2 = camera.zoom
+	var visible_half_width: float = (viewport_size.x / camera_zoom.x) / 2.0 + 100.0  # 加100像素边缘缓冲
+	var visible_half_height: float = (viewport_size.y / camera_zoom.y) / 2.0 + 100.0
+	var camera_pos: Vector2 = camera.global_position
+	# 遍历所有chunk中的实体，更新LOD
+	for chunk_coord in chunk_entities.keys():
+		var entities: Array = chunk_entities[chunk_coord]
+		for entity in entities:
+			if not entity or not is_instance_valid(entity):
+				continue
+			# 只对激活的实体进行LOD处理（冻结的实体已经暂停）
+			if entity.process_mode == Node.PROCESS_MODE_DISABLED:
+				continue
+			# 计算实体到相机的距离
+			var entity_pos: Vector2 = entity.global_position
+			var dx: float = abs(entity_pos.x - camera_pos.x)
+			var dy: float = abs(entity_pos.y - camera_pos.y)
+			var distance: float = sqrt(dx * dx + dy * dy)
+			# 检测实体是否在屏幕可见范围内
+			var on_screen: bool = dx <= visible_half_width and dy <= visible_half_height
+			# 确定LOD级别
+			var lod_level: int = 0
+			if not on_screen:
+				lod_level = 2  # 屏幕外：最高LOD（暂停AI）
+			elif distance > LOD_DISTANCE_MID:
+				lod_level = 2  # 远距离：暂停AI
+			elif distance > LOD_DISTANCE_NEAR:
+				lod_level = 1  # 中距离：降低AI频率
+			else:
+				lod_level = 0  # 近距离：完整AI
+			# 设置实体的LOD级别
+			_set_entity_lod_level(entity, lod_level, on_screen)
+	# 打印LOD统计（可选，调试用）
+	# print("[LOD] LOD0:%d LOD1:%d LOD2:%d 屏幕外:%d" % [lod_stats.lod0, lod_stats.lod1, lod_stats.lod2, lod_stats.culled])
+
+
+func _set_entity_lod_level(entity: Node, lod_level: int, on_screen: bool) -> void:
+	## 设置实体的LOD级别
+	# 根据实体类型应用不同的LOD策略
+	var entity_type: String = entity.get("entity_type") if entity.has_method("get") and entity.has_method("has_method") else ""
+	# 对于丧尸和NPC，根据LOD级别调整AI更新
+	if entity.is_in_group("zombie") or entity.is_in_group("npc"):
+		match lod_level:
+			0:
+				# LOD0：完整AI
+				if entity.has_method("set_ai_update_interval"):
+					entity.set_ai_update_interval(0.0)  # 每帧更新
+				entity.process_mode = Node.PROCESS_MODE_INHERIT
+				lod_stats.lod0 += 1
+			1:
+				# LOD1：降低AI频率（每0.2秒更新一次）
+				if entity.has_method("set_ai_update_interval"):
+					entity.set_ai_update_interval(0.2)
+				entity.process_mode = Node.PROCESS_MODE_INHERIT
+				lod_stats.lod1 += 1
+			2:
+				# LOD2：暂停AI（屏幕外或远距离）
+				if entity.has_method("set_ai_update_interval"):
+					entity.set_ai_update_interval(1.0)  # 每秒更新一次
+				# 对于屏幕外的实体，完全暂停process
+				if not on_screen:
+					entity.process_mode = Node.PROCESS_MODE_DISABLED
+					lod_stats.culled += 1
+				else:
+					entity.process_mode = Node.PROCESS_MODE_INHERIT
+					lod_stats.lod2 += 1
+	# 对于建筑，根据LOD级别简化渲染
+	elif entity.is_in_group("building"):
+		match lod_level:
+			0:
+				# LOD0：完整渲染
+				entity.visible = true
+				if entity.has_method("set_lod_level"):
+					entity.set_lod_level(0)
+				lod_stats.lod0 += 1
+			1:
+				# LOD1：简化渲染（隐藏细节）
+				entity.visible = true
+				if entity.has_method("set_lod_level"):
+					entity.set_lod_level(1)
+				lod_stats.lod1 += 1
+			2:
+				# LOD2：远距离简化（只显示轮廓或隐藏）
+				if not on_screen:
+					entity.visible = false  # 屏幕外完全隐藏
+					lod_stats.culled += 1
+				else:
+					entity.visible = true
+					if entity.has_method("set_lod_level"):
+						entity.set_lod_level(2)
+					lod_stats.lod2 += 1
+	# 其他实体（资源节点、载具等）只做屏幕外隐藏
+	else:
+		if not on_screen and lod_level >= 2:
+			entity.visible = false
+			lod_stats.culled += 1
+		else:
+			entity.visible = true
+			if lod_level == 0:
+				lod_stats.lod0 += 1
+			elif lod_level == 1:
+				lod_stats.lod1 += 1
+			else:
+				lod_stats.lod2 += 1
 
 
 func _update_day_night(delta: float) -> void:
