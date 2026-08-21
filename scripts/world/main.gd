@@ -141,6 +141,10 @@ const FOOD_ROT_INTERVAL := 30.0  # 每30秒检查一次食物腐烂
 
 
 func _ready() -> void:
+	# 设置斜45度视角的Y轴排序（Godot原生支持，稳定可靠）
+	# 所有放在world_layer下的实体会自动按Y坐标排序，Y值大的在前面
+	world_layer.y_sort_enabled = true
+	print("[Main] 斜45度视角Y轴排序已启用（world_layer.y_sort_enabled = true）")
 	# 立即显示加载界面
 	if loading_screen:
 		loading_screen.visible = true
