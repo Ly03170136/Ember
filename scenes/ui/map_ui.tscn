@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://bmapui001"]
+[gd_scene load_steps=2 format=3 uid="uid://bmapui_pubg"]
 
 [ext_resource type="Script" path="res://scripts/ui/map_ui.gd" id="1_map"]
 
@@ -9,6 +9,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("1_map")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -18,57 +19,116 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.7)
+color = Color(0, 0, 0, 0.85)
 
-[node name="Panel" type="Panel" parent="."]
+[node name="MapPanel" type="Panel" parent="."]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -525.0
-offset_top = -525.0
-offset_right = 525.0
-offset_bottom = 525.0
+offset_left = -550.0
+offset_top = -400.0
+offset_right = 550.0
+offset_bottom = 400.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="Panel"]
+[node name="TitleLabel" type="Label" parent="MapPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 40.0
+grow_horizontal = 2
+text = "大地图"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 0.8, 0.4, 1)
+theme_override_font_sizes/font_size = 22
+
+[node name="MapViewport" type="Control" parent="MapPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 12.0
-offset_top = 12.0
-offset_right = -12.0
-offset_bottom = -12.0
+offset_left = 16.0
+offset_top = 50.0
+offset_right = -16.0
+offset_bottom = -60.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 8
+clip_contents = true
+mouse_filter = 0
 
-[node name="TitleLabel" type="Label" parent="Panel/VBox"]
-layout_mode = 2
-text = "大地图"
-horizontal_alignment = 1
-theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
-theme_override_font_sizes/font_size = 20
+[node name="MapContainer" type="Control" parent="MapPanel/MapViewport"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
-[node name="MapImage" type="TextureRect" parent="Panel/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(960, 960)
-size_flags_vertical = 3
+[node name="MapImage" type="TextureRect" parent="MapPanel/MapViewport/MapContainer"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 1
 
-[node name="PlayerMarker" type="ColorRect" parent="Panel/VBox/MapImage"]
+[node name="PlayerMarker" type="ColorRect" parent="MapPanel/MapViewport/MapContainer/MapImage"]
 visible = false
-custom_minimum_size = Vector2(10, 10)
-color = Color(0, 1, 0, 1)
+custom_minimum_size = Vector2(12, 12)
+color = Color(0, 1, 0.3, 1)
 
-[node name="HintLabel" type="Label" parent="Panel/VBox"]
-layout_mode = 2
-text = "按 M 关闭地图"
+[node name="PlayerArrow" type="Label" parent="MapPanel/MapViewport/MapContainer/MapImage"]
+visible = false
+layout_mode = 1
+offset_left = -8.0
+offset_top = -16.0
+offset_right = 8.0
+offset_bottom = 4.0
+text = "▲"
 horizontal_alignment = 1
+theme_override_colors/font_color = Color(0, 1, 0.3, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="ZoomLabel" type="Label" parent="MapPanel"]
+layout_mode = 1
+anchors_preset = 3
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -42.0
+offset_right = 120.0
+offset_bottom = -16.0
+grow_vertical = 0
+text = "缩放: 100%"
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="HintLabel" type="Label" parent="MapPanel"]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = -42.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+text = "滚轮缩放 | 拖动平移 | M关闭"
+horizontal_alignment = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 13
