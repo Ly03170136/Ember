@@ -20,6 +20,7 @@ var notification_timer: float = 0.0
 var chat_visible: bool = false
 var chat_hide_timer: float = 0.0  # 聊天窗口自动隐藏计时器
 const CHAT_AUTO_HIDE_TIME := 5.0  # 5秒后自动隐藏
+var debug_console: Node = null  # 调试控制台引用
 
 
 func _ready() -> void:
@@ -29,7 +30,17 @@ func _ready() -> void:
 	chat_panel.hide()
 	chat_input.hide()
 	# 初始显示
-	_add_chat_message("系统", "欢迎来到余烬！WASD移动，Enter聊天")
+	_add_chat_message("系统", "欢迎来到余烬！WASD移动，Enter聊天，输入 /help 查看调试命令")
+	# 延迟获取调试控制台引用（它在main.gd中动态创建）
+	call_deferred("_init_debug_console")
+
+
+func _init_debug_console() -> void:
+	## 初始化调试控制台引用并连接信号
+	debug_console = get_node_or_null("DebugConsole")
+	if debug_console and debug_console.has_signal("command_output"):
+		debug_console.command_output.connect(_on_command_output)
+		print("[HUD] 调试控制台已连接，输入 /help 查看命令")
 
 
 func _process(delta: float) -> void:
@@ -164,12 +175,30 @@ func _on_chat_submitted(text: String) -> void:
 		# 空内容直接隐藏
 		_hide_chat()
 		return
+	# 检测是否为调试命令（以 / 开头）
+	if text.strip_edges().begins_with("/"):
+		# 执行调试命令
+		if debug_console and debug_console.has_method("execute_command_text"):
+			debug_console.execute_command_text(text)
+		else:
+			_add_chat_message("系统", "调试控制台未就绪", Color(1.0, 0.5, 0.5))
+		chat_input.clear()
+		# 命令执行后保持聊天窗口可见5秒
+		chat_hide_timer = CHAT_AUTO_HIDE_TIME
+		chat_input.release_focus()
+		return
+	# 普通聊天消息
 	GameManager.send_chat.rpc(text)
 	chat_input.clear()
 	# 发送后启动5秒自动隐藏计时器
 	chat_hide_timer = CHAT_AUTO_HIDE_TIME
 	# 保持聊天窗口可见，但输入框失去焦点
 	chat_input.release_focus()
+
+
+func _on_command_output(text: String, color: Color) -> void:
+	## 调试命令输出回调，显示到聊天窗口
+	_add_chat_message("控制台", text, color)
 
 
 func _on_chat_received(peer_id: int, message: String) -> void:
@@ -183,11 +212,11 @@ func _on_chat_received(peer_id: int, message: String) -> void:
 	chat_hide_timer = CHAT_AUTO_HIDE_TIME
 
 
-func _add_chat_message(name: String, message: String) -> void:
+func _add_chat_message(name: String, message: String, color: Color = Color(1, 1, 1)) -> void:
 	var label := Label.new()
 	label.text = "[%s] %s" % [name, message]
 	label.add_theme_font_size_override("font_size", 16)
-	label.add_theme_color_override("font_color", Color(1, 1, 1))
+	label.add_theme_color_override("font_color", color)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	chat_box.add_child(label)
 	# 限制聊天记录数量

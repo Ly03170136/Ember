@@ -13,6 +13,7 @@ extends Node2D
 @onready var settings_menu: Control = $SettingsMenu
 @onready var tech_tree_ui: Control = $TechTreeUI
 var character_ui: Control = null
+var debug_console: CanvasLayer = null  # 调试控制台
 
 var inventory_ui_connected: bool = false
 var game_over: bool = false
@@ -182,6 +183,14 @@ func _ready() -> void:
 		character_ui.name = "CharacterUI"
 		hud.add_child(character_ui)
 		print("[Main] 人物属性UI已创建")
+	# 动态创建调试控制台
+	var console_script: Script = load("res://scripts/ui/debug_console.gd")
+	if console_script:
+		debug_console = CanvasLayer.new()
+		debug_console.name = "DebugConsole"
+		debug_console.set_script(console_script)
+		hud.add_child(debug_console)
+		print("[Main] 调试控制台已创建，按Enter聊天，输入 /help 查看命令")
 	# 主机或单人游戏生成初始资源（改为异步加载，显示真实进度）
 	if GameManager.is_server or multiplayer.multiplayer_peer == null:
 		if not GameManager.is_server:
