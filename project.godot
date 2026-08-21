@@ -73,6 +73,7 @@ InputManager="*res://scripts/globals/input_manager.gd"
 EventBus="*res://scripts/globals/event_bus.gd"
 ObjectPool="*res://scripts/globals/object_pool.gd"
 DataLoader="*res://scripts/globals/data_loader.gd"
+EntityInspector="*res://scripts/globals/entity_inspector.gd"
 
 [display]
 
