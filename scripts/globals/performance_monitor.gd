@@ -31,6 +31,20 @@ var current_draw_calls: int = 0
 var current_object_count: int = 0
 var current_node_count: int = 0
 
+# 调试信息（扩展）
+var player_position: Vector2 = Vector2.ZERO
+var player_chunk: Vector2 = Vector2.ZERO
+var entity_counts: Dictionary = {}  # 玩家、NPC、丧尸、物品、建筑等分类计数
+var game_day: int = 1
+var game_time: String = "00:00"
+var game_weather: String = "晴朗"
+var game_season: String = "春季"
+var virus_progress: float = 0.0
+var active_entities: int = 0
+var frozen_entities: int = 0
+var network_ping: int = 0
+var network_players: int = 1
+
 # 历史数据（用于图表）
 var fps_history: Array = []
 var frame_time_history: Array = []
@@ -56,6 +70,14 @@ var _frame_time_chart: Control = null
 var _memory_chart: Control = null
 var _warning_label: Label = null
 
+# 扩展调试UI标签
+var _player_pos_label: Label = null
+var _player_chunk_label: Label = null
+var _entity_counts_label: Label = null
+var _game_state_label: Label = null
+var _chunk_info_label: Label = null
+var _network_info_label: Label = null
+
 # ==================== 生命周期 ====================
 
 func _ready() -> void:
@@ -76,9 +98,9 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	## 处理快捷键（F3切换性能监控显示）
+	## 处理快捷键（F12切换性能监控显示）
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_F3:
+		if event.keycode == KEY_F12:
 			toggle()
 			get_viewport().set_input_as_handled()
 
@@ -170,6 +192,9 @@ func _update_stats() -> void:
 	current_object_count = Performance.get_monitor(Performance.OBJECT_COUNT)
 	current_node_count = Performance.get_monitor(Performance.OBJECT_NODE_COUNT)
 
+	# 收集扩展调试信息
+	_collect_debug_info()
+
 	# 更新历史数据
 	fps_history.append(current_fps)
 	if fps_history.size() > HISTORY_LENGTH:
@@ -190,6 +215,68 @@ func _update_stats() -> void:
 	max_fps = max(max_fps, current_fps)
 
 	fps_changed.emit(current_fps)
+
+
+func _collect_debug_info() -> void:
+	## 收集扩展调试信息
+	# 重置实体计数
+	entity_counts = {
+		"players": 0,
+		"npcs": 0,
+		"zombies": 0,
+		"items": 0,
+		"buildings": 0,
+		"vehicles": 0,
+		"resources": 0
+	}
+	active_entities = 0
+	frozen_entities = 0
+
+	# 遍历场景树，统计实体
+	var main_scene = get_tree().current_scene
+	if main_scene:
+		# 查找玩家
+		var players = main_scene.find_children("*", "CharacterBody2D", true, false)
+		for p in players:
+			if p.name.begins_with("Player_"):
+				entity_counts["players"] += 1
+				if entity_counts["players"] == 1:
+					player_position = p.position
+
+		# 查找NPC（通过组或名称）
+		var npcs = main_scene.find_children("*", "", true, false)
+		for n in npcs:
+			var name_str = str(n.name)
+			if name_str.begins_with("NPC_") or name_str.begins_with("Citizen_") or name_str.begins_with("Police_"):
+				entity_counts["npcs"] += 1
+			elif name_str.begins_with("Zombie_") or name_str.begins_with("zombie_"):
+				entity_counts["zombies"] += 1
+			elif name_str.begins_with("Item_") or name_str.begins_with("Pickup_"):
+				entity_counts["items"] += 1
+			elif name_str.begins_with("Building_") or name_str.begins_with("building_"):
+				entity_counts["buildings"] += 1
+			elif name_str.begins_with("Vehicle_") or name_str.begins_with("vehicle_"):
+				entity_counts["vehicles"] += 1
+			elif name_str.begins_with("Tree_") or name_str.begins_with("Rock_") or name_str.begins_with("Berry_") or name_str.begins_with("Resource_"):
+				entity_counts["resources"] += 1
+
+	# 从GameManager获取游戏状态
+	if GameManager:
+		game_day = GameManager.get("game_day") if "game_day" in GameManager else 1
+		network_players = GameManager.player_names.size() if "player_names" in GameManager else 1
+
+	# 网络信息
+	if multiplayer and multiplayer.multiplayer_peer:
+		network_ping = 0  # Godot ENet没有直接的ping API，暂设为0
+		network_players = multiplayer.get_peers().size() + 1
+
+	# 区块信息（尝试从Chunk系统获取）
+	var chunk_system = main_scene.find_child("ChunkManager", true, false) if main_scene else null
+	if chunk_system:
+		if "active_count" in chunk_system:
+			active_entities = chunk_system.active_count
+		if "frozen_count" in chunk_system:
+			frozen_entities = chunk_system.frozen_count
 
 
 func _check_warnings() -> void:
@@ -222,8 +309,40 @@ func _update_ui() -> void:
 
 	_frame_time_label.text = "帧时间: %.1fms" % current_frame_time
 	_memory_label.text = "内存: %.1fMB" % (float(current_memory) / 1024.0)
-	_draw_calls_label.text = "Draw Calls: %d" % current_draw_calls
 	_objects_label.text = "对象: %d | 节点: %d" % [current_object_count, current_node_count]
+
+	# 玩家信息
+	_player_pos_label.text = "坐标: (%.0f, %.0f)" % [player_position.x, player_position.y]
+	_player_chunk_label.text = "区块: (%d, %d)" % [int(player_position.x / 1024), int(player_position.y / 1024)]
+
+	# 实体计数
+	_entity_counts_label.text = "玩家:%d NPC:%d 丧尸:%d" % [
+		entity_counts.get("players", 0),
+		entity_counts.get("npcs", 0),
+		entity_counts.get("zombies", 0)
+	]
+	_chunk_info_label.text = "物品:%d 建筑:%d 资源:%d 载具:%d" % [
+		entity_counts.get("items", 0),
+		entity_counts.get("buildings", 0),
+		entity_counts.get("resources", 0),
+		entity_counts.get("vehicles", 0)
+	]
+
+	# 激活/冻结实体
+	var active_label = _monitor_panel.find_child("ActiveEntitiesLabel", true, false)
+	if active_label:
+		active_label.text = "激活:%d 冻结:%d" % [active_entities, frozen_entities]
+
+	# 游戏状态
+	_game_state_label.text = "第%d天 %s %s %s" % [game_day, game_time, game_season, game_weather]
+
+	# 病毒扩散进度
+	var virus_label = _monitor_panel.find_child("VirusProgressLabel", true, false)
+	if virus_label:
+		virus_label.text = "病毒扩散: %.1f%%" % virus_progress
+
+	# 网络信息
+	_network_info_label.text = "玩家:%d 延迟:%dms" % [network_players, network_ping]
 
 	# 重绘图表
 	if _fps_chart:
@@ -262,23 +381,30 @@ func _create_ui() -> void:
 	_monitor_panel = Control.new()
 	_monitor_panel.name = "PerformanceMonitorPanel"
 	_monitor_panel.visible = is_visible
-	_monitor_panel.custom_minimum_size = Vector2(280, 200)
+	_monitor_panel.custom_minimum_size = Vector2(320, 420)
 	_monitor_panel.position = Vector2(10, 10)
 	_canvas_layer.add_child(_monitor_panel)
 
 	# 创建布局
 	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
+	vbox.add_theme_constant_override("separation", 3)
 	vbox.position = Vector2(8, 8)
-	vbox.custom_minimum_size = Vector2(264, 184)
+	vbox.custom_minimum_size = Vector2(304, 404)
 	_monitor_panel.add_child(vbox)
 
 	# 标题（白色）
 	var title_label: Label = Label.new()
-	title_label.text = "=== 性能监控 ==="
+	title_label.text = "=== 调试面板 (F12) ==="
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	title_label.add_theme_font_size_override("font_size", 12)
 	vbox.add_child(title_label)
+
+	# 性能信息分隔线
+	var perf_sep: Label = Label.new()
+	perf_sep.text = "--- 性能 ---"
+	perf_sep.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	perf_sep.add_theme_font_size_override("font_size", 10)
+	vbox.add_child(perf_sep)
 
 	# FPS（白色）
 	_fps_label = Label.new()
@@ -301,13 +427,6 @@ func _create_ui() -> void:
 	_memory_label.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(_memory_label)
 
-	# Draw Calls（白色）
-	_draw_calls_label = Label.new()
-	_draw_calls_label.text = "Draw Calls: 0"
-	_draw_calls_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	_draw_calls_label.add_theme_font_size_override("font_size", 11)
-	vbox.add_child(_draw_calls_label)
-
 	# 对象数量（白色）
 	_objects_label = Label.new()
 	_objects_label.text = "对象: 0 | 节点: 0"
@@ -315,27 +434,113 @@ func _create_ui() -> void:
 	_objects_label.add_theme_font_size_override("font_size", 11)
 	vbox.add_child(_objects_label)
 
+	# 玩家信息分隔线
+	var player_sep: Label = Label.new()
+	player_sep.text = "--- 玩家 ---"
+	player_sep.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	player_sep.add_theme_font_size_override("font_size", 10)
+	vbox.add_child(player_sep)
+
+	# 玩家坐标
+	_player_pos_label = Label.new()
+	_player_pos_label.text = "坐标: (0, 0)"
+	_player_pos_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	_player_pos_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(_player_pos_label)
+
+	# 玩家区块
+	_player_chunk_label = Label.new()
+	_player_chunk_label.text = "区块: (0, 0)"
+	_player_chunk_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	_player_chunk_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(_player_chunk_label)
+
+	# 实体计数分隔线
+	var entity_sep: Label = Label.new()
+	entity_sep.text = "--- 实体计数 ---"
+	entity_sep.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	entity_sep.add_theme_font_size_override("font_size", 10)
+	vbox.add_child(entity_sep)
+
+	# 实体计数
+	_entity_counts_label = Label.new()
+	_entity_counts_label.text = "玩家:0 NPC:0 丧尸:0"
+	_entity_counts_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	_entity_counts_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(_entity_counts_label)
+
+	# 资源/物品/建筑计数
+	_chunk_info_label = Label.new()
+	_chunk_info_label.text = "物品:0 建筑:0 资源:0"
+	_chunk_info_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	_chunk_info_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(_chunk_info_label)
+
+	# 激活/冻结实体
+	var active_label: Label = Label.new()
+	active_label.name = "ActiveEntitiesLabel"
+	active_label.text = "激活:0 冻结:0"
+	active_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	active_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(active_label)
+
+	# 游戏状态分隔线
+	var game_sep: Label = Label.new()
+	game_sep.text = "--- 游戏状态 ---"
+	game_sep.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	game_sep.add_theme_font_size_override("font_size", 10)
+	vbox.add_child(game_sep)
+
+	# 游戏状态
+	_game_state_label = Label.new()
+	_game_state_label.text = "第1天 00:00 春季 晴朗"
+	_game_state_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	_game_state_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(_game_state_label)
+
+	# 病毒扩散进度
+	var virus_label: Label = Label.new()
+	virus_label.name = "VirusProgressLabel"
+	virus_label.text = "病毒扩散: 0%"
+	virus_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	virus_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(virus_label)
+
+	# 网络信息分隔线
+	var net_sep: Label = Label.new()
+	net_sep.text = "--- 网络 ---"
+	net_sep.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	net_sep.add_theme_font_size_override("font_size", 10)
+	vbox.add_child(net_sep)
+
+	# 网络信息
+	_network_info_label = Label.new()
+	_network_info_label.text = "玩家:1 延迟:0ms"
+	_network_info_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	_network_info_label.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(_network_info_label)
+
 	# 图表区域
 	var chart_hbox: HBoxContainer = HBoxContainer.new()
 	chart_hbox.add_theme_constant_override("separation", 4)
-	chart_hbox.custom_minimum_size = Vector2(264, 50)
+	chart_hbox.custom_minimum_size = Vector2(304, 40)
 	vbox.add_child(chart_hbox)
 
 	# FPS图表
 	_fps_chart = Control.new()
-	_fps_chart.custom_minimum_size = Vector2(80, 50)
+	_fps_chart.custom_minimum_size = Vector2(96, 40)
 	_fps_chart.draw.connect(_draw_fps_chart)
 	chart_hbox.add_child(_fps_chart)
 
 	# 帧时间图表
 	_frame_time_chart = Control.new()
-	_frame_time_chart.custom_minimum_size = Vector2(80, 50)
+	_frame_time_chart.custom_minimum_size = Vector2(96, 40)
 	_frame_time_chart.draw.connect(_draw_frame_time_chart)
 	chart_hbox.add_child(_frame_time_chart)
 
 	# 内存图表
 	_memory_chart = Control.new()
-	_memory_chart.custom_minimum_size = Vector2(80, 50)
+	_memory_chart.custom_minimum_size = Vector2(96, 40)
 	_memory_chart.draw.connect(_draw_memory_chart)
 	chart_hbox.add_child(_memory_chart)
 
@@ -347,7 +552,7 @@ func _create_ui() -> void:
 	_warning_label.add_theme_font_size_override("font_size", 10)
 	vbox.add_child(_warning_label)
 
-	print("[PerformanceMonitor] UI创建完成（直接挂载在Autoload节点下，透明背景，白色字体）")
+	print("[PerformanceMonitor] UI创建完成（扩展调试面板，F12切换，透明背景，白色字体）")
 
 
 func _on_scene_changed() -> void:
