@@ -274,11 +274,11 @@ func _generate_lab_only() -> void:
 	## 只生成实验室
 	if USE_FIXED_MAP:
 		return
-	# 等距地图中心和范围
-	map_w = 200.0 * 64.0
-	map_h = 200.0 * 64.0
-	var center_x: float = 0.0
-	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0
+	# 顶视角地图中心和范围（400x300瓦片，64x64像素）
+	map_w = 400.0 * 64.0
+	map_h = 300.0 * 64.0
+	var center_x: float = map_w / 2.0
+	var center_y: float = map_h / 2.0
 	# 检查是否已经有实验室存在
 	var existing_labs: Array = []
 	if get_tree():
@@ -897,13 +897,13 @@ func _generate_initial_resources() -> void:
 	if USE_FIXED_MAP:
 		_load_fixed_map()
 		return
-	# 等距地图中心和范围（200x200瓦片，瓦片64x32）
-	map_w = 200.0 * 64.0
-	map_h = 200.0 * 64.0
-	var center_x: float = 0.0  # 等距地图x中心
-	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0  # 等距地图y中心 = 3200
-	var range_x: float = 5600.0  # 等距地图x范围
-	var range_y: float = 2800.0  # 等距地图y范围
+	# 顶视角地图中心和范围（400x300瓦片，瓦片64x64）
+	map_w = 400.0 * 64.0
+	map_h = 300.0 * 64.0
+	var center_x: float = map_w / 2.0  # 顶视角地图x中心
+	var center_y: float = map_h / 2.0  # 顶视角地图y中心
+	var range_x: float = map_w / 2.0  # 顶视角地图x范围
+	var range_y: float = map_h / 2.0  # 顶视角地图y范围
 	# 生成实验室位置（全图唯一，随机出现在地图四条边的附近）
 	# 先检查是否已经有实验室存在，防止重复生成
 	var existing_labs: Array = get_tree().get_nodes_in_group("laboratory")
