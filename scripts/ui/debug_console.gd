@@ -148,6 +148,14 @@ func _register_commands() -> void:
 	commands["load"] = _cmd_load
 	commands["log"] = _cmd_log
 
+	# 性能监控相关
+	commands["perf"] = _cmd_perf
+	commands["perfshow"] = _cmd_perf_show
+	commands["perfhide"] = _cmd_perf_hide
+	commands["perfstats"] = _cmd_perf_stats
+	commands["perfreset"] = _cmd_perf_reset
+	commands["perflog"] = _cmd_perf_log
+
 
 func _input(event: InputEvent) -> void:
 	## 处理输入（控制台打开时的特殊按键）
@@ -361,6 +369,13 @@ func _cmd_help(args: Array) -> void:
 	_print("  save [存档位]  - 保存游戏（存档位0-2，默认0）")
 	_print("  load [存档位]  - 读取游戏数据（存档位0-2，默认0）")
 	_print("  log <级别> - 设置日志级别（debug/info/warning/error）")
+	_print("【性能监控命令】", Color(0.6, 1.0, 0.6))
+	_print("  perf       - 切换性能监控显示（快捷键F3）")
+	_print("  perfshow   - 显示性能监控")
+	_print("  perfhide   - 隐藏性能监控")
+	_print("  perfstats  - 显示详细性能统计")
+	_print("  perfreset  - 重置性能统计数据")
+	_print("  perflog    - 记录当前性能到日志")
 	_print("====================", Color(0.8, 0.8, 1.0))
 
 
@@ -778,6 +793,73 @@ func _cmd_log(args: Array) -> void:
 		_print("日志级别已设置为: " + level, Color(0.5, 1.0, 0.5))
 	else:
 		_print("GameLogger 不可用", Color(1.0, 0.5, 0.5))
+
+
+# ==================== 性能监控命令 ====================
+
+func _cmd_perf(args: Array) -> void:
+	## 切换性能监控显示
+	if PerformanceMonitor and PerformanceMonitor.has_method("toggle"):
+		PerformanceMonitor.toggle()
+		_print("性能监控已%s" % ["隐藏", "显示"][PerformanceMonitor.is_visible], Color(0.5, 1.0, 0.5))
+	else:
+		_print("PerformanceMonitor 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_perf_show(args: Array) -> void:
+	## 显示性能监控
+	if PerformanceMonitor and PerformanceMonitor.has_method("show"):
+		PerformanceMonitor.show()
+		_print("性能监控已显示", Color(0.5, 1.0, 0.5))
+	else:
+		_print("PerformanceMonitor 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_perf_hide(args: Array) -> void:
+	## 隐藏性能监控
+	if PerformanceMonitor and PerformanceMonitor.has_method("hide"):
+		PerformanceMonitor.hide()
+		_print("性能监控已隐藏", Color(0.5, 1.0, 0.5))
+	else:
+		_print("PerformanceMonitor 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_perf_stats(args: Array) -> void:
+	## 显示性能统计
+	if PerformanceMonitor and PerformanceMonitor.has_method("get_stats"):
+		var stats: Dictionary = PerformanceMonitor.get_stats()
+		_print("=== 性能统计 ===", Color(0.8, 0.8, 1.0))
+		_print("当前FPS: %d" % stats.fps)
+		_print("帧时间: %.1fms" % stats.frame_time)
+		_print("内存: %.1fMB" % stats.memory_mb)
+		_print("Draw Calls: %d" % stats.draw_calls)
+		_print("对象数: %d" % stats.object_count)
+		_print("节点数: %d" % stats.node_count)
+		_print("平均FPS: %.1f" % stats.avg_fps)
+		_print("最低FPS: %d" % stats.min_fps)
+		_print("最高FPS: %d" % stats.max_fps)
+		_print("警告次数: %d" % stats.warning_count)
+		_print("================", Color(0.8, 0.8, 1.0))
+	else:
+		_print("PerformanceMonitor 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_perf_reset(args: Array) -> void:
+	## 重置性能统计
+	if PerformanceMonitor and PerformanceMonitor.has_method("reset_stats"):
+		PerformanceMonitor.reset_stats()
+		_print("性能统计已重置", Color(0.5, 1.0, 0.5))
+	else:
+		_print("PerformanceMonitor 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_perf_log(args: Array) -> void:
+	## 记录性能到日志
+	if PerformanceMonitor and PerformanceMonitor.has_method("log_performance"):
+		PerformanceMonitor.log_performance()
+		_print("性能数据已记录到日志", Color(0.5, 1.0, 0.5))
+	else:
+		_print("PerformanceMonitor 不可用", Color(1.0, 0.5, 0.5))
 
 
 # ==================== 辅助函数 ====================

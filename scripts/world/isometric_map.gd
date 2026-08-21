@@ -30,12 +30,25 @@ func _ready() -> void:
 
 
 func _create_terrain_textures() -> void:
-	## 创建地形纹理
+	## 创建地形纹理（优先加载自制瓦片，不存在则用代码生成）
 	var terrain_types := ["grass", "dirt", "stone", "sand", "water", "concrete"]
+	var custom_tiles_loaded: int = 0
 	for terrain_type in terrain_types:
-		var tex: Texture2D = _create_isometric_tile_texture(terrain_type)
+		var tex: Texture2D = null
+		# 尝试加载自制瓦片
+		var tile_path: String = "res://assets/tiles/%s.png" % terrain_type
+		if ResourceLoader.exists(tile_path):
+			tex = load(tile_path) as Texture2D
+			if tex:
+				custom_tiles_loaded += 1
+				print("[IsoMap] 加载自制瓦片: %s" % terrain_type)
+		# 如果自制瓦片不存在，用代码生成
+		if tex == null:
+			tex = _create_isometric_tile_texture(terrain_type)
 		_terrain_textures[terrain_type] = tex
-	print("[IsoMap] 地形纹理创建完成，共%d种" % terrain_types.size())
+	print("[IsoMap] 地形纹理创建完成，共%d种（自制瓦片%d个，代码生成%d个）" % [
+		terrain_types.size(), custom_tiles_loaded, terrain_types.size() - custom_tiles_loaded
+	])
 
 
 func _create_isometric_tile_texture(terrain_type: String) -> Texture2D:

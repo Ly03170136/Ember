@@ -67,6 +67,7 @@ SaveManager="*res://scripts/globals/save_manager.gd"
 LoadManager="*res://scripts/globals/load_manager.gd"
 LoadingScreen="*res://scenes/ui/loading_screen.tscn"
 GameLogger="*res://scripts/globals/logger.gd"
+PerformanceMonitor="*res://scripts/globals/performance_monitor.gd"
 
 [display]
 
