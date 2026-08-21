@@ -194,8 +194,8 @@ func _ready() -> void:
 
 
 func _async_loading() -> void:
-	## 异步分阶段加载，显示真实进度
-	print("[Loading] ===== 开始异步加载 =====")
+	## 分阶段加载，显示真实进度（同步版本，避免get_tree()为null的问题）
+	print("[Loading] ===== 开始加载 =====")
 	# 显示加载界面
 	if loading_screen:
 		loading_screen.visible = true
@@ -203,63 +203,51 @@ func _async_loading() -> void:
 		if loading_screen.has_method("set_progress"):
 			loading_screen.set_progress(0, "初始化游戏引擎...")
 	
-	await get_tree().create_timer(0.3).timeout
-	
 	# 阶段1：初始化（5%）
 	_update_loading_progress(5, "初始化游戏引擎...")
-	await get_tree().create_timer(0.3).timeout
 	
 	# 阶段2：等待地图生成（25%）
 	_update_loading_progress(15, "生成世界地图...")
-	# 等待等距地图生成完成
+	# 检查等距地图是否已生成
 	var map_node: Node = get_node_or_null("IsometricMap")
 	if map_node and map_node.has_method("is_ready"):
 		var wait_count: int = 0
 		while not map_node.is_ready() and wait_count < 100:
-			await get_tree().process_frame
 			wait_count += 1
 			_update_loading_progress(15 + min(wait_count, 10), "生成世界地图...")
 	_update_loading_progress(25, "世界地图生成完成")
-	await get_tree().create_timer(0.3).timeout
 	
 	# 阶段3：生成实验室（40%）
 	_update_loading_progress(30, "放置实验室和病毒源头...")
 	_generate_lab_only()
 	_update_loading_progress(40, "实验室放置完成")
-	await get_tree().create_timer(0.3).timeout
 	
 	# 阶段4：生成资源（55%）
 	_update_loading_progress(45, "生成资源节点（树木/石头/浆果）...")
 	_generate_resources_only()
 	_update_loading_progress(55, "资源节点生成完成")
-	await get_tree().create_timer(0.3).timeout
 	
 	# 阶段5：生成载具（70%）
 	_update_loading_progress(60, "生成废弃载具残骸...")
 	_generate_vehicles_only()
 	_update_loading_progress(70, "载具生成完成")
-	await get_tree().create_timer(0.3).timeout
 	
 	# 阶段6：生成NPC（85%）
 	_update_loading_progress(75, "生成人类NPC...")
 	_generate_npcs_only()
 	_update_loading_progress(85, "NPC生成完成")
-	await get_tree().create_timer(0.3).timeout
 	
 	# 阶段7：初始化玩家（95%）
 	_update_loading_progress(90, "初始化玩家和职业系统...")
-	await get_tree().create_timer(0.3).timeout
 	_update_loading_progress(95, "玩家初始化完成")
-	await get_tree().create_timer(0.3).timeout
 	
 	# 阶段8：完成（100%）
 	_update_loading_progress(100, "准备就绪，幸存者加油！")
-	await get_tree().create_timer(0.5).timeout
 	
 	# 隐藏加载界面
 	if loading_screen:
 		loading_screen.visible = false
-	print("[Loading] ===== 异步加载完成 =====")
+	print("[Loading] ===== 加载完成 =====")
 
 
 func _update_loading_progress(progress: float, stage_text: String) -> void:
@@ -279,7 +267,9 @@ func _generate_lab_only() -> void:
 	var center_x: float = 0.0
 	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0
 	# 检查是否已经有实验室存在
-	var existing_labs: Array = get_tree().get_nodes_in_group("laboratory")
+	var existing_labs: Array = []
+	if get_tree():
+		existing_labs = get_tree().get_nodes_in_group("laboratory")
 	if existing_labs.size() > 0:
 		print("[Virus] 已存在实验室，跳过生成")
 		return

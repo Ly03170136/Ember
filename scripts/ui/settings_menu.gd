@@ -1,4 +1,4 @@
-﻿extends Control
+extends Control
 ## 系统设置菜单（Minecraft风格）- 实际可调节功能
 ## 按ESC打开/关闭，暂停游戏
 
@@ -81,10 +81,12 @@ func _ready() -> void:
 
 func _deferred_load_settings() -> void:
 	# 延迟一帧后加载设置，确保窗口已初始化
-	await get_tree().process_frame
+	if is_inside_tree() and get_tree():
+		await get_tree().process_frame
 	_load_settings()
 	# 再延迟一帧后确保窗口在单个屏幕内（防止跨屏渲染冲突）
-	await get_tree().process_frame
+	if is_inside_tree() and get_tree():
+		await get_tree().process_frame
 	_ensure_window_in_single_screen()
 
 

@@ -72,7 +72,7 @@ func _on_class_tab() -> void:
 
 func _refresh_tech_tree() -> void:
 	var player: Node = GameManager.get_local_player()
-	if not player:
+	if not player or not is_instance_valid(player):
 		return
 	# 更新科技点
 	points_label.text = "科技点: %d" % player.skill_points

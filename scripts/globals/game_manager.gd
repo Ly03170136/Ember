@@ -92,8 +92,13 @@ func disconnect_game() -> void:
 
 func _start_game() -> void:
 	game_started.emit()
-	# 直接进入main场景，显示真实加载进度
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	# 使用加载管理器统一入口异步加载场景
+	print("[GameManager] 开始加载游戏场景...")
+	var load_data: Dictionary = {
+		"is_multiplayer": is_server or is_connected,
+		"is_server": is_server
+	}
+	LoadManager.load_scene("res://scenes/main.tscn", load_data, true)
 
 
 func set_game_world(world: Node2D) -> void:
@@ -277,7 +282,10 @@ func get_player_count() -> int:
 
 
 func get_local_player() -> CharacterBody2D:
-	return players.get(local_peer_id, null)
+	var player = players.get(local_peer_id, null)
+	if player and is_instance_valid(player):
+		return player
+	return null
 
 
 func is_local_player(peer_id: int) -> bool:
