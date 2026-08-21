@@ -222,16 +222,30 @@ func _add_chat_message(name: String, message: String, color: Color = Color(1, 1,
 	# 限制聊天记录数量
 	if chat_box.get_child_count() > 50:
 		chat_box.get_child(0).queue_free()
-	# 自动滚动到底部（延迟一帧，确保UI布局已更新）
+	# 自动滚动到底部（延迟两帧，确保UI布局已完全更新）
+	call_deferred("_scroll_chat_to_bottom")
 	call_deferred("_scroll_chat_to_bottom")
 
 
 func _scroll_chat_to_bottom() -> void:
 	## 聊天窗口滚动到底部
+	if not chat_box or not is_instance_valid(chat_box):
+		return
 	var scroll: ScrollContainer = chat_box.get_parent() as ScrollContainer
 	if scroll and is_instance_valid(scroll):
 		var vbar: VScrollBar = scroll.get_v_scroll_bar()
-		if vbar:
+		if vbar and is_instance_valid(vbar):
+			# 设置滚动到最大值
+			scroll.scroll_vertical = vbar.max_value
+			# 再次设置，确保生效
+			call_deferred("_set_scroll_max", scroll)
+
+
+func _set_scroll_max(scroll: ScrollContainer) -> void:
+	## 辅助函数：设置滚动容器到最大值
+	if scroll and is_instance_valid(scroll):
+		var vbar: VScrollBar = scroll.get_v_scroll_bar()
+		if vbar and is_instance_valid(vbar):
 			scroll.scroll_vertical = vbar.max_value
 
 
