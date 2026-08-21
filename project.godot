@@ -70,6 +70,7 @@ GameLogger="*res://scripts/globals/logger.gd"
 PerformanceMonitor="*res://scripts/globals/performance_monitor.gd"
 CrashReporter="*res://scripts/globals/crash_reporter.gd"
 InputManager="*res://scripts/globals/input_manager.gd"
+EventBus="*res://scripts/globals/event_bus.gd"
 
 [display]
 
