@@ -120,6 +120,9 @@ func _ready() -> void:
 		inventory.add_item("water", 5)
 		inventory.add_item("cloth", 5)
 		print("[Inventory] 背包初始化完成")
+		# 连接InputManager的action_pressed信号，处理攻击、互动、快捷栏等瞬时动作
+		if InputManager:
+			InputManager.action_pressed.connect(_on_input_action_pressed)
 
 
 func _build_replication_config() -> SceneReplicationConfig:
@@ -178,13 +181,13 @@ func _physics_process(delta: float) -> void:
 func _crawl(delta: float) -> void:
 	# 倒地爬行：速度为正常的20%
 	var input_dir: Vector2 = Vector2.ZERO
-	if Input.is_key_pressed(KEY_W):
+	if InputManager and InputManager.is_action_pressed("move_up"):
 		input_dir.y -= 1
-	if Input.is_key_pressed(KEY_S):
+	if InputManager and InputManager.is_action_pressed("move_down"):
 		input_dir.y += 1
-	if Input.is_key_pressed(KEY_A):
+	if InputManager and InputManager.is_action_pressed("move_left"):
 		input_dir.x -= 1
-	if Input.is_key_pressed(KEY_D):
+	if InputManager and InputManager.is_action_pressed("move_right"):
 		input_dir.x += 1
 	if input_dir != Vector2.ZERO:
 		input_dir = input_dir.normalized()
@@ -197,18 +200,18 @@ func _crawl(delta: float) -> void:
 
 func _handle_input(delta: float) -> void:
 	var input_dir := Vector2.ZERO
-	if Input.is_action_pressed("move_up"):
+	if InputManager and InputManager.is_action_pressed("move_up"):
 		input_dir.y -= 1
-	if Input.is_action_pressed("move_down"):
+	if InputManager and InputManager.is_action_pressed("move_down"):
 		input_dir.y += 1
-	if Input.is_action_pressed("move_left"):
+	if InputManager and InputManager.is_action_pressed("move_left"):
 		input_dir.x -= 1
-	if Input.is_action_pressed("move_right"):
+	if InputManager and InputManager.is_action_pressed("move_right"):
 		input_dir.x += 1
 	input_dir = input_dir.normalized()
 
 	# 冲刺
-	is_sprinting = Input.is_action_pressed("sprint") and stamina > 0 and input_dir != Vector2.ZERO
+	is_sprinting = (InputManager and InputManager.is_action_pressed("sprint")) and stamina > 0 and input_dir != Vector2.ZERO
 	if is_sprinting:
 		stamina = max(0, stamina - 20 * delta)
 	else:
@@ -302,48 +305,54 @@ func _input(event: InputEvent) -> void:
 		camera.zoom = Vector2(new_zoom, new_zoom)
 		get_viewport().set_input_as_handled()
 		return
-	# 鼠标左键攻击
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# 检查是否有UI菜单打开（建造/背包/制作），如果有则不攻击，让按钮接收点击
-		var ui_menus: Array = get_tree().get_nodes_in_group("ui_menu")
-		for menu in ui_menus:
-			if menu and menu.is_open:
-				return  # UI菜单打开时不攻击，让事件传播到按钮
-		# 检查是否处于建造放置模式
-		var build_ui_nodes: Array = get_tree().get_nodes_in_group("build_ui")
-		if build_ui_nodes.size() > 0:
-			var build_ui = build_ui_nodes[0]
-			if build_ui and build_ui.is_placing:
-				return  # 放置模式下不攻击，让事件继续传播到建造UI
-		_attack()
-		get_viewport().set_input_as_handled()
+	# 攻击逻辑已移到 _on_input_action_pressed 函数中，使用InputManager统一管理
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_local() or is_down:
 		return
-	# 数字键切换快捷栏
-	if event is InputEventKey and event.pressed and not event.echo:
-		var keycode: int = event.physical_keycode
-		if keycode >= KEY_1 and keycode <= KEY_9:
-			var slot_index: int = keycode - KEY_1
+	# 输入处理已移到 _on_input_action_pressed 函数中，使用InputManager统一管理
+
+
+func _on_input_action_pressed(action: String) -> void:
+	## 处理InputManager的action_pressed信号，处理攻击、互动、快捷栏等瞬时动作
+	if not is_local() or is_down:
+		return
+	# 攻击
+	if action == "attack":
+		# 检查是否有UI菜单打开（建造/背包/制作），如果有则不攻击，让按钮接收点击
+		var ui_menus: Array = get_tree().get_nodes_in_group("ui_menu")
+		for menu in ui_menus:
+			if menu and menu.is_open:
+				return  # UI菜单打开时不攻击
+		# 检查是否处于建造放置模式
+		var build_ui_nodes: Array = get_tree().get_nodes_in_group("build_ui")
+		if build_ui_nodes.size() > 0:
+			var build_ui = build_ui_nodes[0]
+			if build_ui and build_ui.is_placing:
+				return  # 放置模式下不攻击
+		_attack()
+		return
+	# 互动/采集
+	if action == "interact":
+		if not _interact_with_nearest():
 			if inventory:
-				inventory.select_slot(slot_index)
-				print("[Inventory] 选中快捷栏 ", slot_index + 1)
-		# E键：打开制作菜单
-		elif keycode == KEY_E:
-			pass  # 制作菜单UI自己处理E键
-		# F键：优先交互采集附近资源，没有则使用当前选中物品
-		elif keycode == KEY_F:
-			if not _interact_with_nearest():
-				if inventory:
-					if inventory.use_selected_item():
-						print("[Inventory] 使用了物品")
-		# F5键：手动存档
-		elif keycode == KEY_F5:
-			var main: Node = get_tree().current_scene
-			if main and main.has_method("manual_save"):
-				main.manual_save()
+				if inventory.use_selected_item():
+					print("[Inventory] 使用了物品")
+		return
+	# 快捷栏 1-9
+	if action.begins_with("quickbar_"):
+		var slot_index: int = action.to_int() - 1
+		if slot_index >= 0 and slot_index <= 8 and inventory:
+			inventory.select_slot(slot_index)
+			print("[Inventory] 选中快捷栏 ", slot_index + 1)
+		return
+	# 手动存档（F5）
+	if action == "save":
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("manual_save"):
+			main.manual_save()
+		return
 
 
 func _attack() -> void:

@@ -23,6 +23,9 @@ func _ready() -> void:
 	panel.visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_to_group("ui_menu")
+	# 连接InputManager的action_pressed信号
+	if InputManager:
+		InputManager.action_pressed.connect(_on_input_action_pressed)
 	# 创建格子
 	grid.columns = COLUMNS
 	for i in range(SLOT_COUNT):
@@ -56,11 +59,16 @@ func _ready() -> void:
 	add_child(drag_preview)
 
 
+func _on_input_action_pressed(action: String) -> void:
+	## 处理InputManager的action_pressed信号
+	if action == "inventory":
+		# TAB键打开或关闭背包
+		toggle()
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_TAB:
-			toggle()
-			get_viewport().set_input_as_handled()
+	# 移除硬编码的TAB键检测，改用InputManager的action_pressed信号
+	pass
 
 
 func _input(event: InputEvent) -> void:

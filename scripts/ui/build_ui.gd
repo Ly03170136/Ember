@@ -22,6 +22,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_to_group("build_ui")
 	add_to_group("ui_menu")
+	# 连接InputManager的action_pressed信号
+	if InputManager:
+		InputManager.action_pressed.connect(_on_input_action_pressed)
 	# 连接关闭按钮
 	if close_btn:
 		close_btn.pressed.connect(toggle)
@@ -59,18 +62,23 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_B:
-			if is_placing:
-				_cancel_placing()
-				toggle()  # 取消后重新打开建造菜单
-			else:
-				toggle()
-			get_viewport().set_input_as_handled()
-		elif event.physical_keycode == KEY_ESCAPE and is_placing:
+func _on_input_action_pressed(action: String) -> void:
+	## 处理InputManager的action_pressed信号
+	if action == "build":
+		# B键打开或关闭建造菜单
+		if is_placing:
 			_cancel_placing()
-			get_viewport().set_input_as_handled()
+			toggle()  # 取消后重新打开建造菜单
+		else:
+			toggle()
+	elif action == "pause" and is_placing:
+		# ESC键只在放置模式下取消放置
+		_cancel_placing()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# 移除硬编码的B键和ESC键检测，改用InputManager的action_pressed信号
+	pass
 
 
 func toggle() -> void:

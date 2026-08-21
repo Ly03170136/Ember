@@ -69,6 +69,7 @@ LoadingScreen="*res://scenes/ui/loading_screen.tscn"
 GameLogger="*res://scripts/globals/logger.gd"
 PerformanceMonitor="*res://scripts/globals/performance_monitor.gd"
 CrashReporter="*res://scripts/globals/crash_reporter.gd"
+InputManager="*res://scripts/globals/input_manager.gd"
 
 [display]
 

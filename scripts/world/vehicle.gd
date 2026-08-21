@@ -137,13 +137,13 @@ func _physics_process(delta: float) -> void:
 func _handle_driving(delta: float) -> void:
 	# 获取输入方向
 	var input_dir: Vector2 = Vector2.ZERO
-	if Input.is_key_pressed(KEY_W):
+	if InputManager and InputManager.is_action_pressed("move_up"):
 		input_dir.y -= 1
-	if Input.is_key_pressed(KEY_S):
+	if InputManager and InputManager.is_action_pressed("move_down"):
 		input_dir.y += 1
-	if Input.is_key_pressed(KEY_A):
+	if InputManager and InputManager.is_action_pressed("move_left"):
 		input_dir.x -= 1
-	if Input.is_key_pressed(KEY_D):
+	if InputManager and InputManager.is_action_pressed("move_right"):
 		input_dir.x += 1
 	input_dir = input_dir.normalized()
 	# 没油时不能加速

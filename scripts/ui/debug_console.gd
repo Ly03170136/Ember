@@ -162,6 +162,11 @@ func _register_commands() -> void:
 	commands["exportcrash"] = _cmd_export_crash
 	commands["clearerrors"] = _cmd_clear_errors
 
+	# 输入管理相关
+	commands["input"] = _cmd_input
+	commands["inputreset"] = _cmd_input_reset
+	commands["inputlist"] = _cmd_input_list
+
 
 func _input(event: InputEvent) -> void:
 	## 处理输入（控制台打开时的特殊按键）
@@ -387,6 +392,10 @@ func _cmd_help(args: Array) -> void:
 	_print("  crashreports - 查看崩溃报告列表")
 	_print("  exportcrash - 导出最近一次崩溃报告")
 	_print("  clearerrors - 清除错误统计")
+	_print("【输入管理命令】", Color(0.6, 1.0, 0.6))
+	_print("  input      - 查看输入管理状态")
+	_print("  inputlist  - 列出所有动作绑定")
+	_print("  inputreset - 重置输入配置为默认")
 	_print("====================", Color(0.8, 0.8, 1.0))
 
 
@@ -930,6 +939,53 @@ func _cmd_clear_errors(args: Array) -> void:
 		_print("错误统计已清除", Color(0.5, 1.0, 0.5))
 	else:
 		_print("CrashReporter 不可用", Color(1.0, 0.5, 0.5))
+
+
+# ==================== 输入管理命令 ====================
+
+func _cmd_input(args: Array) -> void:
+	## 查看输入管理状态
+	if InputManager:
+		_print("=== 输入管理状态 ===", Color(0.8, 0.8, 1.0))
+		_print("UI焦点: %s" % ("是" if InputManager.is_ui_focused() else "否"))
+		_print("鼠标位置: %s" % str(InputManager.get_mouse_position()))
+		_print("当前按下的动作:", Color(0.7, 0.7, 0.7))
+		var pressed: Dictionary = InputManager._pressed_actions
+		if pressed.is_empty():
+			_print("  (无)")
+		else:
+			for action in pressed.keys():
+				_print("  - %s" % action)
+		_print("====================", Color(0.8, 0.8, 1.0))
+	else:
+		_print("InputManager 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_input_reset(args: Array) -> void:
+	## 重置输入配置为默认
+	if InputManager and InputManager.has_method("reset_to_default"):
+		InputManager.reset_to_default()
+		_print("输入配置已重置为默认", Color(0.5, 1.0, 0.5))
+	else:
+		_print("InputManager 不可用", Color(1.0, 0.5, 0.5))
+
+
+func _cmd_input_list(args: Array) -> void:
+	## 列出所有动作绑定
+	if InputManager and InputManager.has_method("get_action_bindings"):
+		var bindings: Dictionary = InputManager.get_action_bindings()
+		_print("=== 动作绑定列表 ===", Color(0.8, 0.8, 1.0))
+		for action in bindings.keys():
+			var keys: Array = bindings[action]
+			var key_names: String = ""
+			for i in range(keys.size()):
+				if i > 0:
+					key_names += ", "
+				key_names += InputManager.get_key_name(keys[i])
+			_print("  %s: %s" % [action, key_names])
+		_print("====================", Color(0.8, 0.8, 1.0))
+	else:
+		_print("InputManager 不可用", Color(1.0, 0.5, 0.5))
 
 
 # ==================== 辅助函数 ====================

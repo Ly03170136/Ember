@@ -11,6 +11,7 @@ extends Control
 @onready var language_btn: Button = $Panel/VBox/LanguageBtn
 @onready var quit_btn: Button = $Panel/VBox/QuitBtn
 @onready var version_label: Label = $Panel/VBox/VersionLabel
+@onready var main_panel: Panel = $Panel
 
 # 设置子面板
 @onready var settings_panel: Panel = $SettingsPanel
@@ -25,6 +26,12 @@ extends Control
 
 var is_open: bool = false
 var current_settings: String = ""
+
+# 按键绑定状态
+var _rebinding_action: String = ""
+var _rebinding_button: Button = null
+var _rebinding_type: String = ""  # "keyboard" or "joypad"
+var _key_binding_buttons: Dictionary = {}  # {action: {keyboard: Button, joypad: Button}}
 
 # 视频设置临时变量（应用前不生效）
 var temp_resolution: String = ""
@@ -178,14 +185,52 @@ func _limit_window_size() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_ESCAPE:
-			if shortcuts_panel.visible:
-				shortcuts_panel.visible = false
-			elif settings_panel.visible:
-				settings_panel.visible = false
+	# 如果正在重新绑定按键，捕获输入
+	if _rebinding_action != "" and shortcuts_panel.visible:
+		var keycode: int = 0
+		var is_keyboard: bool = false
+		var is_joypad: bool = false
+		if event is InputEventKey and event.pressed and not event.echo:
+			keycode = event.keycode
+			is_keyboard = true
+		elif event is InputEventMouseButton and event.pressed:
+			keycode = event.button_index
+			is_keyboard = true  # 鼠标按钮也算键盘绑定
+		elif event is InputEventJoypadButton and event.pressed:
+			keycode = event.button_index
+			is_joypad = true
+		else:
+			return
+		# ESC键取消重新绑定
+		if keycode == KEY_ESCAPE:
+			_cancel_key_rebinding()
+			return
+		# 根据绑定类型只捕获对应的按键
+		if _rebinding_type == "keyboard" and not is_keyboard:
+			return
+		if _rebinding_type == "joypad" and not is_joypad:
+			return
+		# 设置新的绑定
+		if InputManager and InputManager.has_method("set_action_binding"):
+			if _rebinding_type == "keyboard":
+				InputManager.set_keyboard_binding(_rebinding_action, keycode)
 			else:
-				toggle()
+				InputManager.set_joypad_binding(_rebinding_action, keycode)
+			print("[Settings] 动作 %s (%s) 已绑定为 %s" % [_rebinding_action, _rebinding_type, InputManager.get_key_name(keycode)])
+		# 刷新所有按键绑定按钮的显示（包括被占用的旧按键）
+		_refresh_all_key_binding_buttons()
+		# 清除重新绑定状态
+		_rebinding_action = ""
+		_rebinding_button = null
+		_rebinding_type = ""
+		get_viewport().set_input_as_handled()
+		return
+	# 只有当菜单可见时才处理ESC键（关闭菜单，直接返回主世界）
+	# 菜单不可见时，不处理ESC键，让它继续传播到main.gd的_on_input_action_pressed
+	if visible and event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ESCAPE:
+			# 直接关闭整个菜单，返回主世界（不管在哪个子面板）
+			toggle()
 			get_viewport().set_input_as_handled()
 
 
@@ -194,8 +239,14 @@ func toggle() -> void:
 	visible = is_open
 	if is_open:
 		get_tree().paused = true
+		# 打开菜单时显示暂停菜单主面板，隐藏子面板
+		main_panel.visible = true
+		settings_panel.visible = false
+		shortcuts_panel.visible = false
 	else:
 		get_tree().paused = false
+		# 关闭菜单时重置所有面板状态
+		main_panel.visible = true
 		settings_panel.visible = false
 		shortcuts_panel.visible = false
 
@@ -217,6 +268,8 @@ func _update_shortcuts() -> void:
 
 func _open_settings(settings_type: String) -> void:
 	current_settings = settings_type
+	# 隐藏暂停菜单主面板，避免叠加
+	main_panel.visible = false
 	settings_panel.visible = true
 	# 清空旧内容
 	for child in settings_content.get_children():
@@ -690,7 +743,116 @@ func _on_return() -> void:
 	toggle()
 
 func _on_controls() -> void:
+	# 隐藏暂停菜单主面板和设置子面板，避免叠加
+	main_panel.visible = false
+	settings_panel.visible = false
 	shortcuts_panel.visible = true
+	# 隐藏原来的文本标签
+	shortcuts_label.visible = false
+	# 清空旧的按键绑定按钮
+	_key_binding_buttons.clear()
+	# 获取VBox容器
+	var vbox: VBoxContainer = shortcuts_panel.get_node("Margin/VBox")
+	# 移除旧的动态内容（保留标题和关闭按钮）
+	for child in vbox.get_children():
+		if child.name != "ShortcutsLabel" and child.name != "CloseBtn" and child.name != "ControlsTitle":
+			child.queue_free()
+	# 添加标题
+	var title_label: Label = Label.new()
+	title_label.name = "ControlsTitle"
+	title_label.text = "=== 按键绑定设置 ==="
+	title_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	vbox.add_child(title_label)
+	# 添加提示
+	var hint_label: Label = Label.new()
+	hint_label.text = "键盘和手柄按键分开绑定，点击对应按钮后按下按键"
+	hint_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	vbox.add_child(hint_label)
+	# 添加表头
+	var header_hbox: HBoxContainer = HBoxContainer.new()
+	vbox.add_child(header_hbox)
+	var action_header: Label = Label.new()
+	action_header.text = "动作"
+	action_header.custom_minimum_size = Vector2(120, 0)
+	action_header.add_theme_color_override("font_color", Color(0.8, 0.8, 1.0))
+	header_hbox.add_child(action_header)
+	var keyboard_header: Label = Label.new()
+	keyboard_header.text = "键盘"
+	keyboard_header.custom_minimum_size = Vector2(150, 0)
+	keyboard_header.add_theme_color_override("font_color", Color(0.8, 1.0, 0.8))
+	header_hbox.add_child(keyboard_header)
+	var joypad_header: Label = Label.new()
+	joypad_header.text = "手柄"
+	joypad_header.custom_minimum_size = Vector2(150, 0)
+	joypad_header.add_theme_color_override("font_color", Color(1.0, 0.8, 0.8))
+	header_hbox.add_child(joypad_header)
+	# 添加ScrollContainer
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(450, 300)
+	vbox.add_child(scroll)
+	# 添加VBoxContainer用于按键绑定列表
+	var list_vbox: VBoxContainer = VBoxContainer.new()
+	scroll.add_child(list_vbox)
+	# 从InputManager获取动作分类和绑定
+	if InputManager:
+		var categories: Dictionary = InputManager.get_action_categories()
+		for category in categories.keys():
+			# 添加分类标题
+			var cat_label: Label = Label.new()
+			cat_label.text = "【%s】" % category
+			cat_label.add_theme_color_override("font_color", Color(0.8, 0.8, 1.0))
+			list_vbox.add_child(cat_label)
+			# 添加该分类下的动作
+			var actions: Array = categories[category]
+			for action in actions:
+				var action_name: String = InputManager.get_action_name(action)
+				var keyboard_key: int = InputManager.get_keyboard_binding(action)
+				var joypad_key: int = InputManager.get_joypad_binding(action)
+				var keyboard_name: String = "未绑定"
+				var joypad_name: String = "未绑定"
+				if keyboard_key != 0:
+					keyboard_name = InputManager.get_key_name(keyboard_key)
+				if joypad_key != 0:
+					joypad_name = InputManager.get_key_name(joypad_key)
+				# 创建水平容器
+				var hbox: HBoxContainer = HBoxContainer.new()
+				list_vbox.add_child(hbox)
+				# 动作名称标签
+				var name_label: Label = Label.new()
+				name_label.text = action_name
+				name_label.custom_minimum_size = Vector2(120, 0)
+				hbox.add_child(name_label)
+				# 键盘绑定按钮
+				var keyboard_btn: Button = Button.new()
+				keyboard_btn.text = keyboard_name
+				keyboard_btn.custom_minimum_size = Vector2(150, 30)
+				keyboard_btn.pressed.connect(_start_key_rebinding.bind(action, keyboard_btn, "keyboard"))
+				hbox.add_child(keyboard_btn)
+				# 手柄绑定按钮
+				var joypad_btn: Button = Button.new()
+				joypad_btn.text = joypad_name
+				joypad_btn.custom_minimum_size = Vector2(150, 30)
+				joypad_btn.pressed.connect(_start_key_rebinding.bind(action, joypad_btn, "joypad"))
+				hbox.add_child(joypad_btn)
+				# 保存按钮引用
+				_key_binding_buttons[action] = {"keyboard": keyboard_btn, "joypad": joypad_btn}
+	# 添加按钮容器
+	var btn_hbox: HBoxContainer = HBoxContainer.new()
+	vbox.add_child(btn_hbox)
+	# 添加应用按钮
+	var apply_btn: Button = Button.new()
+	apply_btn.text = "应用设置"
+	apply_btn.custom_minimum_size = Vector2(150, 30)
+	apply_btn.pressed.connect(_on_apply_key_bindings)
+	btn_hbox.add_child(apply_btn)
+	# 添加重置按钮
+	var reset_btn: Button = Button.new()
+	reset_btn.text = "重置为默认"
+	reset_btn.custom_minimum_size = Vector2(150, 30)
+	reset_btn.pressed.connect(_on_reset_key_bindings)
+	btn_hbox.add_child(reset_btn)
+	# 移动关闭按钮到最后
+	vbox.move_child(shortcuts_close_btn, -1)
 
 func _on_quit() -> void:
 	# 完全重置游戏状态
@@ -709,7 +871,92 @@ func _on_quit() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 
 func _on_close_shortcuts() -> void:
-	shortcuts_panel.visible = false
+	# 取消正在进行的按键重新绑定
+	if _rebinding_action != "":
+		_rebinding_action = ""
+		_rebinding_button = null
+	# 直接关闭整个菜单，返回主世界
+	toggle()
 
 func _on_close_settings() -> void:
-	settings_panel.visible = false
+	# 直接关闭整个菜单，返回主世界
+	toggle()
+
+
+# ==================== 按键绑定功能 ====================
+
+func _start_key_rebinding(action: String, button: Button, rebind_type: String) -> void:
+	## 开始重新绑定按键
+	## rebind_type: "keyboard" or "joypad"
+	_rebinding_action = action
+	_rebinding_button = button
+	_rebinding_type = rebind_type
+	if rebind_type == "keyboard":
+		button.text = "请按下键盘按键..."
+	else:
+		button.text = "请按下手柄按钮..."
+	button.add_theme_color_override("font_color", Color(1, 0.8, 0.3))
+	print("[Settings] 开始重新绑定动作: ", action, " 类型: ", rebind_type)
+
+
+func _on_reset_key_bindings() -> void:
+	## 重置为默认按键
+	if InputManager and InputManager.has_method("reset_to_default"):
+		InputManager.reset_to_default()
+		print("[Settings] 按键绑定已重置为默认")
+		# 刷新显示
+		_on_controls()
+
+
+func _on_apply_key_bindings() -> void:
+	## 应用按键设置（当前是自动保存，这里只是提示）
+	print("[Settings] 按键设置已应用并保存")
+	# 不调用_on_controls()，避免重新生成列表导致按键重置
+
+
+func _refresh_all_key_binding_buttons() -> void:
+	## 刷新所有按键绑定按钮的显示
+	if not InputManager:
+		return
+	for action in _key_binding_buttons.keys():
+		var buttons: Dictionary = _key_binding_buttons[action]
+		# 更新键盘按钮
+		if buttons.has("keyboard") and buttons["keyboard"]:
+			var keyboard_key: int = InputManager.get_keyboard_binding(action)
+			if keyboard_key != 0:
+				buttons["keyboard"].text = InputManager.get_key_name(keyboard_key)
+			else:
+				buttons["keyboard"].text = "未绑定"
+			buttons["keyboard"].add_theme_color_override("font_color", Color(1, 1, 1))
+		# 更新手柄按钮
+		if buttons.has("joypad") and buttons["joypad"]:
+			var joypad_key: int = InputManager.get_joypad_binding(action)
+			if joypad_key != 0:
+				buttons["joypad"].text = InputManager.get_key_name(joypad_key)
+			else:
+				buttons["joypad"].text = "未绑定"
+			buttons["joypad"].add_theme_color_override("font_color", Color(1, 1, 1))
+
+
+func _cancel_key_rebinding() -> void:
+	## 取消按键重新绑定
+	if _rebinding_button and _rebinding_action != "":
+		# 恢复原来的按键显示
+		if InputManager:
+			if _rebinding_type == "keyboard":
+				var keyboard_key: int = InputManager.get_keyboard_binding(_rebinding_action)
+				if keyboard_key != 0:
+					_rebinding_button.text = InputManager.get_key_name(keyboard_key)
+				else:
+					_rebinding_button.text = "未绑定"
+			else:
+				var joypad_key: int = InputManager.get_joypad_binding(_rebinding_action)
+				if joypad_key != 0:
+					_rebinding_button.text = InputManager.get_key_name(joypad_key)
+				else:
+					_rebinding_button.text = "未绑定"
+		_rebinding_button.add_theme_color_override("font_color", Color(1, 1, 1))
+	_rebinding_action = ""
+	_rebinding_button = null
+	_rebinding_type = ""
+	print("[Settings] 取消按键重新绑定")

@@ -24,31 +24,26 @@ func _ready() -> void:
 	close_btn.pressed.connect(toggle)
 	public_tab.pressed.connect(_on_public_tab)
 	class_tab.pressed.connect(_on_class_tab)
+	# 连接InputManager的action_pressed信号
+	if InputManager:
+		InputManager.action_pressed.connect(_on_input_action_pressed)
 	# 初始化
 	_refresh_tech_tree()
 
 
+func _on_input_action_pressed(action: String) -> void:
+	## 处理InputManager的action_pressed信号
+	if action == "tech_tree":
+		# T键打开或关闭科技树
+		toggle()
+	elif action == "pause" and is_open:
+		# ESC键只在科技树打开时关闭
+		toggle()
+
+
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		# 检查是否有文本输入框获得焦点（聊天输入框等）
-		if _is_text_input_focused():
-			return
-		if event.keycode == KEY_T:
-			# T键打开或关闭科技树
-			toggle()
-			get_viewport().set_input_as_handled()
-		elif event.keycode == KEY_ESCAPE and is_open:
-			# ESC键只在科技树打开时关闭
-			toggle()
-			get_viewport().set_input_as_handled()
-
-
-func _is_text_input_focused() -> bool:
-	## 检查是否有文本输入控件获得焦点（聊天输入框等）
-	var focused: Node = get_viewport().gui_get_focus_owner()
-	if focused and (focused is LineEdit or focused is TextEdit):
-		return true
-	return false
+	# 移除硬编码的按键检测，改用InputManager的action_pressed信号
+	pass
 
 
 func toggle() -> void:

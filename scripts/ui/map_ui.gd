@@ -51,6 +51,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# 添加到组，方便其他脚本检测大地图是否打开
 	add_to_group("map_ui")
+	# 连接InputManager的action_pressed信号
+	if InputManager:
+		InputManager.action_pressed.connect(_on_input_action_pressed)
 	# 连接地图视口的输入事件（处理拖动）
 	map_viewport.gui_input.connect(_on_map_viewport_input)
 	# 初始化地图容器位置
@@ -108,13 +111,16 @@ func _is_mouse_in_map_viewport() -> bool:
 	return viewport_rect.has_point(mouse_pos)
 
 
+func _on_input_action_pressed(action: String) -> void:
+	## 处理InputManager的action_pressed信号
+	if action == "map":
+		# M键打开或关闭大地图
+		toggle()
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	# M键开关
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_M:
-			toggle()
-			get_viewport().set_input_as_handled()
-			return
+	# 移除硬编码的M键检测，改用InputManager的action_pressed信号
+	pass
 
 
 func _on_map_viewport_input(event: InputEvent) -> void:

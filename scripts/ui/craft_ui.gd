@@ -26,6 +26,9 @@ func _ready() -> void:
 	panel.visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_to_group("ui_menu")
+	# 连接InputManager的action_pressed信号
+	if InputManager:
+		InputManager.action_pressed.connect(_on_input_action_pressed)
 	# 连接关闭按钮
 	if close_btn:
 		close_btn.pressed.connect(toggle)
@@ -44,11 +47,16 @@ func _ready() -> void:
 		mat_btn.pressed.connect(_on_category_pressed.bind("material"))
 
 
+func _on_input_action_pressed(action: String) -> void:
+	## 处理InputManager的action_pressed信号
+	if action == "craft":
+		# E键打开或关闭制作菜单
+		toggle()
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_E:
-			toggle()
-			get_viewport().set_input_as_handled()
+	# 移除硬编码的E键检测，改用InputManager的action_pressed信号
+	pass
 
 
 func toggle() -> void:

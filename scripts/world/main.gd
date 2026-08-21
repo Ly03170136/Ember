@@ -200,6 +200,10 @@ func _ready() -> void:
 		call_deferred("_async_loading")
 	# 连接聊天信号
 	GameManager.chat_received.connect(_on_chat_received)
+	# 连接InputManager的action_pressed信号，处理ESC键（更可靠，不受其他UI拦截影响）
+	if InputManager and InputManager.has_signal("action_pressed"):
+		InputManager.action_pressed.connect(_on_input_action_pressed)
+		print("[Main] 已连接InputManager的action_pressed信号")
 
 
 func _async_loading() -> void:
@@ -1032,9 +1036,34 @@ func _trigger_game_over() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# ESC键处理已移到 _on_input_action_pressed 函数中，使用InputManager统一管理
+	# R键重新开始游戏（仅在游戏结束时）
 	if game_over and event is InputEventKey and event.pressed and event.physical_keycode == KEY_R:
 		# 重新开始游戏
 		get_tree().reload_current_scene()
+
+
+func _on_input_action_pressed(action: String) -> void:
+	## 处理InputManager的action_pressed信号
+	## 当"pause"动作被按下时，打开/关闭设置菜单
+	if action == "pause":
+		if settings_menu and settings_menu.has_method("toggle"):
+			# 如果设置菜单已经可见，让settings_menu自己处理ESC键（先关闭子菜单，再关闭整个菜单）
+			if settings_menu.visible:
+				return
+			# 检查是否有其他UI菜单打开（如科技树、背包等），如果有则不打开设置菜单
+			var other_ui_open: bool = false
+			# 检查科技树UI
+			var tech_tree: Node = get_node_or_null("TechTreeUI")
+			if tech_tree and tech_tree.has_method("is_open") and tech_tree.is_open():
+				other_ui_open = true
+			# 检查背包UI
+			var inventory: Node = get_node_or_null("InventoryUI")
+			if inventory and inventory.has_method("is_open") and inventory.is_open():
+				other_ui_open = true
+			# 如果没有其他UI菜单打开，打开设置菜单
+			if not other_ui_open:
+				settings_menu.toggle()
 
 
 func get_time_of_day() -> float:
