@@ -215,11 +215,10 @@ func _spawn_exit() -> void:
 
 
 func _spawn_enemy() -> void:
-	## 生成敌人（丧尸+特殊变异体）
-	var zombie_scene: PackedScene = load("res://scenes/entities/zombie.tscn")
-	if not zombie_scene:
+	## 生成敌人（丧尸+特殊变异体）使用对象池
+	var zombie = ObjectPool.acquire("zombie")
+	if not zombie:
 		return
-	var zombie: Node2D = zombie_scene.instantiate()
 	# 随机位置（在副本内）
 	var room_idx: int = randi_range(0, ROOMS.size() - 1)
 	var room: Dictionary = ROOMS[room_idx]

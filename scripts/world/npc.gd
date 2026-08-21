@@ -281,12 +281,11 @@ func infect() -> void:
 
 
 func _turn_into_zombie() -> void:
-	## NPC变成僵尸
+	## NPC变成僵尸（使用对象池）
 	print("[NPC] %s 变成僵尸！" % _type_config.name)
-	# 生成僵尸
-	var zombie_scene: PackedScene = load("res://scenes/entities/zombie.tscn")
-	if zombie_scene:
-		var zombie: Node2D = zombie_scene.instantiate()
+	# 从对象池获取僵尸
+	var zombie = ObjectPool.acquire("zombie")
+	if zombie:
 		zombie.position = position
 		zombie.name = "InfectedZombie_%d" % randi()
 		get_parent().add_child(zombie)

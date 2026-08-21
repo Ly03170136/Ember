@@ -167,6 +167,12 @@ func _register_commands() -> void:
 	commands["inputreset"] = _cmd_input_reset
 	commands["inputlist"] = _cmd_input_list
 
+	# 对象池相关
+	commands["pool"] = _cmd_pool
+	commands["objectpool"] = _cmd_pool
+	commands["poolclear"] = _cmd_pool_clear
+	commands["poolclearall"] = _cmd_pool_clear_all
+
 
 func _input(event: InputEvent) -> void:
 	## 处理输入（控制台打开时的特殊按键）
@@ -396,6 +402,11 @@ func _cmd_help(args: Array) -> void:
 	_print("  input      - 查看输入管理状态")
 	_print("  inputlist  - 列出所有动作绑定")
 	_print("  inputreset - 重置输入配置为默认")
+	_print("【对象池命令】", Color(0.6, 1.0, 0.6))
+	_print("  pool [池名称] - 查看对象池统计（指定名称查看详情）")
+	_print("  objectpool [池名称] - 同pool命令")
+	_print("  poolclear <池名称> - 清空指定对象池")
+	_print("  poolclearall - 清空所有对象池")
 	_print("====================", Color(0.8, 0.8, 1.0))
 
 
@@ -986,6 +997,75 @@ func _cmd_input_list(args: Array) -> void:
 		_print("====================", Color(0.8, 0.8, 1.0))
 	else:
 		_print("InputManager 不可用", Color(1.0, 0.5, 0.5))
+
+
+# ==================== 对象池命令 ====================
+
+func _cmd_pool(args: Array) -> void:
+	## 查看对象池统计信息
+	if not ObjectPool:
+		_print("ObjectPool 不可用", Color(1.0, 0.5, 0.5))
+		return
+	# 如果指定了池名称，查看详细信息
+	if args.size() >= 1:
+		var pool_name: String = args[0]
+		var info: Dictionary = ObjectPool.get_pool_info(pool_name)
+		if info.is_empty():
+			_print("未找到对象池: " + pool_name, Color(1.0, 0.5, 0.5))
+			return
+		_print("=== 对象池详情: %s ===" % pool_name, Color(0.8, 0.8, 1.0))
+		_print("总数: %d" % info.total, Color(0.7, 0.7, 1.0))
+		_print("可用: %d" % info.available, Color(0.5, 1.0, 0.5))
+		_print("使用中: %d" % info.in_use, Color(1.0, 0.8, 0.3))
+		_print("自动扩容: %s" % ("是" if info.auto_expand else "否"), Color(0.7, 0.7, 0.7))
+		_print("场景路径: %s" % info.scene_path, Color(0.7, 0.7, 0.7))
+		_print("========================", Color(0.8, 0.8, 1.0))
+	else:
+		# 查看所有对象池统计
+		var all_info: Dictionary = ObjectPool.get_all_pool_info()
+		_print("=== 对象池统计 ===", Color(0.8, 0.8, 1.0))
+		if all_info.is_empty():
+			_print("  (无对象池)", Color(0.7, 0.7, 0.7))
+		else:
+			var total_all: int = 0
+			var available_all: int = 0
+			var in_use_all: int = 0
+			for pool_name in all_info.keys():
+				var info: Dictionary = all_info[pool_name]
+				_print("  [%s] 总数:%d 可用:%d 使用中:%d" % [
+					pool_name, info.total, info.available, info.in_use
+				], Color(0.7, 0.7, 1.0))
+				total_all += info.total
+				available_all += info.available
+				in_use_all += info.in_use
+			_print("  ------------------------", Color(0.5, 0.5, 0.5))
+			_print("  [合计] 总数:%d 可用:%d 使用中:%d" % [
+				total_all, available_all, in_use_all
+			], Color(1.0, 1.0, 0.7))
+		_print("====================", Color(0.8, 0.8, 1.0))
+		_print("提示: /pool <池名称> 查看详细信息", Color(0.6, 0.6, 0.6))
+
+
+func _cmd_pool_clear(args: Array) -> void:
+	## 清空指定对象池
+	if args.size() < 1:
+		_print("用法: poolclear <池名称>", Color(1.0, 0.5, 0.5))
+		return
+	if not ObjectPool:
+		_print("ObjectPool 不可用", Color(1.0, 0.5, 0.5))
+		return
+	var pool_name: String = args[0]
+	ObjectPool.clear_pool(pool_name)
+	_print("对象池 '%s' 已清空" % pool_name, Color(0.5, 1.0, 0.5))
+
+
+func _cmd_pool_clear_all(args: Array) -> void:
+	## 清空所有对象池
+	if not ObjectPool:
+		_print("ObjectPool 不可用", Color(1.0, 0.5, 0.5))
+		return
+	ObjectPool.clear_all_pools()
+	_print("所有对象池已清空", Color(0.5, 1.0, 0.5))
 
 
 # ==================== 辅助函数 ====================

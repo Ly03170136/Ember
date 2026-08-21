@@ -242,8 +242,12 @@ func _die() -> void:
 	_drop_loot()
 	# 给附近玩家经验值
 	_give_experience()
-	print("[Zombie] %s died at %s" % [zombie_type, str(position)])
-	queue_free()
+	print("[Zombie] %s died at %s, recycled to pool" % [zombie_type, str(position)])
+	# 从组中移除
+	if is_in_group("zombie"):
+		remove_from_group("zombie")
+	# 归还到对象池，而不是销毁
+	ObjectPool.recycle("zombie", self)
 
 
 func _give_experience() -> void:

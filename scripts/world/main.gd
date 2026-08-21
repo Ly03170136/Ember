@@ -145,6 +145,9 @@ func _ready() -> void:
 	# 所有放在world_layer下的实体会自动按Y坐标排序，Y值大的在前面
 	world_layer.y_sort_enabled = true
 	print("[Main] 斜45度视角Y轴排序已启用（world_layer.y_sort_enabled = true）")
+	# 初始化丧尸对象池（预加载100个普通丧尸，支持自动扩容）
+	ObjectPool.init_pool("res://scenes/entities/zombie.tscn", 100, "zombie", true)
+	print("[Main] 丧尸对象池已初始化（100个预加载，支持自动扩容）")
 	# 立即显示加载界面
 	if loading_screen:
 		loading_screen.visible = true
@@ -640,7 +643,11 @@ func _spawn_zombie_from_lab() -> void:
 	var angle: float = randf() * TAU
 	var distance: float = randf_range(50, 150)
 	var spawn_pos: Vector2 = lab_position + Vector2(cos(angle), sin(angle)) * distance
-	var zombie: Node2D = ZOMBIE_SCENE.instantiate()
+	# 从对象池获取丧尸
+	var zombie = ObjectPool.acquire("zombie")
+	if zombie == null:
+		print("[Main] 警告：无法从对象池获取丧尸")
+		return
 	zombie.position = spawn_pos
 	zombie.name = "LabZombie_%d" % randi()
 	# 实验室丧尸更强大，随机类型
@@ -708,7 +715,11 @@ func _spawn_horde_zombie() -> void:
 	var angle: float = randf() * TAU
 	var distance: float = randf_range(500, 800)
 	var spawn_pos: Vector2 = target_player.position + Vector2(cos(angle), sin(angle)) * distance
-	var zombie: Node2D = ZOMBIE_SCENE.instantiate()
+	# 从对象池获取丧尸
+	var zombie = ObjectPool.acquire("zombie")
+	if zombie == null:
+		print("[Main] 警告：无法从对象池获取尸潮丧尸")
+		return
 	zombie.position = spawn_pos
 	zombie.name = "HordeZombie_%d" % randi()
 	# 尸潮丧尸更强大

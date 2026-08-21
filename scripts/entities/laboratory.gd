@@ -79,10 +79,9 @@ func _spawn_zombie() -> void:
 					nearby_zombies += 1
 	if nearby_zombies >= MAX_ZOMBIES_NEAR_LAB:
 		return
-	# 生成僵尸
-	var zombie_scene: PackedScene = load("res://scenes/entities/zombie.tscn")
-	if zombie_scene:
-		var zombie: Node2D = zombie_scene.instantiate()
+	# 生成僵尸（使用对象池）
+	var zombie = ObjectPool.acquire("zombie")
+	if zombie:
 		var angle: float = randf() * PI * 2
 		var dist: float = randf_range(80, 150)
 		zombie.position = position + Vector2(cos(angle), sin(angle)) * dist
