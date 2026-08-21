@@ -66,6 +66,7 @@ AudioManager="*res://scripts/globals/audio_manager.gd"
 SaveManager="*res://scripts/globals/save_manager.gd"
 LoadManager="*res://scripts/globals/load_manager.gd"
 LoadingScreen="*res://scenes/ui/loading_screen.tscn"
+GameLogger="*res://scripts/globals/logger.gd"
 
 [display]
 

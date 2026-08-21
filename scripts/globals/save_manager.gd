@@ -24,8 +24,10 @@ func _ready() -> void:
 func save_game(slot: int, world: Node) -> bool:
 	## 保存游戏到指定存档位
 	if slot < 0 or slot >= MAX_SAVE_SLOTS:
+		GameLogger.error("存档位无效: %d" % slot, "Save")
 		return false
 	current_slot = slot
+	GameLogger.info("开始保存存档: %d" % slot, "Save")
 	var save_data: Dictionary = {
 		"version": 1,
 		"timestamp": Time.get_datetime_string_from_system(),
@@ -39,24 +41,30 @@ func save_game(slot: int, world: Node) -> bool:
 	var file := FileAccess.open(file_path, FileAccess.WRITE)
 	if not file:
 		print("[Save] 无法打开存档文件：", file_path)
+		GameLogger.error("无法打开存档文件: %s" % file_path, "Save")
 		return false
 	file.store_string(JSON.stringify(save_data, "\t"))
 	file.close()
 	print("[Save] 游戏已保存到存档位 %d" % slot)
+	GameLogger.info("存档保存成功: %d" % slot, "Save")
 	return true
 
 
 func load_game(slot: int) -> Dictionary:
 	## 从指定存档位读取游戏数据
 	if slot < 0 or slot >= MAX_SAVE_SLOTS:
+		GameLogger.error("存档位无效: %d" % slot, "Save")
 		return {}
 	var file_path: String = "%s/save_%d.json" % [SAVE_DIR, slot]
+	GameLogger.info("读取存档: %d" % slot, "Save")
 	if not FileAccess.file_exists(file_path):
 		print("[Save] 存档文件不存在：", file_path)
+		GameLogger.warning("存档文件不存在: %s" % file_path, "Save")
 		return {}
 	var file := FileAccess.open(file_path, FileAccess.READ)
 	if not file:
 		print("[Save] 无法打开存档文件：", file_path)
+		GameLogger.error("无法打开存档文件: %s" % file_path, "Save")
 		return {}
 	var json_text: String = file.get_as_text()
 	file.close()
@@ -64,9 +72,11 @@ func load_game(slot: int) -> Dictionary:
 	var parse_result: int = json.parse(json_text)
 	if parse_result != OK:
 		print("[Save] 存档文件解析失败：", json.get_error_message())
+		GameLogger.error("存档文件解析失败: %s" % json.get_error_message(), "Save")
 		return {}
 	current_slot = slot
 	print("[Save] 从存档位 %d 读取游戏数据" % slot)
+	GameLogger.info("存档读取成功: %d" % slot, "Save")
 	return json.data
 
 

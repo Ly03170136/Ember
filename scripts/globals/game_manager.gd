@@ -50,6 +50,7 @@ func host_game(player_name: String = "Player", player_class: String = "warrior")
 	var err := peer.create_server(PORT, MAX_PLAYERS)
 	if err != OK:
 		push_error("Failed to create server: %d" % err)
+		GameLogger.error("创建主机失败，端口: %d, 错误码: %d" % [PORT, err], "Network")
 		return
 	multiplayer.multiplayer_peer = peer
 	is_server = true
@@ -58,6 +59,7 @@ func host_game(player_name: String = "Player", player_class: String = "warrior")
 	player_names[1] = player_name
 	player_classes[1] = player_class
 	print("[Server] Hosting on port %d, peer_id=1" % PORT)
+	GameLogger.info("创建主机，端口: %d, 玩家: %s, 职业: %s" % [PORT, player_name, player_class], "Network")
 	_start_game()
 
 
@@ -68,6 +70,7 @@ func join_game(ip: String, player_name: String = "Player", player_class: String 
 	var err := peer.create_client(ip, PORT)
 	if err != OK:
 		push_error("Failed to create client: %d" % err)
+		GameLogger.error("加入游戏失败，IP: %s, 错误码: %d" % [ip, err], "Network")
 		return
 	multiplayer.multiplayer_peer = peer
 	is_server = false
@@ -75,6 +78,7 @@ func join_game(ip: String, player_name: String = "Player", player_class: String 
 	player_names[0] = player_name  # temp, will update
 	player_classes[0] = player_class  # temp, will update
 	print("[Client] Connecting to %s:%d" % [ip, PORT])
+	GameLogger.info("加入主机: %s:%d, 玩家: %s" % [ip, PORT, player_name], "Network")
 
 
 func disconnect_game() -> void:
@@ -153,6 +157,7 @@ func _despawn_player(peer_id: int) -> void:
 
 func _on_peer_connected(peer_id: int) -> void:
 	print("[Net] Peer connected: %d" % peer_id)
+	GameLogger.info("玩家加入，peer_id: %d" % peer_id, "Network")
 	player_joined.emit(peer_id)
 	if is_server:
 		# 服务器为新玩家生成角色
@@ -164,6 +169,7 @@ func _on_peer_connected(peer_id: int) -> void:
 
 func _on_peer_disconnected(peer_id: int) -> void:
 	print("[Net] Peer disconnected: %d" % peer_id)
+	GameLogger.info("玩家离开，peer_id: %d" % peer_id, "Network")
 	player_left.emit(peer_id)
 	if is_server:
 		_despawn_player(peer_id)
@@ -177,6 +183,7 @@ func _on_connected_to_server() -> void:
 	is_connected = true
 	local_peer_id = multiplayer.get_unique_id()
 	print("[Client] Connected! peer_id=%d" % local_peer_id)
+	GameLogger.info("连接服务器成功，peer_id: %d" % local_peer_id, "Network")
 	# 向服务器注册名字和职业
 	_register_name.rpc_id(1, player_names.get(0, "Player"))
 	_register_class.rpc_id(1, player_classes.get(0, "warrior"))
@@ -185,12 +192,14 @@ func _on_connected_to_server() -> void:
 
 func _on_connection_failed() -> void:
 	print("[Client] Connection failed!")
+	GameLogger.error("连接服务器失败", "Network")
 	is_connected = false
 	multiplayer.multiplayer_peer = null
 
 
 func _on_server_disconnected() -> void:
 	print("[Client] Server disconnected!")
+	GameLogger.warning("服务器断开连接", "Network")
 	is_connected = false
 	multiplayer.multiplayer_peer = null
 	players.clear()

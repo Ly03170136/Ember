@@ -95,16 +95,19 @@ func load_scene(scene_path: String, data: Dictionary = {}, auto_switch: bool = t
 	_emit_progress(0.0, "正在准备加载...")
 	
 	print("[LoadingManager] 开始加载场景: %s, 数据: %s" % [scene_path, str(data)])
+	GameLogger.info("开始加载场景: " + scene_path, "LoadingManager")
 	
 	# 检查文件是否存在
 	if not ResourceLoader.exists(scene_path):
 		_handle_load_failed("场景文件不存在: %s" % scene_path)
+		GameLogger.error("场景文件不存在: " + scene_path, "LoadingManager")
 		return
 	
 	# 启动异步加载
 	var load_err: Error = ResourceLoader.load_threaded_request(scene_path, "", false)
 	if load_err != OK:
 		_handle_load_failed("无法启动异步加载，错误码: %d" % load_err)
+		GameLogger.error("无法启动异步加载，错误码: %d" % load_err, "LoadingManager")
 		return
 	
 	# 启动分帧加载轮询
@@ -291,6 +294,7 @@ func _on_resource_loaded() -> void:
 	_set_state(LoadState.COMPLETED)
 	load_completed.emit(current_scene_path, current_load_data)
 	loading_finished.emit()
+	GameLogger.info("场景加载完成: " + current_scene_path, "LoadingManager")
 	
 	# 调用回调
 	if _load_callback.is_valid():
@@ -335,6 +339,7 @@ func _handle_load_failed(error_msg: String) -> void:
 	_load_complete = true
 	
 	print("[LoadingManager] 加载失败: %s, 错误: %s" % [current_scene_path, error_msg])
+	GameLogger.error("加载失败: " + current_scene_path + ", 错误: " + error_msg, "LoadingManager")
 	
 	_emit_progress(1.0, "加载失败：%s" % error_msg)
 	_set_state(LoadState.FAILED)
