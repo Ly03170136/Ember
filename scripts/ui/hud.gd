@@ -222,6 +222,17 @@ func _add_chat_message(name: String, message: String, color: Color = Color(1, 1,
 	# 限制聊天记录数量
 	if chat_box.get_child_count() > 50:
 		chat_box.get_child(0).queue_free()
+	# 自动滚动到底部（延迟一帧，确保UI布局已更新）
+	call_deferred("_scroll_chat_to_bottom")
+
+
+func _scroll_chat_to_bottom() -> void:
+	## 聊天窗口滚动到底部
+	var scroll: ScrollContainer = chat_box.get_parent() as ScrollContainer
+	if scroll and is_instance_valid(scroll):
+		var vbar: VScrollBar = scroll.get_v_scroll_bar()
+		if vbar:
+			scroll.scroll_vertical = vbar.max_value
 
 
 func show_notification(text: String, duration: float = 3.0) -> void:

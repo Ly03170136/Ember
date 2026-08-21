@@ -139,11 +139,31 @@ func _physics_process(delta: float) -> void:
 	if is_down:
 		if GameManager.is_server:
 			update_down_state(delta)
+		# 检查是否有输入框获得焦点
+		var focus_owner_down: Control = get_viewport().gui_get_focus_owner()
+		if focus_owner_down and (focus_owner_down is LineEdit or focus_owner_down is TextEdit):
+			# 输入框激活时，不爬行
+			velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
+			move_and_slide()
+			_update_animation(delta)
+			return
 		# 倒地后可缓慢爬行
 		_crawl(delta)
 		_update_animation(delta)
 		return
 	attack_cooldown = max(0, attack_cooldown - delta)
+	# 检查是否有输入框获得焦点（聊天框等），如果有则不处理玩家输入
+	var focus_owner: Control = get_viewport().gui_get_focus_owner()
+	if focus_owner and (focus_owner is LineEdit or focus_owner is TextEdit):
+		# 输入框激活时，停止移动
+		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
+		move_and_slide()
+		_update_stats(delta)
+		_update_animation(delta)
+		update_noise(delta)
+		_update_sickness(delta)
+		_update_sanity(delta)
+		return
 	_handle_input(delta)
 	_move(delta)
 	_update_stats(delta)
