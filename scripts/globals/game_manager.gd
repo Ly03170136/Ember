@@ -157,7 +157,7 @@ func _spawn_player(peer_id: int) -> void:
 	player.player_class = player_classes.get(peer_id, "warrior")
 	player.player_color = PLAYER_COLORS[peer_id % PLAYER_COLORS.size()]
 	# 玩家出生点：X0 Y0
-	var map_center: Vector2 = Vector2.ZERO
+	var map_center: Vector2 = Vector2(2000, 10000)
 	var spawn_pos: Vector2 = map_center
 	var main_scene: Node = get_tree().current_scene
 	if main_scene and main_scene.has_node("IsometricMap"):

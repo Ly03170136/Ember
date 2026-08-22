@@ -157,7 +157,7 @@ func _generate_map() -> void:
 	# 创建一个Sprite2D显示整个地图
 	var map_sprite: Sprite2D = Sprite2D.new()
 	map_sprite.texture = big_tex
-	map_sprite.position = Vector2(0, 0)
+	map_sprite.position = Vector2(-2000, -10000)
 	map_sprite.centered = false
 	map_container.add_child(map_sprite)
 	
@@ -180,7 +180,7 @@ func _load_full_map_image(bg_path: String) -> void:
 	# 创建一个Sprite2D显示整个地图
 	var map_sprite: Sprite2D = Sprite2D.new()
 	map_sprite.texture = tex
-	map_sprite.position = Vector2(0, 0)
+	map_sprite.position = Vector2(-2000, -10000)
 	map_sprite.centered = false
 	map_container.add_child(map_sprite)
 	
