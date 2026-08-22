@@ -477,7 +477,8 @@ func _interact_with_nearest() -> bool:
 		interact_anim_timer = 0.4
 		anim_frame = 0
 		anim_timer = 0
-		nearest_resource.hit(20.0)
+		# 传入玩家位置，让树木向玩家相反方向倒下
+		nearest_resource.hit(20.0, global_position)
 		# 播放采集音效
 		if AudioManager:
 			AudioManager.play_sfx(AudioManager.SFX.GATHER)

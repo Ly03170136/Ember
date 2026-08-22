@@ -120,7 +120,7 @@ func _process(delta: float) -> void:
 			sprite.position.x = 0
 
 
-func hit(damage: float = 1.0) -> void:
+func hit(damage: float = 1.0, attacker_pos: Vector2 = Vector2.ZERO) -> void:
 	if is_depleted:
 		return
 	# 触发抖动反馈
