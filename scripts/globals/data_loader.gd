@@ -36,12 +36,12 @@ const VALIDATION_RULES = {
 	}
 }
 
-# ?????????
+# 校验结果存储
 var _validation_errors = []
 var _validation_warnings = []
 
 var _file_watchers = {}
-var hot_reload_enabled = true  # ??????????????????????
+var hot_reload_enabled = true  # 热重载开关，修改JSON文件后自动重新加载
 var validation_enabled = true
 
 signal data_updated(data_type)
@@ -56,13 +56,13 @@ func _ready():
 
 
 func _load_all_data():
-	# ????????????????????????????D????????????
+	# 按依赖顺序加载数据，物品先加载，因为配方和建筑需要引用物品
 	var load_order = ["items", "recipes", "buildings", "zombies", "professions", "tech_tree", "world"]
 	for data_type in load_order:
 		if DATA_PATHS.has(data_type):
 			_load_data(data_type)
 	print("[DataLoader] All data loaded, total %d types" % DATA_PATHS.size())
-	# ?????????????????????????
+	# 打印校验结果摘要
 	_print_validation_summary()
 
 
@@ -128,7 +128,7 @@ func _load_directory(dir_path):
 
 
 func _validate_data(data_type, data):
-	# ???????????
+	# 清空之前的校验结果
 	_validation_errors.clear()
 	_validation_warnings.clear()
 	
@@ -139,13 +139,13 @@ func _validate_data(data_type, data):
 	elif data_type == "buildings":
 		_validate_buildings(data)
 	
-	# ?????????
+	# 打印校验结果
 	if _validation_errors.size() > 0:
-		print("[DataLoader] ===== %s ?????? (%d?) =====" % [data_type, _validation_errors.size()])
+		print("[DataLoader] ===== %s 校验错误 (%d个) =====" % [data_type, _validation_errors.size()])
 		for err in _validation_errors:
 			print("  [ERROR] %s" % err)
 	if _validation_warnings.size() > 0:
-		print("[DataLoader] ===== %s ?????? (%d?) =====" % [data_type, _validation_warnings.size()])
+		print("[DataLoader] ===== %s 校验警告 (%d个) =====" % [data_type, _validation_warnings.size()])
 		for warn in _validation_warnings:
 			print("  [WARN] %s" % warn)
 	if _validation_errors.size() == 0 and _validation_warnings.size() == 0:
@@ -174,7 +174,7 @@ func _is_positive_integer(value):
 
 
 func _validate_items(data):
-	# ?????????
+	# 物品数据校验
 	var rules = VALIDATION_RULES["items"]
 	var required_fields = rules["required_fields"]
 	var valid_types = rules["valid_types"]
@@ -184,113 +184,113 @@ func _validate_items(data):
 	for item_id in data.keys():
 		var item = data[item_id]
 		if typeof(item) != TYPE_DICTIONARY:
-			_add_validation_error("??? '%s' ?????????" % item_id)
+			_add_validation_error("物品 '%s' 不是有效的字典" % item_id)
 			continue
 		
-		# ??????????
+		# 检查必填字段
 		for field in required_fields:
 			if not item.has(field):
-				_add_validation_error("??? '%s' ????????? '%s'" % [item_id, field])
+				_add_validation_error("物品 '%s' 缺少必填字段 '%s'" % [item_id, field])
 		
-		# ????????????
+		# 检查类型是否有效
 		if item.has("type") and not valid_types.is_empty():
 			if not valid_types.has(item["type"]):
-				_add_validation_error("??? '%s' ??? '%s' ?????????? %s" % [item_id, item["type"], str(valid_types)])
+				_add_validation_error("物品 '%s' 的类型 '%s' 无效，有效值: %s" % [item_id, item["type"], str(valid_types)])
 		
-		# ??????????
+		# 检查数值字段
 		for field in numeric_fields.keys():
 			if item.has(field):
 				var value = item[field]
 				if typeof(value) != TYPE_INT and typeof(value) != TYPE_FLOAT:
-					_add_validation_error("??? '%s' ??? '%s' ????????????????%s" % [item_id, field, typeof(value)])
+					_add_validation_error("物品 '%s' 的字段 '%s' 类型错误，应为数值，当前类型: %s" % [item_id, field, typeof(value)])
 				elif value < numeric_fields[field]:
-					_add_validation_error("??? '%s' ??? '%s' ??%s ?????????%s" % [item_id, field, str(value), str(numeric_fields[field])])
+					_add_validation_error("物品 '%s' 的字段 '%s' 值 %s 小于最小值 %s" % [item_id, field, str(value), str(numeric_fields[field])])
 		
-		# ??????????
+		# 检查数组字段
 		for field in array_fields.keys():
 			if item.has(field):
 				var value = item[field]
 				if typeof(value) != TYPE_ARRAY:
-					_add_validation_error("??? '%s' ??? '%s' ?????????" % [item_id, field])
+					_add_validation_error("物品 '%s' 的字段 '%s' 应为数组类型" % [item_id, field])
 				elif value.size() != array_fields[field]:
-					_add_validation_warning("??? '%s' ??? '%s' ????????? %d?????? %d" % [item_id, field, array_fields[field], value.size()])
+					_add_validation_warning("物品 '%s' 的字段 '%s' 数组长度应为 %d，当前为 %d" % [item_id, field, array_fields[field], value.size()])
 
 
 func _validate_recipes(data):
-	# ?????????
+	# 配方数据校验
 	var rules = VALIDATION_RULES["recipes"]
 	var required_fields = rules["required_fields"]
 	var output_required_fields = rules["output_required_fields"]
 	var ingredient_required_fields = rules["ingredient_required_fields"]
 	var numeric_fields = rules["numeric_fields"]
 	
-	# ???????????????????????
+	# 获取已加载的物品数据，用于引用检查
 	var items = _data_cache.get("items", {})
 	
 	for recipe_id in data.keys():
 		var recipe = data[recipe_id]
 		if typeof(recipe) != TYPE_DICTIONARY:
-			_add_validation_error("??? '%s' ?????????" % recipe_id)
+			_add_validation_error("配方 '%s' 不是有效的字典" % recipe_id)
 			continue
 		
-		# ??????????
+		# 检查必填字段
 		for field in required_fields:
 			if not recipe.has(field):
-				_add_validation_error("??? '%s' ????????? '%s'" % [recipe_id, field])
+				_add_validation_error("配方 '%s' 缺少必填字段 '%s'" % [recipe_id, field])
 		
-		# ????utput???
+		# 校验output字段
 		if recipe.has("output"):
 			var output = recipe["output"]
 			if typeof(output) != TYPE_DICTIONARY:
-				_add_validation_error("??? '%s' output ?????????" % recipe_id)
+				_add_validation_error("配方 '%s' 的output字段不是有效的字典" % recipe_id)
 			else:
 				for field in output_required_fields:
 					if not output.has(field):
-						_add_validation_error("??? '%s' output ?????? '%s'" % [recipe_id, field])
-				# ????????????output.id???????????????
+						_add_validation_error("配方 '%s' 的output缺少字段 '%s'" % [recipe_id, field])
+				# 检查output.id是否引用了存在的物品
 				if output.has("id") and not items.is_empty():
 					if not items.has(output["id"]):
-						_add_validation_error("??? '%s' output.id '%s' ??????????????" % [recipe_id, output["id"]])
-				# ????ount????
+						_add_validation_error("配方 '%s' 的output.id '%s' 引用了不存在的物品" % [recipe_id, output["id"]])
+				# 检查count字段
 				if output.has("count"):
 					if not _is_positive_integer(output["count"]):
-						_add_validation_error("??? '%s' output.count ????????" % recipe_id)
+						_add_validation_error("配方 '%s' 的output.count应为正整数" % recipe_id)
 		
-		# ????ngredients???
+		# 校验ingredients字段
 		if recipe.has("ingredients"):
 			var ingredients = recipe["ingredients"]
 			if typeof(ingredients) != TYPE_ARRAY:
-				_add_validation_error("??? '%s' ingredients ?????????" % recipe_id)
+				_add_validation_error("配方 '%s' 的ingredients字段不是有效的数组" % recipe_id)
 			else:
 				for i in range(ingredients.size()):
 					var ing = ingredients[i]
 					if typeof(ing) != TYPE_DICTIONARY:
-						_add_validation_error("??? '%s' ingredients[%d] ?????????" % [recipe_id, i])
+						_add_validation_error("配方 '%s' 的ingredients[%d] 不是有效的字典" % [recipe_id, i])
 					else:
 						for field in ingredient_required_fields:
 							if not ing.has(field):
-								_add_validation_error("??? '%s' ingredients[%d] ?????? '%s'" % [recipe_id, i, field])
-						# ????????????ingredient.id???????????????
+								_add_validation_error("配方 '%s' 的ingredients[%d] 缺少字段 '%s'" % [recipe_id, i, field])
+						# 检查ingredient.id是否引用了存在的物品
 						if ing.has("id") and not items.is_empty():
 							if not items.has(ing["id"]):
-								_add_validation_error("??? '%s' ingredients[%d].id '%s' ??????????????" % [recipe_id, i, ing["id"]])
-						# ????ount????
+								_add_validation_error("配方 '%s' 的ingredients[%d].id '%s' 引用了不存在的物品" % [recipe_id, i, ing["id"]])
+						# 检查count字段
 						if ing.has("count"):
 							if not _is_positive_integer(ing["count"]):
-								_add_validation_error("??? '%s' ingredients[%d].count ????????" % [recipe_id, i])
+								_add_validation_error("配方 '%s' 的ingredients[%d].count应为正整数" % [recipe_id, i])
 		
-		# ??????????
+		# 检查数值字段
 		for field in numeric_fields.keys():
 			if recipe.has(field):
 				var value = recipe[field]
 				if typeof(value) != TYPE_INT and typeof(value) != TYPE_FLOAT:
-					_add_validation_error("??? '%s' ??? '%s' ??????????" % [recipe_id, field])
+					_add_validation_error("配方 '%s' 的字段 '%s' 类型错误，应为数值" % [recipe_id, field])
 				elif value < numeric_fields[field]:
-					_add_validation_error("??? '%s' ??? '%s' ??%s ?????????%s" % [recipe_id, field, str(value), str(numeric_fields[field])])
+					_add_validation_error("配方 '%s' 的字段 '%s' 值 %s 小于最小值 %s" % [recipe_id, field, str(value), str(numeric_fields[field])])
 
 
 func _validate_buildings(data):
-	# ?????????
+	# 建筑数据校验
 	var rules = VALIDATION_RULES["buildings"]
 	var required_fields = rules["required_fields"]
 	var valid_categories = rules["valid_categories"]
@@ -298,84 +298,84 @@ func _validate_buildings(data):
 	var material_required_fields = rules["material_required_fields"]
 	var numeric_fields = rules["numeric_fields"]
 	
-	# ???????????????????????
+	# 获取已加载的物品数据，用于引用检查
 	var items = _data_cache.get("items", {})
 	
 	for building_id in data.keys():
 		var building = data[building_id]
 		if typeof(building) != TYPE_DICTIONARY:
-			_add_validation_error("??? '%s' ?????????" % building_id)
+			_add_validation_error("建筑 '%s' 不是有效的字典" % building_id)
 			continue
 		
-		# ??????????
+		# 检查必填字段
 		for field in required_fields:
 			if not building.has(field):
-				_add_validation_error("??? '%s' ????????? '%s'" % [building_id, field])
+				_add_validation_error("建筑 '%s' 缺少必填字段 '%s'" % [building_id, field])
 		
-		# ????????????
+		# 检查分类是否有效
 		if building.has("category") and not valid_categories.is_empty():
 			if not valid_categories.has(building["category"]):
-				_add_validation_warning("??? '%s' ??? '%s' ??????????????" % [building_id, building["category"]])
+				_add_validation_warning("建筑 '%s' 的分类 '%s' 不在预定义分类中" % [building_id, building["category"]])
 		
-		# ?????????????ize??
+		# 检查数组字段如size
 		for field in array_fields.keys():
 			if building.has(field):
 				var value = building[field]
 				if typeof(value) != TYPE_ARRAY:
-					_add_validation_error("??? '%s' ??? '%s' ?????????" % [building_id, field])
+					_add_validation_error("建筑 '%s' 的字段 '%s' 应为数组类型" % [building_id, field])
 				elif value.size() != array_fields[field]:
-					_add_validation_error("??? '%s' ??? '%s' ????????? %d?????? %d" % [building_id, field, array_fields[field], value.size()])
+					_add_validation_error("建筑 '%s' 的字段 '%s' 数组长度应为 %d，当前为 %d" % [building_id, field, array_fields[field], value.size()])
 		
-		# ????uild_materials???
+		# 校验build_materials字段
 		if building.has("build_materials"):
 			var materials = building["build_materials"]
 			if typeof(materials) != TYPE_ARRAY:
-				_add_validation_error("??? '%s' build_materials ?????????" % building_id)
+				_add_validation_error("建筑 '%s' 的build_materials字段不是有效的数组" % building_id)
 			else:
 				for i in range(materials.size()):
 					var mat = materials[i]
 					if typeof(mat) != TYPE_DICTIONARY:
-						_add_validation_error("??? '%s' build_materials[%d] ?????????" % [building_id, i])
+						_add_validation_error("建筑 '%s' 的build_materials[%d] 不是有效的字典" % [building_id, i])
 					else:
 						for field in material_required_fields:
 							if not mat.has(field):
-								_add_validation_error("??? '%s' build_materials[%d] ?????? '%s'" % [building_id, i, field])
-						# ????????????material.id???????????????
+								_add_validation_error("建筑 '%s' 的build_materials[%d] 缺少字段 '%s'" % [building_id, i, field])
+						# 检查material.id是否引用了存在的物品
 						if mat.has("id") and not items.is_empty():
 							if not items.has(mat["id"]):
-								_add_validation_error("??? '%s' build_materials[%d].id '%s' ??????????????" % [building_id, i, mat["id"]])
-						# ????ount????
+								_add_validation_error("建筑 '%s' 的build_materials[%d].id '%s' 引用了不存在的物品" % [building_id, i, mat["id"]])
+						# 检查count字段
 						if mat.has("count"):
 							if not _is_positive_integer(mat["count"]):
-								_add_validation_error("??? '%s' build_materials[%d].count ????????" % [building_id, i])
+								_add_validation_error("建筑 '%s' 的build_materials[%d].count应为正整数" % [building_id, i])
 		
-		# ??????????
+		# 检查数值字段
 		for field in numeric_fields.keys():
 			if building.has(field):
 				var value = building[field]
 				if typeof(value) != TYPE_INT and typeof(value) != TYPE_FLOAT:
-					_add_validation_error("??? '%s' ??? '%s' ??????????" % [building_id, field])
+					_add_validation_error("建筑 '%s' 的字段 '%s' 类型错误，应为数值" % [building_id, field])
 				elif value < numeric_fields[field]:
-					_add_validation_error("??? '%s' ??? '%s' ??%s ?????????%s" % [building_id, field, str(value), str(numeric_fields[field])])
+					_add_validation_error("建筑 '%s' 的字段 '%s' 值 %s 小于最小值 %s" % [building_id, field, str(value), str(numeric_fields[field])])
 
 
 func get_validation_errors():
-	# ????????????
+	# 返回校验错误的副本
 	return _validation_errors.duplicate()
 
 
 func get_validation_warnings():
-	# ????????????
+	# 返回校验警告的副本
 	return _validation_warnings.duplicate()
 
 
 func has_validation_errors():
-	# ???????????
+	# 是否存在校验错误
 	return _validation_errors.size() > 0
 
 
 func validate_all_data():
-	# ?????????????
+	# 重新校验所有已加载的数据
 	for data_type in DATA_PATHS.keys():
 		if _data_cache.has(data_type) and VALIDATION_RULES.has(data_type):
 			_validate_data(data_type, _data_cache[data_type])
@@ -383,19 +383,19 @@ func validate_all_data():
 
 
 func _print_validation_summary():
-	# ?????????
+	# 打印校验结果摘要
 	var total_errors = 0
 	var total_warnings = 0
 	var validated_types = []
 	for data_type in DATA_PATHS.keys():
 		if VALIDATION_RULES.has(data_type):
 			validated_types.append(data_type)
-	print("[DataLoader] ===== ????????? =====")
-	print("[DataLoader] ??????????? %s" % str(validated_types))
-	print("[DataLoader] ??????: %d" % _data_cache.get("items", {}).size())
-	print("[DataLoader] ??????: %d" % _data_cache.get("recipes", {}).size())
-	print("[DataLoader] ??????: %d" % _data_cache.get("buildings", {}).size())
-	print("[DataLoader] ????????")
+	print("[DataLoader] ===== 数据校验总结 =====")
+	print("[DataLoader] 已校验数据类型: %s" % str(validated_types))
+	print("[DataLoader] 物品数量: %d" % _data_cache.get("items", {}).size())
+	print("[DataLoader] 配方数量: %d" % _data_cache.get("recipes", {}).size())
+	print("[DataLoader] 建筑数量: %d" % _data_cache.get("buildings", {}).size())
+	print("[DataLoader] 校验完成！")
 
 
 func get_data(data_type):
@@ -504,7 +504,7 @@ func _get_directory_files_modified(dir_path):
 
 
 func _get_file_modified_time(file_path):
-	# ???????????????????????????????et_file_info API??
+	# 使用文件大小作为修改时间的替代指标（Godot 4没有直接的get_file_info API）
 	if not FileAccess.file_exists(file_path):
 		return 0
 	var file = FileAccess.open(file_path, FileAccess.READ)
@@ -532,8 +532,8 @@ func _check_file_changes():
 					if not last_files.has(file_name) or current_files[file_name] != last_files[file_name]:
 						changed = true
 						break
-			if changed:
-				watcher["files_modified"] = current_files
+				if changed:
+					watcher["files_modified"] = current_files
 		else:
 			var current_modified = _get_file_modified_time(watcher["path"])
 			if current_modified != 0 and current_modified != watcher["last_modified"]:
