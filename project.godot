@@ -76,6 +76,7 @@ ResourceCacheManager="*res://scripts/globals/resource_cache_manager.gd"
 TimerManager="*res://scripts/globals/timer_manager.gd"
 MathUtils="*res://scripts/globals/math_utils.gd"
 ParticleEffectManager="*res://scripts/globals/particle_effect_manager.gd"
+AnimationStateMachine="*res://scripts/globals/animation_state_machine.gd"
 
 [display]
 
