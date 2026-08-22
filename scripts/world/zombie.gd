@@ -33,6 +33,7 @@ var knockback_velocity: Vector2 = Vector2.ZERO
 var ai_update_interval: float = 0.0  # AI更新间隔（0=每帧更新，0.2=每0.2秒更新一次）
 var ai_update_timer: float = 0.0  # AI更新计时器
 var entity_type: String = "zombie"  # 实体类型（用于LOD系统识别）
+var is_horde_zombie: bool = false  # 尸潮丧尸标记，使用简化AI
 
 @onready var sprite: Sprite2D = $Sprite
 @onready var synchronizer: MultiplayerSynchronizer = $MultiplayerSynchronizer
@@ -120,6 +121,21 @@ func set_ai_update_interval(interval: float) -> void:
 
 
 func _update_behavior(delta: float) -> void:
+	# 尸潮丧尸简化AI：直接追击最近玩家，不漫游，不检查建筑
+	if is_horde_zombie:
+		var horde_target: Node2D = _find_nearest_player(500.0)  # 扩大检测范围
+		if horde_target:
+			target = horde_target
+			var dir := (horde_target.position - position).normalized()
+			wander_direction = dir
+			var atk_range: float = _type_config.get("attack_range", 45.0)
+			if position.distance_to(horde_target.position) <= atk_range and attack_timer <= 0:
+				_attack(horde_target)
+		else:
+			# 没有玩家时向地图中心移动
+			wander_direction = (Vector2.ZERO - position).normalized()
+		return
+	
 	var is_night := false
 	var main: Node = get_tree().current_scene
 	if main and main.has_method("get_time_of_day"):

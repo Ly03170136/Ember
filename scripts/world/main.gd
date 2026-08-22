@@ -694,6 +694,8 @@ func _spawn_horde_zombie() -> void:
 		return
 	zombie.position = spawn_pos
 	zombie.name = "HordeZombie_%d" % randi()
+	# 尸潮优化：标记为尸潮丧尸，使用简化AI
+	zombie.set("is_horde_zombie", true)
 	# 尸潮丧尸更强大
 	if zombie.has_method("set_zombie_type"):
 		# 随机选择丧尸类型，快速丧尸更多
@@ -701,6 +703,8 @@ func _spawn_horde_zombie() -> void:
 		zombie.set_zombie_type(types[randi() % types.size()])
 	world_layer.add_child(zombie)
 	zombie.add_to_group("zombie")
+	# 注册到分块加载系统
+	_register_chunk_entity(zombie)
 	horde_zombies_spawned += 1
 
 
