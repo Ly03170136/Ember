@@ -295,6 +295,12 @@ func restore_thirst(amount: float) -> void:
 func _input(event: InputEvent) -> void:
 	if not is_local() or is_down:
 		return
+	# 检查是否有UI菜单打开，如果有则不处理滚轮缩放
+	if event is InputEventMouseButton and (event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+		var ui_menus: Array = get_tree().get_nodes_in_group("ui_menu")
+		for menu in ui_menus:
+			if menu.has_method("is_open") and menu.is_open:
+				return
 	# 鼠标滚轮缩放（正常等比例缩放，范围2.0-4.0）
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 		var new_zoom: float = min(camera.zoom.x + 0.2, 4.0)

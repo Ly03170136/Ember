@@ -12,6 +12,7 @@ var _cached_items: Array = []  # 缓存的建筑UI元素
 var _max_cached_items: int = 50  # 最大缓存数量
 
 @onready var panel: Panel = $Panel
+@onready var scroll: ScrollContainer = $Panel/Scroll
 @onready var building_list: VBoxContainer = $Panel/Scroll/BuildingList
 @onready var title_label: Label = $Panel/Header/TitleLabel
 @onready var close_btn: Button = $Panel/Header/CloseBtn
@@ -95,6 +96,19 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# 菜单打开时处理滚轮事件，确保菜单能正常滚动
+	if is_open and not is_placing:
+		if event is InputEventMouseButton:
+			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				scroll.scroll_vertical = max(0, scroll.scroll_vertical - 50)
+				get_viewport().set_input_as_handled()
+				return
+			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				var scroll_bar = scroll.get_v_scroll_bar()
+				if scroll_bar:
+					scroll.scroll_vertical = min(scroll_bar.max_value, scroll.scroll_vertical + 50)
+				get_viewport().set_input_as_handled()
+				return
 	# 放置模式下用_input处理鼠标事件，确保不被其他节点拦截
 	if not is_placing:
 		return

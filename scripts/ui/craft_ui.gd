@@ -15,6 +15,7 @@ var _cached_items: Array = []  # 缓存的配方UI元素
 var _max_cached_items: int = 50  # 最大缓存数量
 
 @onready var panel: Panel = $Panel
+@onready var scroll: ScrollContainer = $Panel/Scroll
 @onready var recipe_list: VBoxContainer = $Panel/Scroll/RecipeList
 @onready var title_label: Label = $Panel/Header/TitleLabel
 @onready var station_label: Label = $Panel/Header/StationLabel
@@ -123,6 +124,21 @@ func _on_input_action_pressed(action: String) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# 移除硬编码的E键检测，改用InputManager的action_pressed信号
 	pass
+
+
+func _input(event: InputEvent) -> void:
+	# 菜单打开时直接处理滚轮事件，确保菜单能正常滚动
+	if not is_open:
+		return
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			scroll.scroll_vertical = max(0, scroll.scroll_vertical - 50)
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			var scroll_bar = scroll.get_v_scroll_bar()
+			if scroll_bar:
+				scroll.scroll_vertical = min(scroll_bar.max_value, scroll.scroll_vertical + 50)
+			get_viewport().set_input_as_handled()
 
 
 func toggle() -> void:
