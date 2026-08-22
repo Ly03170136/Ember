@@ -140,20 +140,8 @@ func _spawn_player(peer_id: int) -> void:
 	player.player_name = player_names.get(peer_id, "Player")
 	player.player_class = player_classes.get(peer_id, "warrior")
 	player.player_color = PLAYER_COLORS[peer_id % PLAYER_COLORS.size()]
-	# 等距地图中心（瓦片坐标(100,100)对应的等距世界坐标，瓦片64x32）
-	var map_center_x: float = 0.0
-	var map_center_y: float = (100.0 + 100.0) * 32.0 / 2.0
-	var map_center: Vector2 = Vector2(map_center_x, map_center_y)
-	# 尝试通过IsometricMap寻找安全出生点
-	var spawn_pos: Vector2 = map_center
-	var main_scene: Node = get_tree().current_scene
-	if main_scene and main_scene.has_node("IsometricMap"):
-		var iso_map: Node = main_scene.get_node("IsometricMap")
-		if iso_map and iso_map.has_method("find_safe_spawn_position"):
-			spawn_pos = iso_map.find_safe_spawn_position(map_center)
-	else:
-		# 备用方案：随机出生点
-		spawn_pos = map_center + Vector2(randf_range(-100, 100), randf_range(-100, 100))
+	# 玩家初始生成位置：地图坐标(0, 0)
+	var spawn_pos: Vector2 = Vector2.ZERO
 	player.position = spawn_pos
 	game_world.add_child(player)
 	players[peer_id] = player
