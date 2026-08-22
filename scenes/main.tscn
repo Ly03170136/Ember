@@ -18,19 +18,19 @@ script = ExtResource("1_main")
 
 [node name="HUD" parent="." unique_id=1244281875 instance=ExtResource("2_hud")]
 
-[node name="InventoryUI" parent="." unique_id=1278131300 instance=ExtResource("3_inv")]
+[node name="InventoryUI" parent="HUD" unique_id=1278131300 instance=ExtResource("3_inv")]
 
-[node name="QuickBar" parent="." unique_id=1076557505 instance=ExtResource("4_qb")]
+[node name="QuickBar" parent="HUD" unique_id=1076557505 instance=ExtResource("4_qb")]
 anchors_preset = 7
 
-[node name="CraftUI" parent="." unique_id=1227049255 instance=ExtResource("5_craft")]
+[node name="CraftUI" parent="HUD" unique_id=1227049255 instance=ExtResource("5_craft")]
 
-[node name="BuildUI" parent="." unique_id=608026269 instance=ExtResource("6_build")]
+[node name="BuildUI" parent="HUD" unique_id=608026269 instance=ExtResource("6_build")]
 
-[node name="MapUI" parent="." unique_id=1128783116 instance=ExtResource("8_map")]
+[node name="MapUI" parent="HUD" unique_id=1128783116 instance=ExtResource("8_map")]
 
-[node name="LoadingScreen" parent="." unique_id=102064051 instance=ExtResource("9_ld")]
+[node name="LoadingScreen" parent="HUD" unique_id=102064051 instance=ExtResource("9_ld")]
 
-[node name="SettingsMenu" parent="." unique_id=1985776927 instance=ExtResource("10_set")]
+[node name="SettingsMenu" parent="HUD" unique_id=1985776927 instance=ExtResource("10_set")]
 
-[node name="TechTreeUI" parent="." unique_id=1601442456 instance=ExtResource("11_tech")]
+[node name="TechTreeUI" parent="HUD" unique_id=1601442456 instance=ExtResource("11_tech")]

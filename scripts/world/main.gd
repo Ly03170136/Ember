@@ -4,14 +4,14 @@ extends Node2D
 
 @onready var world_layer: Node2D = $WorldLayer
 @onready var hud: CanvasLayer = $HUD
-@onready var inventory_ui: Control = $InventoryUI
-@onready var quickbar: Control = $QuickBar
-@onready var craft_ui: Control = $CraftUI
-@onready var build_ui: Control = $BuildUI
-@onready var map_ui: Control = $MapUI
-@onready var loading_screen: Control = $LoadingScreen
-@onready var settings_menu: Control = $SettingsMenu
-@onready var tech_tree_ui: Control = $TechTreeUI
+@onready var inventory_ui: Control = $HUD/InventoryUI
+@onready var quickbar: Control = $HUD/QuickBar
+@onready var craft_ui: Control = $HUD/CraftUI
+@onready var build_ui: Control = $HUD/BuildUI
+@onready var map_ui: Control = $HUD/MapUI
+@onready var loading_screen: Control = $HUD/LoadingScreen
+@onready var settings_menu: Control = $HUD/SettingsMenu
+@onready var tech_tree_ui: Control = $HUD/TechTreeUI
 var character_ui: Control = null
 var debug_console: CanvasLayer = null  # 调试控制台
 
@@ -170,9 +170,7 @@ func _ready() -> void:
 	print("[Main] UI初始化完成")
 	# 注册游戏世界到GameManager
 	GameManager.set_game_world(world_layer)
-	# 把所有UI移到HUD的CanvasLayer里，固定在屏幕上不跟随相机
-	inventory_ui.reparent(hud)
-	quickbar.reparent(hud)
+	# UI已在编辑器中放在HUD节点下，不需要运行时reparent
 	# 确保快捷栏可见并在屏幕底部中央（1920x1080分辨率）
 	quickbar.visible = true
 	quickbar.anchor_left = 0.5
@@ -183,18 +181,12 @@ func _ready() -> void:
 	quickbar.offset_top = -75.0
 	quickbar.offset_right = 300.0
 	quickbar.offset_bottom = -5.0
-	print("[Main] 快捷栏已reparent到HUD，visible=", quickbar.visible, " size=", quickbar.size, " pos=", quickbar.position)
-	craft_ui.reparent(hud)
-	build_ui.reparent(hud)
-	map_ui.reparent(hud)
-	settings_menu.reparent(hud)
-	tech_tree_ui.reparent(hud)
-	# 加载界面也reparent到HUD，并确保在最上层
+	print("[Main] 快捷栏已就绪，visible=", quickbar.visible, " size=", quickbar.size, " pos=", quickbar.position)
+	# 加载界面确保在最上层
 	if loading_screen:
-		loading_screen.reparent(hud)
 		loading_screen.z_index = 100
 		loading_screen.visible = true
-		print("[Main] 加载界面已reparent到HUD，z_index=100")
+		print("[Main] 加载界面已就绪，z_index=100")
 	# 动态创建人物属性UI
 	var char_scene: PackedScene = load("res://scenes/ui/character_ui.tscn")
 	if char_scene:
