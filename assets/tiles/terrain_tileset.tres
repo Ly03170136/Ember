@@ -1,16 +1,14 @@
 [gd_resource type="TileSet" format=3 uid="uid://dfxtu2falv2cw"]
 
-[ext_resource type="Texture2D" uid="uid://ejsom56dr308" path="res://assets/tiles/路1.png" id="1_hx55r"]
-[ext_resource type="Texture2D" uid="uid://cgwtmqv4lh4es" path="res://assets/tiles/路2.png" id="2_e1u3w"]
-[ext_resource type="Texture2D" uid="uid://m8yecf2d6o08" path="res://assets/tiles/路3.png" id="3_foldj"]
-[ext_resource type="Texture2D" uid="uid://c8k7bq0qvg0ow" path="res://assets/tiles/路4.png" id="4_5uefk"]
-[ext_resource type="Texture2D" uid="uid://x0y4p5ek4g5v" path="res://assets/tiles/路5.png" id="5_mfh1a"]
-[ext_resource type="Texture2D" uid="uid://dyutlejjgnano" path="res://assets/tiles/路6.png" id="6_hnmhb"]
-[ext_resource type="Texture2D" uid="uid://ch78c51ongryx" path="res://assets/tiles/路7.png" id="7_70fx8"]
-[ext_resource type="Texture2D" uid="uid://mroxlh78ye1m" path="res://assets/tiles/路8.png" id="8_mfh1a"]
-[ext_resource type="Texture2D" uid="uid://7cwoitt2j0hv" path="res://assets/tiles/路9.png" id="9_hnmhb"]
-[ext_resource type="Texture2D" path="res://assets/tiles/路10.png" id="10_70fx8"]
-[ext_resource type="Texture2D" path="res://assets/tiles/路11.png" id="11_85abt"]
+[ext_resource type="Texture2D" uid="uid://bj4oveb3iy14d" path="res://assets/tiles/路1.png" id="1_hx55r"]
+[ext_resource type="Texture2D" uid="uid://bwkwuebi1fcs" path="res://assets/tiles/路2.png" id="2_e1u3w"]
+[ext_resource type="Texture2D" uid="uid://vh5k5vmuccw3" path="res://assets/tiles/路3.png" id="3_foldj"]
+[ext_resource type="Texture2D" uid="uid://o38gfig6a3kt" path="res://assets/tiles/路4.png" id="4_5uefk"]
+[ext_resource type="Texture2D" uid="uid://big71381yvlhm" path="res://assets/tiles/路5.png" id="5_mfh1a"]
+[ext_resource type="Texture2D" uid="uid://hvwdik8hscna" path="res://assets/tiles/路6.png" id="6_hnmhb"]
+[ext_resource type="Texture2D" uid="uid://cbjupnggy8pgc" path="res://assets/tiles/路7.png" id="7_70fx8"]
+[ext_resource type="Texture2D" uid="uid://dubb66804lflv" path="res://assets/tiles/路8.png" id="8_mfh1a"]
+[ext_resource type="Texture2D" uid="uid://n24w5c0niynd" path="res://assets/tiles/路9.png" id="9_hnmhb"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_85abt"]
 texture = ExtResource("1_hx55r")
@@ -58,12 +56,10 @@ texture_region_size = Vector2i(64, 64)
 0:0/0 = 0
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ow6ow"]
-texture = ExtResource("10_70fx8")
 texture_region_size = Vector2i(64, 64)
 0:0/0 = 0
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_mt4vo"]
-texture = ExtResource("11_85abt")
 texture_region_size = Vector2i(64, 64)
 0:0/0 = 0
 
