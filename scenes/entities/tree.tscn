@@ -1,46 +1,57 @@
-[gd_scene load_steps=6 format=3 uid="uid://btree00001"]
+[gd_scene format=3 uid="uid://btree00001"]
 
-[ext_resource type="Script" path="res://scripts/entities/tree.gd" id="1_tree"]
+[ext_resource type="Script" uid="uid://fetmclcpibfn" path="res://scripts/entities/tree.gd" id="1_tree"]
+[ext_resource type="Texture2D" uid="uid://mfc1v5us7id0" path="res://assets/entities/trees/tree_normal.png" id="2_o8ahq"]
+[ext_resource type="Texture2D" uid="uid://vrbb7dolshm8" path="res://assets/entities/trees/tree_fallen.png" id="3_wdyxn"]
+[ext_resource type="Texture2D" uid="uid://c37jomv04ocg3" path="res://assets/entities/trees/tree_stump.png" id="4_qj15p"]
 
 [sub_resource type="RectangleShape2D" id="RectShape_tree_body"]
-size = Vector2(32, 48)
+size = Vector2(21, 41)
 
 [sub_resource type="RectangleShape2D" id="RectShape_tree_stump"]
 size = Vector2(20, 12)
 
 [sub_resource type="RectangleShape2D" id="RectShape_tree_interact"]
-size = Vector2(64, 80)
+size = Vector2(30, 46)
 
-[node name="Tree" type="StaticBody2D"]
-script = ExtResource("1_tree")
+[node name="Tree" type="StaticBody2D" unique_id=200928278]
 collision_layer = 4
 collision_mask = 3
+script = ExtResource("1_tree")
 resource_name = "Tree"
 max_health = 60.0
-drop_item = "wood"
-drop_count = 3
 hit_count = 4
 respawn_time = 120.0
 
-[node name="TreeSprite" type="Sprite2D" parent="."]
+[node name="TreeSprite" type="Sprite2D" parent="." unique_id=218200320]
+position = Vector2(0, -109)
+texture = ExtResource("2_o8ahq")
 
-[node name="FallenSprite" type="Sprite2D" parent="."]
+[node name="FallenSprite" type="Sprite2D" parent="." unique_id=175731559]
 visible = false
+position = Vector2(-47, -7.000002)
+scale = Vector2(0.7246094, 0.69140625)
+texture = ExtResource("3_wdyxn")
 
-[node name="StumpSprite" type="Sprite2D" parent="."]
+[node name="StumpSprite" type="Sprite2D" parent="." unique_id=1419329789]
 visible = false
+position = Vector2(0.99999905, 5.000002)
+scale = Vector2(0.112304695, 0.083984375)
+texture = ExtResource("4_qj15p")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=187118276]
+position = Vector2(0.5, -6.5)
 shape = SubResource("RectShape_tree_body")
 
-[node name="StumpCollision" type="CollisionShape2D" parent="."]
-disabled = true
+[node name="StumpCollision" type="CollisionShape2D" parent="." unique_id=2039014619]
+position = Vector2(1, 8)
 shape = SubResource("RectShape_tree_stump")
-position = Vector2(0, 12)
+disabled = true
 
-[node name="Area2D" type="Area2D" parent="."]
+[node name="Area2D" type="Area2D" parent="." unique_id=459075412]
 collision_layer = 0
 collision_mask = 2
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=2025834942]
+position = Vector2(1, -7)
 shape = SubResource("RectShape_tree_interact")
