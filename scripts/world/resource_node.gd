@@ -150,9 +150,27 @@ func _collect() -> void:
 
 
 func _drop_items() -> void:
-	# 简单处理：在资源位置生成掉落物
-	# P0先打印，后续做物品掉落
-	print("[Resource] %s collected, dropped %dx %s" % [resource_name, drop_count, drop_item])
+	# 查找附近的玩家，将物品添加到玩家背包
+	var players := get_tree().get_nodes_in_group("player")
+	var nearest_player: Node = null
+	var nearest_dist: float = 9999.0
+	for player in players:
+		if player and is_instance_valid(player):
+			var dist: float = global_position.distance_to(player.global_position)
+			if dist < nearest_dist:
+				nearest_dist = dist
+				nearest_player = player
+	# 如果找到附近玩家（150像素范围内），将物品添加到背包
+	if nearest_player and nearest_dist < 150.0:
+		# 使用get()方法检查玩家是否有inventory变量
+		var inv = nearest_player.get("inventory")
+		if inv != null and inv.has_method("add_item"):
+			var added: int = inv.add_item(drop_item, drop_count)
+			print("[Resource] %s collected, added %dx %s to %s's inventory" % [resource_name, added, drop_item, nearest_player.player_name])
+		else:
+			print("[Resource] %s collected, dropped %dx %s (player has no valid inventory)" % [resource_name, drop_count, drop_item])
+	else:
+		print("[Resource] %s collected, dropped %dx %s (no nearby player, dist=%.1f)" % [resource_name, drop_count, drop_item, nearest_dist])
 
 
 func _respawn() -> void:

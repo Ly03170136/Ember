@@ -107,19 +107,20 @@ func _ready() -> void:
 		synchronizer.replication_config = _build_replication_config()
 	# 健康条初始
 	_update_health_bar()
-	# 创建背包组件
+	# 使用场景文件中已有的Inventory节点（不要重复创建）
 	if is_local():
-		inventory = load("res://scripts/player/inventory.gd").new()
-		inventory.name = "Inventory"
-		add_child(inventory)
-		# 给一些初始物品测试
-		inventory.add_item("wood", 15)
-		inventory.add_item("stone", 10)
-		inventory.add_item("fiber", 10)
-		inventory.add_item("berry", 8)
-		inventory.add_item("water", 5)
-		inventory.add_item("cloth", 5)
-		print("[Inventory] 背包初始化完成")
+		inventory = get_node_or_null("Inventory")
+		if inventory:
+			# 给一些初始物品测试
+			inventory.add_item("wood", 15)
+			inventory.add_item("stone", 10)
+			inventory.add_item("fiber", 10)
+			inventory.add_item("berry", 8)
+			inventory.add_item("water", 5)
+			inventory.add_item("cloth", 5)
+			print("[Inventory] 背包初始化完成")
+		else:
+			print("[Inventory] 警告：未找到Inventory节点！")
 		# 连接InputManager的action_pressed信号，处理攻击、互动、快捷栏等瞬时动作
 		if InputManager:
 			InputManager.action_pressed.connect(_on_input_action_pressed)
