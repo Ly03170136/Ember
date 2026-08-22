@@ -40,6 +40,11 @@ const FIXED_MAP_SCENE := preload("res://scenes/world/fixed_map.tscn")
 var fixed_map: Node2D = null
 const USE_FIXED_MAP := false  # 设置为true使用固定地图，false使用随机生成
 
+# TileMap地形系统
+const TERRAIN_MAP_SCENE := preload("res://scenes/world/terrain_map.tscn")
+var terrain_map: Node2D = null
+const USE_TILEMAP_TERRAIN := true  # 设置为true使用TileMap地形系统，false使用现有地图系统
+
 const MAX_ZOMBIES := 100
 const ZOMBIE_SPAWN_INTERVAL := 5.0
 var zombie_spawn_timer: float = 0.0
@@ -235,13 +240,19 @@ func _async_loading() -> void:
 	
 	# 阶段2：等待地图生成（25%）
 	_update_loading_progress(15, "生成世界地图...")
-	# 检查等距地图是否已生成
-	var map_node: Node = get_node_or_null("IsometricMap")
-	if map_node and map_node.has_method("is_ready"):
-		var wait_count: int = 0
-		while not map_node.is_ready() and wait_count < 100:
-			wait_count += 1
-			_update_loading_progress(15 + min(wait_count, 10), "生成世界地图...")
+	
+	# 使用TileMap地形系统
+	if USE_TILEMAP_TERRAIN:
+		_init_tilemap_terrain()
+	else:
+		# 检查等距地图是否已生成
+		var map_node: Node = get_node_or_null("IsometricMap")
+		if map_node and map_node.has_method("is_ready"):
+			var wait_count: int = 0
+			while not map_node.is_ready() and wait_count < 100:
+				wait_count += 1
+				_update_loading_progress(15 + min(wait_count, 10), "生成世界地图...")
+	
 	_update_loading_progress(25, "世界地图生成完成")
 	
 	# 阶段3：生成实验室（40%）
@@ -1037,6 +1048,40 @@ func _load_fixed_map() -> void:
 	else:
 		print("[FixedMap] 实验室位置：", lab_position)
 	print("[FixedMap] 固定地图加载完成！")
+
+
+func _init_tilemap_terrain() -> void:
+	## 初始化TileMap地形系统（地形在编辑器中预先手绘，运行时不生成）
+	print("[TerrainMap] 正在加载TileMap地形...")
+	
+	# 加载TileMap地形场景（包含预先手绘的地形）
+	terrain_map = TERRAIN_MAP_SCENE.instantiate()
+	terrain_map.name = "TerrainMap"
+	world_layer.add_child(terrain_map)
+	
+	# 等待TileMap初始化完成
+	await get_tree().process_frame
+	
+	# 更新地图大小
+	var map_size = terrain_map.get_map_size_pixels()
+	map_w = map_size.x
+	map_h = map_size.y
+	
+	print("[TerrainMap] TileMap地形加载完成，地图大小: %dx%d像素" % [map_w, map_h])
+
+
+func get_terrain_type_at_position(pos: Vector2) -> String:
+	## 获取指定世界坐标的地形类型
+	if terrain_map and terrain_map.has_method("get_tile_type_at_position"):
+		return terrain_map.get_tile_type_at_position(pos)
+	return "unknown"
+
+
+func is_position_walkable(pos: Vector2) -> bool:
+	## 检查指定位置是否可行走
+	if terrain_map and terrain_map.has_method("is_walkable"):
+		return terrain_map.is_walkable(pos)
+	return true
 
 
 func _generate_initial_resources() -> void:
