@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://bworldgen01"]
+[gd_scene format=3 uid="uid://b0vwi6l3wv2hc"]
 
-[ext_resource type="Script" path="res://scripts/world/world_generator.gd" id="1_wg"]
+[ext_resource type="Script" uid="uid://davaxr7sgs6uj" path="res://scripts/world/world_generator.gd" id="1_wg"]
 
-[node name="WorldGenerator" type="Node2D"]
+[node name="WorldGenerator" type="Node2D" unique_id=1001172746]
 script = ExtResource("1_wg")
 
-[node name="GroundLayer" type="Node2D" parent="."]
+[node name="GroundLayer" type="Node2D" parent="." unique_id=1424208495]

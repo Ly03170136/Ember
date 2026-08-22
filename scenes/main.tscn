@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bigyenfhtd2wv" path="res://scripts/world/main.gd" id="1_main"]
 [ext_resource type="PackedScene" uid="uid://bhud000001" path="res://scenes/ui/hud.tscn" id="2_hud"]
+[ext_resource type="PackedScene" uid="uid://btree00001" path="res://scenes/entities/tree.tscn" id="2_ya4ey"]
 [ext_resource type="PackedScene" uid="uid://binventoryui1" path="res://scenes/ui/inventory_ui.tscn" id="3_inv"]
 [ext_resource type="PackedScene" uid="uid://bquickbar001" path="res://scenes/ui/quickbar.tscn" id="4_qb"]
 [ext_resource type="PackedScene" uid="uid://bcraftui001" path="res://scenes/ui/craft_ui.tscn" id="5_craft"]
@@ -12,16 +13,25 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/tech_tree_ui.tscn" id="11_tech"]
 
 [node name="Main" type="Node2D" unique_id=1532684812]
+position = Vector2(881, 427)
 script = ExtResource("1_main")
 
 [node name="WorldLayer" type="Node2D" parent="." unique_id=250676738]
 
+[node name="Tree" parent="WorldLayer" unique_id=200928278 instance=ExtResource("2_ya4ey")]
+
+[node name="Tree2" parent="WorldLayer" unique_id=1984984948 instance=ExtResource("2_ya4ey")]
+position = Vector2(-327, 0)
+
 [node name="HUD" parent="." unique_id=1244281875 instance=ExtResource("2_hud")]
+visible = false
 
 [node name="InventoryUI" parent="HUD" unique_id=1278131300 instance=ExtResource("3_inv")]
 
 [node name="QuickBar" parent="HUD" unique_id=1076557505 instance=ExtResource("4_qb")]
 anchors_preset = 7
+offset_top = -70.0
+offset_bottom = 0.0
 
 [node name="CraftUI" parent="HUD" unique_id=1227049255 instance=ExtResource("5_craft")]
 

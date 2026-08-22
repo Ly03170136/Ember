@@ -329,46 +329,13 @@ func _generate_lab_only() -> void:
 
 
 func _generate_resources_only() -> void:
-	## 只生成资源（树木/石头/浆果）
-	var center_x: float = 0.0
-	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0
-	var range_x: float = 5600.0
-	var range_y: float = 2800.0
-	# 生成随机树木
-	for i in range(200):
-		var tree: Node2D = TREE_SCENE.instantiate()
-		tree.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
-		world_layer.add_child(tree)
-		_register_chunk_entity(tree)
-	# 生成随机石头
-	for i in range(100):
-		var rock: Node2D = ROCK_SCENE.instantiate()
-		rock.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
-		world_layer.add_child(rock)
-		_register_chunk_entity(rock)
-	# 生成浆果丛
-	for i in range(60):
-		var berry: Node2D = BERRY_SCENE.instantiate()
-		berry.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
-		world_layer.add_child(berry)
-		_register_chunk_entity(berry)
-	# 出生点附近额外资源
-	for i in range(30):
-		var tree2: Node2D = TREE_SCENE.instantiate()
-		tree2.position = Vector2(center_x + randf_range(-400, 400), center_y + randf_range(-400, 400))
-		world_layer.add_child(tree2)
-		_register_chunk_entity(tree2)
-	for i in range(15):
-		var rock2: Node2D = ROCK_SCENE.instantiate()
-		rock2.position = Vector2(center_x + randf_range(-400, 400), center_y + randf_range(-400, 400))
-		world_layer.add_child(rock2)
-		_register_chunk_entity(rock2)
-	for i in range(10):
-		var berry2: Node2D = BERRY_SCENE.instantiate()
-		berry2.position = Vector2(center_x + randf_range(-400, 400), center_y + randf_range(-400, 400))
-		world_layer.add_child(berry2)
-		_register_chunk_entity(berry2)
-	print("[World] 生成了230树木, 115石头, 70浆果")
+	## 只生成资源（树木/石头/浆果）- 使用智能资源生成器
+	var resource_generator := preload("res://scripts/world/resource_generator.gd").new()
+	var results: Dictionary = resource_generator.generate_selected_types(["tree", "rock", "berry"], world_layer)
+	var tree_count: int = results.get("tree", 0)
+	var rock_count: int = results.get("rock", 0)
+	var berry_count: int = results.get("berry", 0)
+	print("[World] 资源生成完成: %d树木, %d石头, %d浆果" % [tree_count, rock_count, berry_count])
 
 
 func _generate_vehicles_only() -> void:
@@ -389,24 +356,12 @@ func _generate_vehicles_only() -> void:
 
 
 func _generate_npcs_only() -> void:
-	## 只生成NPC
-	var center_x: float = 0.0
-	var center_y: float = (100.0 + 100.0) * 32.0 / 2.0
-	var range_x: float = 5600.0
-	var range_y: float = 2800.0
-	for i in range(500):
-		var npc: Node2D = NPC_SCENE.instantiate()
-		npc.npc_type = "civilian"
-		npc.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
-		world_layer.add_child(npc)
-		_register_chunk_entity(npc)
-	for i in range(80):
-		var police: Node2D = NPC_SCENE.instantiate()
-		police.npc_type = "police"
-		police.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
-		world_layer.add_child(police)
-		_register_chunk_entity(police)
-	print("[World] 生成了500市民, 80警察")
+	## 只生成NPC - 使用智能资源生成器
+	var resource_generator := preload("res://scripts/world/resource_generator.gd").new()
+	var results: Dictionary = resource_generator.generate_selected_types(["npc_civilian", "npc_police"], world_layer)
+	var civilian_count: int = results.get("npc_civilian", 0)
+	var police_count: int = results.get("npc_police", 0)
+	print("[World] NPC生成完成: %d市民, %d警察" % [civilian_count, police_count])
 
 
 func _process(delta: float) -> void:
