@@ -22,10 +22,12 @@
 [ext_resource type="Texture2D" uid="uid://bmjqovhndt6ju" path="res://assets/tiles/decorations/花1.png" id="20_acblf"]
 [ext_resource type="Texture2D" uid="uid://ciqo1pco8ktyu" path="res://assets/tiles/decorations/花2.png" id="21_c47bh"]
 [ext_resource type="Texture2D" uid="uid://bqy2ogonpltew" path="res://assets/tiles/TerrainLayer/草1.png" id="22_5q8ni"]
+[ext_resource type="Texture2D" uid="uid://ibi042erbf54" path="res://assets/tiles/TerrainLayer/路10.png" id="22_rqkle"]
 [ext_resource type="Texture2D" uid="uid://bgsnd5igeamfm" path="res://assets/tiles/TerrainLayer/路11.png" id="22_taaff"]
 [ext_resource type="Texture2D" uid="uid://djodaxdycqavt" path="res://assets/tiles/TerrainLayer/路12.png" id="23_bxgg8"]
 [ext_resource type="Texture2D" uid="uid://bfcnjjmasttj6" path="res://assets/tiles/TerrainLayer/草2.png" id="23_nl1fw"]
 [ext_resource type="Texture2D" uid="uid://bsl6fesaooael" path="res://assets/tiles/TerrainLayer/草3.png" id="24_0gxjh"]
+[ext_resource type="Texture2D" uid="uid://dh8ufmrkncp5o" path="res://assets/tiles/TerrainLayer/路13.png" id="24_mpkhn"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_mt4vo"]
 texture = ExtResource("1_mt4vo")
@@ -142,6 +144,16 @@ texture = ExtResource("23_bxgg8")
 texture_region_size = Vector2i(64, 64)
 0:0/0 = 0
 
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_xyeuy"]
+texture = ExtResource("24_mpkhn")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_gv560"]
+texture = ExtResource("22_rqkle")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_qa678"]
 texture = ExtResource("22_5q8ni")
 texture_region_size = Vector2i(64, 64)
@@ -185,3 +197,5 @@ sources/49 = SubResource("TileSetAtlasSource_yq33d")
 sources/50 = SubResource("TileSetAtlasSource_jelbo")
 sources/53 = SubResource("TileSetAtlasSource_qw2yi")
 sources/54 = SubResource("TileSetAtlasSource_bk0yt")
+sources/55 = SubResource("TileSetAtlasSource_xyeuy")
+sources/56 = SubResource("TileSetAtlasSource_gv560")
