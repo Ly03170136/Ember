@@ -94,6 +94,10 @@ func _make_resource_texture() -> Texture2D:
 
 
 func _process(delta: float) -> void:
+	# 深度优化：快速路径，没有被采集、没有抖动时直接返回
+	if not is_depleted and hit_shake_timer <= 0:
+		return
+	
 	if is_depleted:
 		if respawn_time > 0:
 			respawn_timer -= delta
@@ -101,23 +105,14 @@ func _process(delta: float) -> void:
 				_respawn()
 		return
 
-	# 树木/浆果丛摇晃动画
-	if sprite and (resource_name == "Tree" or resource_name == "BerryBush"):
-		sway_timer += delta
-		var sway_amount: float = sin(sway_timer * 1.5) * 0.03
-		sprite.rotation = sway_amount
-		# 轻微的呼吸缩放
-		var breathe: float = 1.0 + sin(sway_timer * 0.8) * 0.01
-		sprite.scale = base_scale * breathe
-
-	# 采集抖动反馈
+	# 只有采集抖动时才更新（去掉了不必要的摇晃和呼吸动画）
 	if hit_shake_timer > 0:
 		hit_shake_timer -= delta
 		var shake: float = sin(hit_shake_timer * 40) * 0.1 * (hit_shake_timer / 0.3)
 		if sprite:
 			sprite.position.x = shake * 20
-		if hit_shake_timer <= 0 and sprite:
-			sprite.position.x = 0
+			if hit_shake_timer <= 0 and sprite:
+				sprite.position.x = 0
 
 
 func hit(damage: float = 1.0, attacker_pos: Vector2 = Vector2.ZERO) -> void:

@@ -119,15 +119,17 @@ var _full_infection_notified: bool = false  # 全图感染提示是否已发送
 var infection_spread_rate: float = 0.025  # 每天感染扩散速度（保留兼容）
 var is_lab_destroyed: bool = false  # 实验室是否被摧毁
 var lab_spawn_timer: float = 0.0  # 实验室僵尸刷新计时器（保留兼容）
+var infection_check_timer: float = 0.0  # 感染检查计时器（优化性能，每1秒检查一次）
+const INFECTION_CHECK_INTERVAL := 1.0  # 感染检查间隔（秒）
 var map_w: float = 6400.0  # 地图宽度（100瓦片*64像素）
 var map_h: float = 6400.0  # 地图高度（100瓦片*64像素）
 
 # ==================== 分块加载系统（参考僵尸毁灭工程） ====================
 const CHUNK_SIZE := 1024.0  # 每个chunk大小（像素），16x16瓦片
-const CHUNK_ACTIVATION_RANGE := 2  # 玩家周围激活的chunk范围（2=5x5=25个chunk）
+const CHUNK_ACTIVATION_RANGE := 1  # 玩家周围激活的chunk范围（1=3x3=9个chunk）
 var chunk_entities: Dictionary = {}  # 存储每个chunk的实体列表 {Vector2i: [Node, ...]}
 var chunk_update_timer: float = 0.0  # chunk更新计时器
-const CHUNK_UPDATE_INTERVAL := 0.5  # 每0.5秒更新一次chunk激活状态
+const CHUNK_UPDATE_INTERVAL := 1.0  # 每1秒更新一次chunk激活状态
 var last_player_chunk: Vector2i = Vector2i(-999, -999)  # 上次玩家所在的chunk（用于检测是否需要更新）
 var total_frozen_entities: int = 0  # 统计冻结的实体数量（调试用）
 var total_active_entities: int = 0  # 统计激活的实体数量（调试用）
@@ -135,7 +137,7 @@ var total_active_entities: int = 0  # 统计激活的实体数量（调试用）
 # ==================== 视锥剔除/LOD系统 ====================
 const LOD_DISTANCE_NEAR := 800.0  # 近距离阈值（像素），LOD0：完整AI和渲染
 const LOD_DISTANCE_MID := 1600.0  # 中距离阈值（像素），LOD1：降低AI频率，简化渲染
-const LOD_UPDATE_INTERVAL := 0.3  # 每0.3秒更新一次LOD状态
+const LOD_UPDATE_INTERVAL := 1.0  # 每1秒更新一次LOD状态
 var lod_update_timer: float = 0.0  # LOD更新计时器
 var lod_stats: Dictionary = {"lod0": 0, "lod1": 0, "lod2": 0, "culled": 0}  # LOD统计
 
@@ -712,9 +714,12 @@ func _update_infection(delta: float) -> void:
 	var max_radius: float = sqrt(map_w * map_w + map_h * map_h) / 2.0
 	infection_radius = min(max_radius, infection_radius + (max_radius / 30.0) * delta / day_length)
 	infection_level = infection_radius / max_radius  # 感染程度用于UI显示
-	# 感染扩散半径内的NPC
+	# 感染扩散半径内的NPC（优化：每1秒检查一次，而不是每帧）
 	if infection_radius > 100:
-		_infect_npcs(delta)
+		infection_check_timer -= delta
+		if infection_check_timer <= 0:
+			infection_check_timer = INFECTION_CHECK_INTERVAL
+			_infect_npcs(delta)
 	# 感染达到50%时提示玩家
 	if infection_level >= 0.5 and infection_level < 0.51:
 		GameManager.send_chat.rpc("空气中弥漫着不祥的气息...病毒正在从实验室蔓延")
@@ -725,22 +730,22 @@ func _update_infection(delta: float) -> void:
 
 
 func _infect_npcs(delta: float) -> void:
-	## 感染实验室扩散半径内的NPC
-	if not world_layer:
-		return
+	## 感染实验室扩散半径内的NPC（只检测NPC，不遍历其他实体）
+	var npcs: Array = get_tree().get_nodes_in_group("npc")
 	# 基础感染概率（距离实验室越近，概率越高）
 	var base_infect_chance: float = 0.0005 * delta
-	for child in world_layer.get_children():
-		if child.is_in_group("npc") and not child.is_infected:
-			# 只感染在扩散半径内的NPC
-			var dist_to_lab: float = child.position.distance_to(lab_position)
-			if dist_to_lab > infection_radius:
-				continue
-			# 距离实验室越近，感染概率越高（半径边缘概率为0，中心概率最高）
-			var dist_factor: float = 1.0 - (dist_to_lab / infection_radius)
-			dist_factor = clamp(dist_factor, 0.1, 1.0)
-			if randf() < base_infect_chance * dist_factor:
-				child.infect()
+	for npc in npcs:
+		if not is_instance_valid(npc) or npc.is_infected:
+			continue
+		# 只感染在扩散半径内的NPC
+		var dist_to_lab: float = npc.position.distance_to(lab_position)
+		if dist_to_lab > infection_radius:
+			continue
+		# 距离实验室越近，感染概率越高（半径边缘概率为0，中心概率最高）
+		var dist_factor: float = 1.0 - (dist_to_lab / infection_radius)
+		dist_factor = clamp(dist_factor, 0.1, 1.0)
+		if randf() < base_infect_chance * dist_factor:
+			npc.infect()
 
 
 func destroy_lab() -> void:
@@ -811,12 +816,30 @@ func _is_chunk_active(chunk_x: int, chunk_y: int, player_chunk: Vector2i) -> boo
 	return abs(chunk_x - player_chunk.x) <= CHUNK_ACTIVATION_RANGE and abs(chunk_y - player_chunk.y) <= CHUNK_ACTIVATION_RANGE
 
 
+func _set_resource_collision(entity: Node, enabled: bool) -> void:
+	## 深度优化：只对资源节点（树木/石头/浆果）禁用碰撞体，减少物理计算
+	if not entity.is_in_group("resource"):
+		return
+	# 递归处理所有子节点
+	for child in entity.get_children():
+		if child is CollisionShape2D or child is CollisionPolygon2D:
+			child.disabled = not enabled
+		elif child is Area2D:
+			child.monitoring = enabled
+			child.monitorable = enabled
+		# 递归处理
+		_set_resource_collision(child, enabled)
+
+
 func _update_chunks() -> void:
 	## 更新所有chunk的激活状态（冻结远处实体，激活附近实体）
 	var player: Node = GameManager.get_local_player()
 	if not player or not is_instance_valid(player):
 		return
 	var player_chunk: Vector2i = _get_chunk_coord(player.position)
+	# 只有玩家移动到新chunk时才更新（优化性能）
+	if player_chunk == last_player_chunk:
+		return
 	last_player_chunk = player_chunk
 	total_active_entities = 0
 	total_frozen_entities = 0
@@ -830,10 +853,14 @@ func _update_chunks() -> void:
 			if is_active:
 				if entity.process_mode != Node.PROCESS_MODE_INHERIT:
 					entity.process_mode = Node.PROCESS_MODE_INHERIT
+					# 只在状态改变时才启用碰撞体，避免重复遍历
+					_set_resource_collision(entity, true)
 				total_active_entities += 1
 			else:
 				if entity.process_mode != Node.PROCESS_MODE_DISABLED:
 					entity.process_mode = Node.PROCESS_MODE_DISABLED
+					# 只在状态改变时才禁用碰撞体，避免重复遍历
+					_set_resource_collision(entity, false)
 				total_frozen_entities += 1
 	print("[Chunk] 玩家在chunk(%d,%d)，激活%d个实体，冻结%d个实体" % [player_chunk.x, player_chunk.y, total_active_entities, total_frozen_entities])
 

@@ -15,10 +15,10 @@ const RESOURCE_CONFIG := {
 	"tree": {
 		"scene": preload("res://scenes/entities/tree.tscn"),
 		"zones": [
-			{"name": "北部森林", "center": Vector2(-2500, -1500), "size": Vector2(5000, 3000), "density": 0.0006, "min_spacing": 80.0},
-			{"name": "东部森林", "center": Vector2(3500, 500), "size": Vector2(3000, 4000), "density": 0.0005, "min_spacing": 90.0},
-			{"name": "南部森林", "center": Vector2(0, 3500), "size": Vector2(6000, 2500), "density": 0.0007, "min_spacing": 70.0},
-			{"name": "西部森林", "center": Vector2(-4000, 1000), "size": Vector2(2500, 3500), "density": 0.00055, "min_spacing": 85.0},
+			{"name": "北部森林", "center": Vector2(-2500, -1500), "size": Vector2(5000, 3000), "density": 0.000015, "min_spacing": 150.0},
+			{"name": "东部森林", "center": Vector2(3500, 500), "size": Vector2(3000, 4000), "density": 0.000012, "min_spacing": 160.0},
+			{"name": "南部森林", "center": Vector2(0, 3500), "size": Vector2(6000, 2500), "density": 0.000018, "min_spacing": 140.0},
+			{"name": "西部森林", "center": Vector2(-4000, 1000), "size": Vector2(2500, 3500), "density": 0.000014, "min_spacing": 155.0},
 		],
 		"exclude_zones": [
 			{"center": Vector2(0, 0), "size": Vector2(600, 600)},
@@ -31,10 +31,10 @@ const RESOURCE_CONFIG := {
 	"rock": {
 		"scene": preload("res://scenes/entities/rock.tscn"),
 		"zones": [
-			{"name": "北部山区", "center": Vector2(-3000, -2000), "size": Vector2(4000, 2000), "density": 0.0002, "min_spacing": 100.0},
-			{"name": "东部矿区", "center": Vector2(4000, 1000), "size": Vector2(2000, 3000), "density": 0.00025, "min_spacing": 90.0},
-			{"name": "南部丘陵", "center": Vector2(0, 4000), "size": Vector2(5000, 1500), "density": 0.00018, "min_spacing": 110.0},
-			{"name": "全图散布", "center": Vector2(0, 1000), "size": Vector2(12000, 7000), "density": 0.00003, "min_spacing": 200.0},
+			{"name": "北部山区", "center": Vector2(-3000, -2000), "size": Vector2(4000, 2000), "density": 0.00003, "min_spacing": 150.0},
+			{"name": "东部矿区", "center": Vector2(4000, 1000), "size": Vector2(2000, 3000), "density": 0.00004, "min_spacing": 140.0},
+			{"name": "南部丘陵", "center": Vector2(0, 4000), "size": Vector2(5000, 1500), "density": 0.000025, "min_spacing": 160.0},
+			{"name": "全图散布", "center": Vector2(0, 1000), "size": Vector2(12000, 7000), "density": 0.000005, "min_spacing": 300.0},
 		],
 		"exclude_zones": [
 			{"center": Vector2(0, 0), "size": Vector2(400, 400)},
@@ -45,9 +45,9 @@ const RESOURCE_CONFIG := {
 	"berry": {
 		"scene": preload("res://scenes/entities/berry.tscn"),
 		"zones": [
-			{"name": "森林边缘", "center": Vector2(-1500, -500), "size": Vector2(3000, 2000), "density": 0.00015, "min_spacing": 120.0},
-			{"name": "南部草地", "center": Vector2(1000, 3000), "size": Vector2(4000, 2000), "density": 0.00012, "min_spacing": 130.0},
-			{"name": "全图散布", "center": Vector2(0, 1000), "size": Vector2(10000, 6000), "density": 0.00002, "min_spacing": 250.0},
+			{"name": "森林边缘", "center": Vector2(-1500, -500), "size": Vector2(3000, 2000), "density": 0.00002, "min_spacing": 180.0},
+			{"name": "南部草地", "center": Vector2(1000, 3000), "size": Vector2(4000, 2000), "density": 0.000015, "min_spacing": 200.0},
+			{"name": "全图散布", "center": Vector2(0, 1000), "size": Vector2(10000, 6000), "density": 0.000003, "min_spacing": 400.0},
 		],
 		"exclude_zones": [
 			{"center": Vector2(0, 0), "size": Vector2(300, 300)},
@@ -199,9 +199,11 @@ func _generate_zone(scene: PackedScene, zone: Dictionary, exclude_zones: Array, 
 
 		parent.add_child(entity)
 
-		# 注册到 chunk 系统
-		if parent.has_method("_register_chunk_entity"):
-			parent._register_chunk_entity(entity)
+		# 注册到 chunk 系统（通过实体查找main节点）
+		if entity.get_tree():
+			var main_node: Node = entity.get_tree().current_scene
+			if main_node and main_node.has_method("_register_chunk_entity"):
+				main_node._register_chunk_entity(entity)
 
 		# 标记
 		grid[gy][gx] = true

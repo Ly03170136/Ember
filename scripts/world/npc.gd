@@ -40,7 +40,7 @@ var is_dead: bool = false
 var criminal_target: Node2D = null  # 犯罪目标（攻击过平民的玩家）
 
 # LOD系统：AI更新间隔控制
-var ai_update_interval: float = 0.0  # AI更新间隔（0=每帧更新，0.2=每0.2秒更新一次）
+var ai_update_interval: float = 0.2  # AI更新间隔（默认0.2秒更新一次，不是每帧）
 var ai_update_timer: float = 0.0  # AI更新计时器
 var entity_type: String = "npc"  # 实体类型（用于LOD系统识别）
 
@@ -133,15 +133,16 @@ func _police_behavior(delta: float) -> void:
 		_patrol(delta)
 		return
 	var world_layer: Node = world.get_node("WorldLayer")
-	# 1. 优先寻找附近的丧尸（250像素范围内）
+	# 1. 优先寻找附近的丧尸（250像素范围内）- 优化：直接从组获取，不遍历所有实体
 	var nearest_zombie: Node2D = null
 	var nearest_zombie_dist: float = 250.0
-	for child in world_layer.get_children():
-		if child.is_in_group("zombie"):
-			var dist: float = position.distance_to(child.position)
+	var zombies: Array = get_tree().get_nodes_in_group("zombie")
+	for zombie in zombies:
+		if zombie and is_instance_valid(zombie):
+			var dist: float = position.distance_to(zombie.position)
 			if dist < nearest_zombie_dist:
 				nearest_zombie_dist = dist
-				nearest_zombie = child
+				nearest_zombie = zombie
 	# 2. 检查是否有犯罪目标（攻击过平民的玩家）- 感染后不再追击玩家
 	if not is_infected:
 		_update_criminal_target()
@@ -260,17 +261,14 @@ func take_damage(amount: float, attacker: Node2D = null) -> void:
 
 
 func _notify_police(attacker: Node2D) -> void:
-	## 通知附近警察有罪犯（扩大范围到600像素）
-	var world: Node = get_tree().current_scene
-	if not world or not world.has_node("WorldLayer"):
-		return
-	var world_layer: Node = world.get_node("WorldLayer")
+	## 通知附近警察有罪犯（扩大范围到600像素）- 优化：直接从组获取，不遍历所有实体
 	var notified_count: int = 0
-	for child in world_layer.get_children():
-		if child.is_in_group("npc") and child.npc_type == "police":
-			var dist: float = position.distance_to(child.position)
+	var npcs: Array = get_tree().get_nodes_in_group("npc")
+	for npc in npcs:
+		if npc and is_instance_valid(npc) and npc.npc_type == "police":
+			var dist: float = position.distance_to(npc.position)
 			if dist < 600:
-				child.criminal_target = attacker
+				npc.criminal_target = attacker
 				notified_count += 1
 	print("[Police] 通知了%d个警察前往追捕罪犯" % notified_count)
 

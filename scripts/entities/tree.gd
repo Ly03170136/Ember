@@ -38,6 +38,11 @@ func _ready() -> void:
 		stump_sprite.visible = false
 	if stump_collision:
 		stump_collision.disabled = true
+	
+	# 深度优化3：减少碰撞层，树木只和玩家碰撞，不和其他实体碰撞
+	if self is CollisionObject2D:
+		collision_layer = 1  # 树木在第1层
+		collision_mask = 1   # 只检测第1层（玩家）
 
 
 func hit(damage: float = 1.0, attacker_pos: Vector2 = Vector2.ZERO) -> void:
@@ -66,6 +71,10 @@ func hit(damage: float = 1.0, attacker_pos: Vector2 = Vector2.ZERO) -> void:
 
 
 func _process(delta: float) -> void:
+	# 深度优化：快速路径，完全静止的树直接返回，不做任何计算
+	if not is_falling and not is_depleted and abs(sway_angle) <= 0.01 and abs(sway_velocity) <= 0.01 and hit_shake_timer <= 0:
+		return
+	
 	if is_falling:
 		_update_fall(delta)
 		return
@@ -78,31 +87,33 @@ func _process(delta: float) -> void:
 				_respawn()
 		return
 	
-	# 正常状态：饥荒风格摇晃
-	_update_sway(delta)
+	# 正常状态：只有在摇晃时才更新
+	if abs(sway_angle) > 0.01 or abs(sway_velocity) > 0.01:
+		_update_sway(delta)
 	
 	# 受击抖动计时
 	if hit_shake_timer > 0:
 		hit_shake_timer -= delta
+	
+	# 摇晃完全停止后重置精灵状态
+	if abs(sway_angle) <= 0.01 and abs(sway_velocity) <= 0.01 and hit_shake_timer <= 0:
+		if tree_sprite:
+			tree_sprite.rotation = 0
+			tree_sprite.position = Vector2.ZERO
+		sway_angle = 0.0
+		sway_velocity = 0.0
 
 
 func _update_sway(delta: float) -> void:
 	## 弹簧阻尼系统，模拟饥荒风格的树木摇晃
-	# 自然微风（轻微的持续摇晃）
-	natural_sway_timer += delta
-	var natural_sway: float = sin(natural_sway_timer * 1.5) * 0.03
-	
 	# 弹簧阻尼计算
 	sway_velocity += -sway_angle * sway_stiffness  # 弹性回正
 	sway_velocity *= sway_damping                     # 阻尼衰减
 	sway_angle += sway_velocity * delta               # 更新角度
 	
-	# 总角度 = 自然微风 + 砍伐摇晃
-	var total_angle: float = natural_sway + sway_angle
-	
 	# 应用到精灵
 	if tree_sprite:
-		tree_sprite.rotation = deg_to_rad(total_angle)
+		tree_sprite.rotation = deg_to_rad(sway_angle)
 		tree_sprite.position.x = sway_angle * 0.5  # 轻微位置偏移
 
 

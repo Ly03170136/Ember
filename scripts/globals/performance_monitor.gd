@@ -270,13 +270,11 @@ func _collect_debug_info() -> void:
 		network_ping = 0  # Godot ENet没有直接的ping API，暂设为0
 		network_players = multiplayer.get_peers().size() + 1
 
-	# 区块信息（尝试从Chunk系统获取）
-	var chunk_system = main_scene.find_child("ChunkManager", true, false) if main_scene else null
-	if chunk_system:
-		if "active_count" in chunk_system:
-			active_entities = chunk_system.active_count
-		if "frozen_count" in chunk_system:
-			frozen_entities = chunk_system.frozen_count
+	# 区块信息（直接从main节点获取Chunk统计）
+	if main_scene and "total_active_entities" in main_scene:
+		active_entities = main_scene.total_active_entities
+	if main_scene and "total_frozen_entities" in main_scene:
+		frozen_entities = main_scene.total_frozen_entities
 
 
 func _check_warnings() -> void:
