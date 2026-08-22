@@ -6,6 +6,14 @@ var is_open: bool = false
 var current_station: String = ""  # 当前工作站：""=徒手, "workbench"=工作台, "campfire"=篝火
 var current_category: String = "all"  # 当前分类
 
+# 缓存引用
+var _cached_player: Node2D = null
+var _cached_world_layer: Node = null
+
+# UI元素缓存
+var _cached_items: Array = []  # 缓存的配方UI元素
+var _max_cached_items: int = 50  # 最大缓存数量
+
 @onready var panel: Panel = $Panel
 @onready var recipe_list: VBoxContainer = $Panel/Scroll/RecipeList
 @onready var title_label: Label = $Panel/Header/TitleLabel
@@ -26,6 +34,8 @@ func _ready() -> void:
 	panel.visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_to_group("ui_menu")
+	# 预创建UI元素缓存
+	_precreate_cached_items()
 	# 连接InputManager的action_pressed信号
 	if InputManager:
 		InputManager.action_pressed.connect(_on_input_action_pressed)
@@ -45,6 +55,62 @@ func _ready() -> void:
 		med_btn.pressed.connect(_on_category_pressed.bind("medicine"))
 	if mat_btn:
 		mat_btn.pressed.connect(_on_category_pressed.bind("material"))
+
+
+func _precreate_cached_items() -> void:
+	# 预创建UI元素，避免打开菜单时卡顿
+	for i in range(_max_cached_items):
+		var item: HBoxContainer = HBoxContainer.new()
+		item.custom_minimum_size = Vector2(0, 44)
+		item.add_theme_constant_override("separation", 10)
+		item.visible = false
+		# 物品颜色图标
+		var icon: ColorRect = ColorRect.new()
+		icon.custom_minimum_size = Vector2(36, 36)
+		item.add_child(icon)
+		# 名称和材料
+		var info: VBoxContainer = VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var name_label: Label = Label.new()
+		name_label.add_theme_font_size_override("font_size", 14)
+		info.add_child(name_label)
+		var mat_label: Label = Label.new()
+		mat_label.add_theme_font_size_override("font_size", 11)
+		mat_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+		info.add_child(mat_label)
+		item.add_child(info)
+		# 制作按钮
+		var craft_btn: Button = Button.new()
+		craft_btn.text = "制作"
+		craft_btn.custom_minimum_size = Vector2(65, 36)
+		craft_btn.pressed.connect(_on_craft_button_pressed.bind(craft_btn))
+		item.add_child(craft_btn)
+		recipe_list.add_child(item)
+		# 存储引用
+		_cached_items.append({
+			"item": item,
+			"icon": icon,
+			"name_label": name_label,
+			"mat_label": mat_label,
+			"craft_btn": craft_btn,
+			"recipe_id": ""
+		})
+
+
+func _get_cached_player() -> Node2D:
+	# 获取并缓存玩家引用
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	return _cached_player
+
+
+func _get_cached_world_layer() -> Node:
+	# 获取并缓存WorldLayer引用
+	if not _cached_world_layer or not is_instance_valid(_cached_world_layer):
+		var world: Node = get_tree().current_scene
+		if world:
+			_cached_world_layer = world.get_node_or_null("WorldLayer")
+	return _cached_world_layer
 
 
 func _on_input_action_pressed(action: String) -> void:
@@ -119,11 +185,15 @@ func set_station(station: String) -> void:
 
 
 func refresh() -> void:
-	for child in recipe_list.get_children():
-		child.queue_free()
 	if not inventory:
+		# 隐藏所有缓存的UI元素
+		for cached in _cached_items:
+			cached.item.visible = false
 		return
+	var item_index: int = 0
 	for recipe_id: String in RecipeDB.get_all_recipes().keys():
+		if item_index >= _max_cached_items:
+			break
 		var recipe: Dictionary = RecipeDB.get_recipe(recipe_id)
 		if recipe.is_empty():
 			continue
@@ -151,44 +221,37 @@ func refresh() -> void:
 				if not type_match:
 					continue
 		var can_make: bool = RecipeDB.can_craft(recipe_id, inventory, current_station)
-		# 创建配方项
-		var item: HBoxContainer = HBoxContainer.new()
-		item.custom_minimum_size = Vector2(0, 44)
-		item.add_theme_constant_override("separation", 10)
-		# 物品颜色图标
-		var icon: ColorRect = ColorRect.new()
-		icon.custom_minimum_size = Vector2(36, 36)
-		icon.color = ItemDB.get_color(recipe.result)
-		item.add_child(icon)
-		# 名称和材料
-		var info: VBoxContainer = VBoxContainer.new()
-		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var name_label: Label = Label.new()
-		name_label.text = recipe.name
-		name_label.add_theme_font_size_override("font_size", 14)
+		# 使用缓存的UI元素，只更新内容
+		var cached = _cached_items[item_index]
+		cached.recipe_id = recipe_id
+		cached.item.visible = true
+		cached.icon.color = ItemDB.get_color(recipe.result)
+		cached.name_label.text = recipe.name
 		if not can_make:
-			name_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
-		info.add_child(name_label)
-		var mat_label: Label = Label.new()
+			cached.name_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		else:
+			cached.name_label.add_theme_color_override("font_color", Color.WHITE)
+		# 更新材料信息
 		var mat_text: String = ""
 		for mat_id in recipe.ingredients.keys():
 			var needed: int = recipe.ingredients[mat_id]
 			var have: int = inventory.get_item_count(mat_id)
 			var status: String = "✓" if have >= needed else "✗"
 			mat_text += "%s %s %d/%d  " % [status, ItemDB.get_item_name(mat_id), have, needed]
-		mat_label.text = mat_text
-		mat_label.add_theme_font_size_override("font_size", 11)
-		mat_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-		info.add_child(mat_label)
-		item.add_child(info)
-		# 制作按钮
-		var craft_btn: Button = Button.new()
-		craft_btn.text = "制作"
-		craft_btn.custom_minimum_size = Vector2(65, 36)
-		craft_btn.disabled = not can_make
-		craft_btn.pressed.connect(_on_craft_pressed.bind(recipe_id))
-		item.add_child(craft_btn)
-		recipe_list.add_child(item)
+		cached.mat_label.text = mat_text
+		# 更新制作按钮
+		cached.craft_btn.disabled = not can_make
+		cached.craft_btn.set_meta("recipe_id", recipe_id)
+		item_index += 1
+	# 隐藏剩余的缓存UI元素
+	for i in range(item_index, _max_cached_items):
+		_cached_items[i].item.visible = false
+
+
+func _on_craft_button_pressed(btn: Button) -> void:
+	var recipe_id: String = btn.get_meta("recipe_id", "")
+	if recipe_id != "":
+		_on_craft_pressed(recipe_id)
 
 
 func _on_craft_pressed(recipe_id: String) -> void:
@@ -199,21 +262,17 @@ func _on_craft_pressed(recipe_id: String) -> void:
 
 
 func _get_nearby_station() -> String:
-	var player: Node2D = get_tree().get_first_node_in_group("player")
+	var player: Node2D = _get_cached_player()
 	if not player:
-		return ""
-	var world: Node = get_tree().current_scene
-	if not world:
-		return ""
-	var world_layer: Node = world.get_node_or_null("WorldLayer")
-	if not world_layer:
 		return ""
 	const INTERACT_RANGE := 120.0
 	var nearest_station: String = ""
 	var nearest_dist: float = INTERACT_RANGE
-	for child in world_layer.get_children():
-		if child.is_in_group("building") and child.has_method("get_building_id"):
-			var building_id: String = child.get_building_id()
+	# 使用组查询获取所有建筑，而不是遍历WorldLayer的所有子节点
+	var buildings: Array = get_tree().get_nodes_in_group("building")
+	for building in buildings:
+		if building.has_method("get_building_id"):
+			var building_id: String = building.get_building_id()
 			var station_type: String = ""
 			match building_id:
 				"workbench", "electric_workbench":
@@ -227,7 +286,7 @@ func _get_nearby_station() -> String:
 				"med_station":
 					station_type = "med_station"
 			if station_type != "":
-				var dist: float = player.position.distance_to(child.position)
+				var dist: float = player.position.distance_to(building.position)
 				if dist < nearest_dist:
 					nearest_dist = dist
 					nearest_station = station_type

@@ -7,6 +7,10 @@ var selected_building: String = ""
 var is_placing: bool = false
 var current_category: String = "all"
 
+# UI元素缓存
+var _cached_items: Array = []  # 缓存的建筑UI元素
+var _max_cached_items: int = 50  # 最大缓存数量
+
 @onready var panel: Panel = $Panel
 @onready var building_list: VBoxContainer = $Panel/Scroll/BuildingList
 @onready var title_label: Label = $Panel/Header/TitleLabel
@@ -22,6 +26,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_to_group("build_ui")
 	add_to_group("ui_menu")
+	# 预创建UI元素缓存
+	_precreate_cached_items()
 	# 连接InputManager的action_pressed信号
 	if InputManager:
 		InputManager.action_pressed.connect(_on_input_action_pressed)
@@ -35,6 +41,45 @@ func _ready() -> void:
 			if btn is Button:
 				var cat: String = btn.name.to_lower().replace("btn", "")
 				btn.pressed.connect(_on_category_pressed.bind(cat))
+
+
+func _precreate_cached_items() -> void:
+	# 预创建UI元素，避免打开菜单时卡顿
+	for i in range(_max_cached_items):
+		var item: HBoxContainer = HBoxContainer.new()
+		item.custom_minimum_size = Vector2(0, 44)
+		item.add_theme_constant_override("separation", 8)
+		item.visible = false
+		# 建筑图标（临时用颜色方块，避免图标生成导致崩溃）
+		var icon: ColorRect = ColorRect.new()
+		icon.custom_minimum_size = Vector2(32, 32)
+		item.add_child(icon)
+		# 名称和材料
+		var info: VBoxContainer = VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var name_label: Label = Label.new()
+		name_label.add_theme_font_size_override("font_size", 14)
+		info.add_child(name_label)
+		var mat_label: Label = Label.new()
+		mat_label.add_theme_font_size_override("font_size", 11)
+		info.add_child(mat_label)
+		item.add_child(info)
+		# 选择按钮
+		var select_btn: Button = Button.new()
+		select_btn.text = "建造"
+		select_btn.custom_minimum_size = Vector2(60, 32)
+		select_btn.pressed.connect(_on_select_button_pressed.bind(select_btn))
+		item.add_child(select_btn)
+		building_list.add_child(item)
+		# 存储引用
+		_cached_items.append({
+			"item": item,
+			"icon": icon,
+			"name_label": name_label,
+			"mat_label": mat_label,
+			"select_btn": select_btn,
+			"building_id": ""
+		})
 
 
 func _on_category_pressed(category: String) -> void:
@@ -118,16 +163,16 @@ func set_inventory(inv: Node) -> void:
 
 
 func refresh() -> void:
-	print("[Build] refresh 被调用")
-	print("[Build] building_list: ", building_list)
-	# 清空旧列表
-	for child in building_list.get_children():
-		child.queue_free()
 	if not inventory:
-		print("[Build] inventory 为 null")
+		# 隐藏所有缓存的UI元素
+		for cached in _cached_items:
+			cached.item.visible = false
 		return
+	var item_index: int = 0
 	# 遍历所有建筑
 	for building_id: String in BuildingDB.get_all_buildings().keys():
+		if item_index >= _max_cached_items:
+			break
 		var building: Dictionary = BuildingDB.get_building(building_id)
 		if building.is_empty():
 			continue
@@ -149,55 +194,40 @@ func refresh() -> void:
 			if not cat_match:
 				continue
 		var can_make: bool = BuildingDB.can_build(building_id, inventory)
-		print("[Build] 建筑: ", building_id, " can_make: ", can_make)
-		# 创建建筑项
-		var item: HBoxContainer = HBoxContainer.new()
-		item.custom_minimum_size = Vector2(0, 44)
-		item.add_theme_constant_override("separation", 8)
-		# 建筑图标（临时用颜色方块，避免图标生成导致崩溃）
-		var icon: ColorRect = ColorRect.new()
-		icon.custom_minimum_size = Vector2(32, 32)
-		icon.color = BuildingDB.get_building_color(building_id)
-		item.add_child(icon)
-		# 名称和材料
-		var info: VBoxContainer = VBoxContainer.new()
-		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var name_label: Label = Label.new()
-		name_label.text = building.name
-		name_label.add_theme_font_size_override("font_size", 14)
-		info.add_child(name_label)
-		var mat_label: Label = Label.new()
+		# 使用缓存的UI元素，只更新内容
+		var cached = _cached_items[item_index]
+		cached.building_id = building_id
+		cached.item.visible = true
+		cached.icon.color = BuildingDB.get_building_color(building_id)
+		cached.name_label.text = building.name
+		# 更新材料信息
 		var mat_text: String = ""
 		for mat_id in building.cost.keys():
 			var needed: int = building.cost[mat_id]
 			var have: int = inventory.get_item_count(mat_id)
 			var status: String = "✓" if have >= needed else "✗"
 			mat_text += "%s %s %d/%d  " % [status, ItemDB.get_item_name(mat_id), have, needed]
-		mat_label.text = mat_text
-		mat_label.add_theme_font_size_override("font_size", 11)
-		info.add_child(mat_label)
-		item.add_child(info)
-		# 选择按钮
-		var select_btn: Button = Button.new()
-		select_btn.text = "建造"
-		select_btn.custom_minimum_size = Vector2(60, 32)
-		select_btn.disabled = not can_make
-		select_btn.pressed.connect(_on_select_building.bind(building_id))
-		item.add_child(select_btn)
-		building_list.add_child(item)
-		print("[Build] 按钮已创建并连接信号: ", building_id)
+		cached.mat_label.text = mat_text
+		# 更新选择按钮
+		cached.select_btn.disabled = not can_make
+		cached.select_btn.set_meta("building_id", building_id)
+		item_index += 1
+	# 隐藏剩余的缓存UI元素
+	for i in range(item_index, _max_cached_items):
+		_cached_items[i].item.visible = false
+
+
+func _on_select_button_pressed(btn: Button) -> void:
+	var building_id: String = btn.get_meta("building_id", "")
+	if building_id != "":
+		_on_select_building(building_id)
 
 
 func _on_select_building(building_id: String) -> void:
-	print("[Build] 点击建造: ", building_id)
-	print("[Build] inventory: ", inventory)
 	if not inventory:
-		print("[Build] inventory 为 null，无法建造")
 		return
 	var can_build: bool = BuildingDB.can_build(building_id, inventory)
-	print("[Build] can_build: ", can_build)
 	if not can_build:
-		print("[Build] 材料不足，无法建造")
 		return
 	selected_building = building_id
 	is_open = false
@@ -224,7 +254,6 @@ func _start_placing() -> void:
 	else:
 		main.add_child(preview)
 	_update_preview_position()
-	print("[Build] 进入放置模式: %s" % BuildingDB.get_building_name(selected_building))
 
 
 func _get_world_mouse_pos() -> Vector2:
@@ -277,15 +306,12 @@ func _try_place_building() -> void:
 		round(mouse_pos.y / grid_size) * grid_size
 	)
 	if not _check_can_place(snapped_pos):
-		print("[Build] 此处无法放置")
 		return
 	if not BuildingDB.can_build(selected_building, inventory):
-		print("[Build] 材料不足")
 		return
 	# 消耗材料并放置建筑
 	BuildingDB.consume_build_materials(selected_building, inventory)
 	emit_signal("building_placed", selected_building, snapped_pos)
-	print("[Build] 放置了 %s" % BuildingDB.get_building_name(selected_building))
 	# 继续放置同一种建筑
 	_update_preview_position()
 
@@ -298,7 +324,6 @@ func _cancel_placing() -> void:
 	if preview and is_instance_valid(preview):
 		preview.queue_free()
 		preview = null
-	print("[Build] 取消放置")
 
 
 func _make_preview_texture(building_id: String) -> Texture2D:
