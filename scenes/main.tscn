@@ -6,7 +6,6 @@
 [ext_resource type="PackedScene" uid="uid://bquickbar001" path="res://scenes/ui/quickbar.tscn" id="4_qb"]
 [ext_resource type="PackedScene" uid="uid://bcraftui001" path="res://scenes/ui/craft_ui.tscn" id="5_craft"]
 [ext_resource type="PackedScene" uid="uid://bbuildui001" path="res://scenes/ui/build_ui.tscn" id="6_build"]
-[ext_resource type="PackedScene" path="res://scenes/world/isometric_map.tscn" id="7_wg"]
 [ext_resource type="PackedScene" path="res://scenes/ui/map_ui.tscn" id="8_map"]
 [ext_resource type="PackedScene" uid="uid://c5rr01c04jq18" path="res://scenes/ui/loading_screen.tscn" id="9_ld"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="10_set"]
@@ -14,8 +13,6 @@
 
 [node name="Main" type="Node2D" unique_id=1532684812]
 script = ExtResource("1_main")
-
-[node name="IsometricMap" parent="." unique_id=1886406638 instance=ExtResource("7_wg")]
 
 [node name="WorldLayer" type="Node2D" parent="." unique_id=250676738]
 
