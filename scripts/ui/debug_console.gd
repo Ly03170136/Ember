@@ -461,8 +461,7 @@ func _cmd_fly(args: Array) -> void:
 			player.set_collision_layer(0)
 			player.set_collision_mask(0)
 		else:
-			player.set_collision_layer(1)
-			player.set_collision_mask(1)
+			PhysicsLayers.set_collision(player, "player")
 	_print("飞行模式: " + ("开启" if fly_mode else "关闭"), Color(0.5, 0.8, 1.0))
 
 

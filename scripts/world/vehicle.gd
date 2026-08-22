@@ -175,7 +175,7 @@ func _check_ram_collision() -> void:
 	query.position = position
 	query.collide_with_areas = false
 	query.collide_with_bodies = true
-	query.collision_mask = 8  # enemy层
+	query.collision_mask = PhysicsLayers.LAYER_ENEMY  # enemy层
 	var results: Array = space_state.intersect_point(query, 10)
 	for result in results:
 		var collider: Node = result.collider

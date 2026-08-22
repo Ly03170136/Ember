@@ -4,7 +4,7 @@
 
 [node name="Building" type="StaticBody2D" unique_id=1727492190]
 collision_layer = 32
-collision_mask = 10
+collision_mask = 1355
 script = ExtResource("1_build")
 
 [node name="Sprite" type="Sprite2D" parent="." unique_id=1901546445]

@@ -77,6 +77,7 @@ TimerManager="*res://scripts/globals/timer_manager.gd"
 MathUtils="*res://scripts/globals/math_utils.gd"
 ParticleEffectManager="*res://scripts/globals/particle_effect_manager.gd"
 AnimationStateMachine="*res://scripts/globals/animation_state_machine.gd"
+PhysicsLayers="*res://scripts/globals/physics_layers.gd"
 
 [display]
 
@@ -153,6 +154,12 @@ chat={
 2d_physics/layer_4="enemy"
 2d_physics/layer_5="item"
 2d_physics/layer_6="building"
+2d_physics/layer_7="npc"
+2d_physics/layer_8="interactable"
+2d_physics/layer_9="projectile"
+2d_physics/layer_10="trigger"
+2d_physics/layer_11="vehicle"
+2d_physics/layer_12="decoration"
 
 [rendering]
 

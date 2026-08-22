@@ -7,7 +7,7 @@ radius = 16.0
 
 [node name="Berry" type="StaticBody2D" unique_id=1462535355]
 collision_layer = 4
-collision_mask = 10
+collision_mask = 3
 script = ExtResource("1_res")
 resource_name = "BerryBush"
 max_health = 30.0

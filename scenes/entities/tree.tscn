@@ -8,7 +8,7 @@ size = Vector2(32, 32)
 [node name="Tree" type="StaticBody2D"]
 script = ExtResource("1_res")
 collision_layer = 4
-collision_mask = 10
+collision_mask = 3
 resource_name = "Tree"
 max_health = 60.0
 drop_item = "wood"
