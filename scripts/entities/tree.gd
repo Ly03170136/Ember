@@ -12,8 +12,7 @@ var natural_sway_timer: float = 0.0    # 自然微风摇晃计时器
 
 # ==================== 倒下动画参数 ====================
 var is_falling: bool = false           # 是否正在倒下
-var fall_timer: float = 0.0            # 倒下动画计时器
-var fall_duration: float = 0.6         # 倒下动画时长（秒）
+var fall_tween: Tween = null           # 倒下动画Tween
 
 # ==================== 节点引用 ====================
 @onready var tree_sprite: Sprite2D = $TreeSprite
@@ -76,7 +75,7 @@ func _process(delta: float) -> void:
 		return
 	
 	if is_falling:
-		_update_fall(delta)
+		# 倒下动画由Tween处理，这里只需要等待
 		return
 	
 	if is_depleted:
@@ -117,22 +116,6 @@ func _update_sway(delta: float) -> void:
 		tree_sprite.position.x = sway_angle * 0.5  # 轻微位置偏移
 
 
-func _update_fall(delta: float) -> void:
-	## 倒下动画
-	fall_timer -= delta
-	var progress: float = 1.0 - (fall_timer / fall_duration)
-	
-	if tree_sprite:
-		# 从当前摇晃角度旋转到倒下角度（90度）
-		var target_angle: float = hit_direction * 90.0
-		tree_sprite.rotation = deg_to_rad(lerp(sway_angle, target_angle, progress))
-		# 逐渐下沉
-		tree_sprite.position.y = progress * 20
-	
-	if fall_timer <= 0:
-		_finish_fall()
-
-
 func _finish_fall() -> void:
 	## 倒下完成，切换到树桩+倒木状态
 	is_falling = false
@@ -167,22 +150,42 @@ func _finish_fall() -> void:
 
 
 func _collect() -> void:
-	## 重写父类的采集函数，实现倒下动画而不是直接消失
+	## 重写父类的采集函数，实现Tween倒下动画而不是直接消失
 	is_depleted = true
 	health = 0
 	
 	# 开始倒下动画
 	is_falling = true
-	fall_timer = fall_duration
 	
 	# 禁用树木碰撞体（玩家可以穿过）
 	var collision: CollisionShape2D = get_node_or_null("CollisionShape2D")
 	if collision:
 		collision.disabled = true
+	
+	# Tween倒下动画：先慢后快，模拟真实树木倒下的物理感
+	if tree_sprite:
+		# 停止之前的摇晃
+		sway_angle = 0.0
+		sway_velocity = 0.0
+		
+		var target_angle: float = deg_to_rad(hit_direction * 90.0)
+		fall_tween = create_tween()
+		fall_tween.set_trans(Tween.TRANS_CUBIC)
+		fall_tween.set_ease(Tween.EASE_OUT)
+		# 同时动画旋转和下沉
+		fall_tween.tween_property(tree_sprite, "rotation", target_angle, 0.8)
+		fall_tween.parallel().tween_property(tree_sprite, "position:y", 20.0, 0.8)
+		# 动画完成后切换到树桩状态
+		fall_tween.tween_callback(_finish_fall)
 
 
 func _respawn() -> void:
 	## 重写父类的重生函数，恢复所有状态
+	# 停止可能正在播放的倒下动画
+	if fall_tween and fall_tween.is_valid():
+		fall_tween.kill()
+		fall_tween = null
+	
 	is_depleted = false
 	health = max_health
 	is_falling = false
