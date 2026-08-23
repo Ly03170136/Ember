@@ -274,18 +274,19 @@ func _generate_map_texture() -> void:
 		_tile_size = 64
 		print("[MapUI] 警告: 无法获取TileSet，使用默认瓦片大小64")
 	
-	# 获取地图使用范围
-	var used_rect = terrain_layer.get_used_rect()
-	if used_rect.size.x <= 0 or used_rect.size.y <= 0:
-		print("[MapUI] 错误: 地图没有瓦片数据")
-		return
+	# 使用固定的地图范围（从0,0开始，确保地图左上角对应世界坐标0,0）
+	# 地图大小：400x300瓦片（与terrain_map.gd中的配置一致）
+	const MAP_WIDTH_TILES = 400
+	const MAP_HEIGHT_TILES = 300
+	var map_start = Vector2i(0, 0)
+	var map_size = Vector2i(MAP_WIDTH_TILES, MAP_HEIGHT_TILES)
 	
-	print("[MapUI] 地图瓦片范围: ", used_rect)
+	print("[MapUI] 使用固定地图范围: ", map_start, " 大小: ", map_size)
 	
 	# 生成简化地图纹理（每个瓦片一个像素，可缩放）
 	var map_scale = 2  # 每个瓦片中2x2像素
-	var img_w = used_rect.size.x * map_scale
-	var img_h = used_rect.size.y * map_scale
+	var img_w = map_size.x * map_scale
+	var img_h = map_size.y * map_scale
 	if img_w < 100: img_w = 100
 	if img_h < 100: img_h = 100
 	
@@ -294,9 +295,9 @@ func _generate_map_texture() -> void:
 	
 	# 遍历所有瓦片，根据源ID绘制颜色
 	var tile_colors = _get_tile_color_map()
-	for x in range(used_rect.size.x):
-		for y in range(used_rect.size.y):
-			var tile_pos = Vector2i(used_rect.position.x + x, used_rect.position.y + y)
+	for x in range(map_size.x):
+		for y in range(map_size.y):
+			var tile_pos = Vector2i(map_start.x + x, map_start.y + y)
 			var source_id = terrain_layer.get_cell_source_id(tile_pos)
 			if source_id >= 0:
 				var color = tile_colors.get(source_id, Color(0.4, 0.5, 0.3))
@@ -314,8 +315,8 @@ func _generate_map_texture() -> void:
 	map_original_size = Vector2(img_w, img_h)
 	_map_generated = true
 	
-	# 保存地图参数用于坐标映射
-	_map_tile_offset = used_rect.position
+	# 保存地图参数用于坐标映射（从0,0开始，所以偏移为0）
+	_map_tile_offset = map_start
 	_map_tile_scale = map_scale
 	
 	print("[MapUI] TileMap地图纹理生成完成: %dx%d" % [img_w, img_h])

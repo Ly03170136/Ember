@@ -19,7 +19,59 @@ func _ready() -> void:
 	else:
 		print("[TerrainMap] TileMap地形系统初始化完成，使用外部TileSet")
 	
+	# 创建地图边界空气墙（防止玩家和实体走出地图）
+	_create_boundary_walls()
+	
 	_world_ready = true
+
+
+func _create_boundary_walls() -> void:
+	## 创建地图四个边界的空气墙
+	var map_world_width = MAP_WIDTH * TILE_SIZE
+	var map_world_height = MAP_HEIGHT * TILE_SIZE
+	var wall_thickness = 64.0  # 空气墙厚度
+	
+	print("[TerrainMap] 创建地图边界空气墙，地图大小: ", map_world_width, "x", map_world_height)
+	
+	# 上边界（y=0）
+	_create_wall(Vector2(map_world_width / 2.0, -wall_thickness / 2.0), 
+		Vector2(map_world_width + wall_thickness * 2, wall_thickness), "BoundaryTop")
+	
+	# 下边界（y=map_world_height）
+	_create_wall(Vector2(map_world_width / 2.0, map_world_height + wall_thickness / 2.0), 
+		Vector2(map_world_width + wall_thickness * 2, wall_thickness), "BoundaryBottom")
+	
+	# 左边界（x=0）
+	_create_wall(Vector2(-wall_thickness / 2.0, map_world_height / 2.0), 
+		Vector2(wall_thickness, map_world_height + wall_thickness * 2), "BoundaryLeft")
+	
+	# 右边界（x=map_world_width）
+	_create_wall(Vector2(map_world_width + wall_thickness / 2.0, map_world_height / 2.0), 
+		Vector2(wall_thickness, map_world_height + wall_thickness * 2), "BoundaryRight")
+	
+	print("[TerrainMap] 地图边界空气墙创建完成")
+
+
+func _create_wall(position: Vector2, size: Vector2, name: String) -> void:
+	## 创建单个边界墙
+	var wall = StaticBody2D.new()
+	wall.name = name
+	wall.position = position
+	
+	# 设置碰撞层（WORLD层，检测玩家、敌人、NPC等）
+	if PhysicsLayers and PhysicsLayers.has_method("set_collision"):
+		PhysicsLayers.set_collision(wall, "building")
+	else:
+		wall.collision_layer = 1  # WORLD层
+		wall.collision_mask = 2 | 8 | 64 | 32  # PLAYER | ENEMY | NPC | BUILDING
+	
+	var collision_shape = CollisionShape2D.new()
+	var rectangle_shape = RectangleShape2D.new()
+	rectangle_shape.size = size
+	collision_shape.shape = rectangle_shape
+	wall.add_child(collision_shape)
+	
+	add_child(wall)
 
 
 func is_ready() -> bool:
