@@ -13,7 +13,7 @@ extends Node
 const RESOURCE_CONFIG := {
 	# ========== 树木 ==========
 	"tree": {
-		"scene": preload("res://scenes/entities/tree.tscn"),
+		"scene_path": "res://scenes/entities/tree.tscn",
 		"zones": [
 			{"name": "北部森林", "center": Vector2(-2500, -1500), "size": Vector2(5000, 3000), "density": 0.000015, "min_spacing": 150.0},
 			{"name": "东部森林", "center": Vector2(3500, 500), "size": Vector2(3000, 4000), "density": 0.000012, "min_spacing": 160.0},
@@ -29,7 +29,7 @@ const RESOURCE_CONFIG := {
 
 	# ========== 石头 ==========
 	"rock": {
-		"scene": preload("res://scenes/entities/rock.tscn"),
+		"scene_path": "res://scenes/entities/rock.tscn",
 		"zones": [
 			{"name": "北部山区", "center": Vector2(-3000, -2000), "size": Vector2(4000, 2000), "density": 0.00003, "min_spacing": 150.0},
 			{"name": "东部矿区", "center": Vector2(4000, 1000), "size": Vector2(2000, 3000), "density": 0.00004, "min_spacing": 140.0},
@@ -43,7 +43,7 @@ const RESOURCE_CONFIG := {
 
 	# ========== 浆果丛 ==========
 	"berry": {
-		"scene": preload("res://scenes/entities/berry.tscn"),
+		"scene_path": "res://scenes/entities/berry.tscn",
 		"zones": [
 			{"name": "森林边缘", "center": Vector2(-1500, -500), "size": Vector2(3000, 2000), "density": 0.00002, "min_spacing": 180.0},
 			{"name": "南部草地", "center": Vector2(1000, 3000), "size": Vector2(4000, 2000), "density": 0.000015, "min_spacing": 200.0},
@@ -56,7 +56,7 @@ const RESOURCE_CONFIG := {
 
 	# ========== NPC（市民） ==========
 	"npc_civilian": {
-		"scene": preload("res://scenes/entities/npc.tscn"),
+		"scene_path": "res://scenes/entities/npc.tscn",
 		"zones": [
 			{"name": "城镇1", "center": Vector2(1500, 800), "size": Vector2(600, 400), "density": 0.003, "min_spacing": 50.0},
 			{"name": "城镇2", "center": Vector2(-2000, 2000), "size": Vector2(400, 400), "density": 0.0025, "min_spacing": 55.0},
@@ -68,7 +68,7 @@ const RESOURCE_CONFIG := {
 
 	# ========== NPC（警察） ==========
 	"npc_police": {
-		"scene": preload("res://scenes/entities/npc.tscn"),
+		"scene_path": "res://scenes/entities/npc.tscn",
 		"zones": [
 			{"name": "城镇1警局", "center": Vector2(1500, 800), "size": Vector2(400, 300), "density": 0.0008, "min_spacing": 60.0},
 			{"name": "城镇2警局", "center": Vector2(-2000, 2000), "size": Vector2(300, 300), "density": 0.0006, "min_spacing": 65.0},
@@ -106,7 +106,15 @@ func generate_selected_types(types: Array, parent: Node) -> Dictionary:
 
 ## 生成单种资源类型
 func _generate_resource_type(resource_type: String, config: Dictionary, parent: Node) -> int:
-	var scene: PackedScene = config.scene
+	# 运行时加载场景（避免preload失败导致整个脚本无法加载）
+	var scene_path: String = config.get("scene_path", "")
+	if scene_path == "":
+		print("[ResourceGenerator] 错误: 资源类型 '%s' 没有配置scene_path" % resource_type)
+		return 0
+	var scene: PackedScene = load(scene_path)
+	if scene == null:
+		print("[ResourceGenerator] 错误: 无法加载场景 '%s'" % scene_path)
+		return 0
 	var zones: Array = config.zones
 	var exclude_zones: Array = config.get("exclude_zones", [])
 	var extra_data: Dictionary = config.get("extra_data", {})

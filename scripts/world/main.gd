@@ -155,6 +155,10 @@ const FOOD_ROT_INTERVAL := 30.0  # 每30秒检查一次食物腐烂
 
 
 func _ready() -> void:
+	# 确保HUD在最上层，不被其他CanvasLayer遮挡
+	hud.layer = 10
+	hud.visible = true
+	print("[Main] HUD layer设置为10，visible=", hud.visible)
 	# 设置斜45度视角的Y轴排序（Godot原生支持，稳定可靠）
 	# 所有放在world_layer下的实体会自动按Y坐标排序，Y值大的在前面
 	world_layer.y_sort_enabled = true
@@ -173,17 +177,11 @@ func _ready() -> void:
 	# 注册游戏世界到GameManager
 	GameManager.set_game_world(world_layer)
 	# UI已在编辑器中放在HUD节点下，不需要运行时reparent
-	# 确保快捷栏可见并在屏幕底部中央（1920x1080分辨率）
+	# 确保快捷栏可见并在屏幕底部中央（基于当前分辨率动态计算）
 	quickbar.visible = true
-	quickbar.anchor_left = 0.5
-	quickbar.anchor_top = 1.0
-	quickbar.anchor_right = 0.5
-	quickbar.anchor_bottom = 1.0
-	quickbar.offset_left = -300.0
-	quickbar.offset_top = -75.0
-	quickbar.offset_right = 300.0
-	quickbar.offset_bottom = -5.0
-	print("[Main] 快捷栏已就绪，visible=", quickbar.visible, " size=", quickbar.size, " pos=", quickbar.position)
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	quickbar.position = Vector2(viewport_size.x * 0.5 - 300.0, viewport_size.y - 80.0)
+	print("[Main] 快捷栏已就绪，visible=", quickbar.visible, " size=", quickbar.size, " pos=", quickbar.position, " 分辨率=", viewport_size)
 	# 加载界面确保在最上层
 	if loading_screen:
 		loading_screen.z_index = 100
