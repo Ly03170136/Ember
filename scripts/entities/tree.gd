@@ -23,6 +23,7 @@ var fall_tween: Tween = null           # 倒下动画Tween
 
 func _ready() -> void:
 	# 初始化基础属性（不调用父类_ready，避免父类的程序化纹理生成）
+	max_health = 120.0  # 树木血量，每次攻击20伤害，6次倒下
 	health = max_health
 	add_to_group("resource")
 	if area:
@@ -177,6 +178,9 @@ func _collect() -> void:
 		fall_tween.parallel().tween_property(tree_sprite, "position:y", 20.0, 0.8)
 		# 动画完成后切换到树桩状态
 		fall_tween.tween_callback(_finish_fall)
+	else:
+		# 没有树木精灵，直接完成倒下
+		_finish_fall()
 
 
 func _respawn() -> void:
