@@ -38,6 +38,12 @@ var _map_min_y: float = 0.0
 var _map_img_w: int = 0
 var _map_img_h: int = 0
 
+# TileMap地图参数（新）
+var _map_tile_offset: Vector2i = Vector2i.ZERO  # 地图瓦片偏移
+var _map_tile_scale: int = 2  # 每个瓦片中多少像素
+var _tile_size: int = 64  # 瓦片大小（像素）
+var _terrain_layer: TileMapLayer = null  # 保存TerrainLayer引用用于坐标转换
+
 # 大图模式参数
 var _full_map_mode: bool = false
 var _full_map_world_size: Vector2 = Vector2.ZERO  # 大图在世界中的显示尺寸
@@ -225,80 +231,82 @@ func _update_map_transform() -> void:
 # ==================== 地图生成 ====================
 
 func _generate_map_texture() -> void:
-	# 获取等距地图生成器
+	# 获取TileMap地形系统
 	var main = get_tree().current_scene
-	if not main or not main.has_node("IsometricMap"):
-		print("[MapUI] 错误: 找不到IsometricMap节点")
-		return
-	var iso_map = main.get_node("IsometricMap")
-	if not iso_map:
+	if not main:
+		print("[MapUI] 错误: 找不到主场景")
 		return
 	
-	# 大图模式：直接使用主地面大图作为小地图
-	if "_full_map_mode" in iso_map and iso_map._full_map_mode:
-		_full_map_mode = true
-		var bg_path := "res://assets/terrain/map_background.png"
-		if ResourceLoader.exists(bg_path):
-			var tex: Texture2D = load(bg_path) as Texture2D
-			if tex:
-				map_image.texture = tex
-				map_image.custom_minimum_size = Vector2(tex.get_width(), tex.get_height())
-				map_original_size = Vector2(tex.get_width(), tex.get_height())
-				# 计算大图在世界中的显示尺寸和中心（与isometric_map.gd中一致）
-				var map_total_width: float = (iso_map.MAP_WIDTH + iso_map.MAP_HEIGHT) * iso_map.TILE_WIDTH / 2.0
-				var map_total_height: float = (iso_map.MAP_WIDTH + iso_map.MAP_HEIGHT) * iso_map.TILE_HEIGHT / 2.0
-				var scale_x: float = map_total_width / tex.get_width()
-				var scale_y: float = map_total_height / tex.get_height()
-				var map_scale: float = max(scale_x, scale_y)
-				_full_map_world_size = Vector2(tex.get_width() * map_scale, tex.get_height() * map_scale)
-				_full_map_center = Vector2(0, (iso_map.MAP_WIDTH + iso_map.MAP_HEIGHT) * iso_map.TILE_HEIGHT / 4.0)
-				_map_generated = true
-				print("[MapUI] 大图模式小地图已加载: %dx%d" % [tex.get_width(), tex.get_height()])
-				return
-		print("[MapUI] 警告: 大图模式但找不到地图图片，回退到瓦片缩略图")
-		_full_map_mode = false
+	# 查找TerrainMap节点（可能在WorldLayer下）
+	var terrain_map = null
+	if main.has_node("WorldLayer/TerrainMap"):
+		terrain_map = main.get_node("WorldLayer/TerrainMap")
+	elif main.has_node("TerrainMap"):
+		terrain_map = main.get_node("TerrainMap")
+	else:
+		# 递归查找TerrainMap
+		terrain_map = _find_node_by_name(main, "TerrainMap")
 	
-	var map_w: int = iso_map.MAP_WIDTH
-	var map_h: int = iso_map.MAP_HEIGHT
-	print("[MapUI] 地图大小: %dx%d" % [map_w, map_h])
+	if not terrain_map:
+		print("[MapUI] 错误: 找不到TerrainMap节点")
+		return
 	
-	# 等距投影渲染
-	var scale_x: float = 2.0
-	var scale_y: float = 1.0
-	# 计算等距地图边界
-	var min_screen_x: float = -(map_h - 1) * scale_x
-	var max_screen_x: float = (map_w - 1) * scale_x
-	var min_screen_y: float = 0
-	var max_screen_y: float = (map_w + map_h - 2) * scale_y
-	var img_w: int = int(max_screen_x - min_screen_x) + 20
-	var img_h: int = int(max_screen_y - min_screen_y) + 20
+	# 获取TerrainLayer
+	var terrain_layer = null
+	if terrain_map.has_node("TerrainLayer"):
+		terrain_layer = terrain_map.get_node("TerrainLayer")
+	elif terrain_map.has_method("get_terrain_layer"):
+		terrain_layer = terrain_map.get_terrain_layer()
+	
+	if not terrain_layer or not terrain_layer is TileMapLayer:
+		print("[MapUI] 错误: 找不到TerrainLayer")
+		return
+	
+	# 保存TerrainLayer引用用于后续坐标转换
+	_terrain_layer = terrain_layer
+	
+	# 从TileSet获取实际瓦片大小
+	var tile_set = terrain_layer.tile_set
+	if tile_set:
+		_tile_size = tile_set.tile_size.x
+		print("[MapUI] 实际瓦片大小: ", _tile_size)
+	else:
+		_tile_size = 64
+		print("[MapUI] 警告: 无法获取TileSet，使用默认瓦片大小64")
+	
+	# 获取地图使用范围
+	var used_rect = terrain_layer.get_used_rect()
+	if used_rect.size.x <= 0 or used_rect.size.y <= 0:
+		print("[MapUI] 错误: 地图没有瓦片数据")
+		return
+	
+	print("[MapUI] 地图瓦片范围: ", used_rect)
+	
+	# 生成简化地图纹理（每个瓦片一个像素，可缩放）
+	var map_scale = 2  # 每个瓦片中2x2像素
+	var img_w = used_rect.size.x * map_scale
+	var img_h = used_rect.size.y * map_scale
 	if img_w < 100: img_w = 100
 	if img_h < 100: img_h = 100
 	
 	var img := Image.create(img_w, img_h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0.08, 0.08, 0.1, 1))
 	
-	# 绘制地形（等距投影）
-	for x in range(map_w):
-		for y in range(map_h):
-			var idx: int = y * map_w + x
-			var tile_type: String = "grass"
-			if iso_map._tile_data.size() > idx:
-				tile_type = iso_map._tile_data[idx]
-			var color: Color = _get_tile_map_color(tile_type)
-			# 等距投影到屏幕坐标
-			var sx: float = (x - y) * scale_x - min_screen_x + 10
-			var sy: float = (x + y) * scale_y - min_screen_y + 10
-			# 绘制小方块
-			for dx in range(-1, 2):
-				for dy in range(-1, 2):
-					var px: int = int(sx) + dx
-					var py: int = int(sy) + dy
-					if px >= 0 and px < img_w and py >= 0 and py < img_h:
-						img.set_pixel(px, py, color)
-	
-	# 绘制地图边界（菱形边框）
-	_draw_map_border(img, map_w, map_h, scale_x, scale_y, min_screen_x, min_screen_y, img_w, img_h)
+	# 遍历所有瓦片，根据源ID绘制颜色
+	var tile_colors = _get_tile_color_map()
+	for x in range(used_rect.size.x):
+		for y in range(used_rect.size.y):
+			var tile_pos = Vector2i(used_rect.position.x + x, used_rect.position.y + y)
+			var source_id = terrain_layer.get_cell_source_id(tile_pos)
+			if source_id >= 0:
+				var color = tile_colors.get(source_id, Color(0.4, 0.5, 0.3))
+				# 绘制map_scale x map_scale像素块
+				for dx in range(map_scale):
+					for dy in range(map_scale):
+						var px = x * map_scale + dx
+						var py = y * map_scale + dy
+						if px >= 0 and px < img_w and py >= 0 and py < img_h:
+							img.set_pixel(px, py, color)
 	
 	_map_texture = ImageTexture.create_from_image(img)
 	map_image.texture = _map_texture
@@ -306,15 +314,37 @@ func _generate_map_texture() -> void:
 	map_original_size = Vector2(img_w, img_h)
 	_map_generated = true
 	
-	# 保存等距投影参数
-	_map_scale_x = scale_x
-	_map_scale_y = scale_y
-	_map_min_x = min_screen_x
-	_map_min_y = min_screen_y
-	_map_img_w = img_w
-	_map_img_h = img_h
+	# 保存地图参数用于坐标映射
+	_map_tile_offset = used_rect.position
+	_map_tile_scale = map_scale
 	
-	print("[MapUI] 地图缩略图生成完成: %dx%d" % [img_w, img_h])
+	print("[MapUI] TileMap地图纹理生成完成: %dx%d" % [img_w, img_h])
+
+
+func _find_node_by_name(root: Node, name: String) -> Node:
+	# 递归查找指定名称的节点
+	if root.name == name:
+		return root
+	for child in root.get_children():
+		var result = _find_node_by_name(child, name)
+		if result:
+			return result
+	return null
+
+
+func _get_tile_color_map() -> Dictionary:
+	# 瓦片源ID到颜色的映射（根据你的TileSet调整）
+	# 这里使用默认颜色，你可以根据实际瓦片源ID自定义
+	return {
+		0: Color(0.3, 0.55, 0.25),   # 草地
+		1: Color(0.55, 0.42, 0.28),   # 泥土
+		2: Color(0.5, 0.5, 0.55),     # 石头
+		3: Color(0.78, 0.7, 0.52),    # 沙地
+		4: Color(0.2, 0.45, 0.7),     # 水
+		5: Color(0.55, 0.54, 0.58),   # 混凝土
+		6: Color(0.25, 0.25, 0.28),   # 沥青
+		7: Color(0.25, 0.4, 0.2),     # 森林地面
+	}
 
 
 func _get_tile_map_color(tile_type: String) -> Color:
@@ -352,51 +382,22 @@ func _update_player_marker() -> void:
 		player_arrow.visible = false
 		return
 	
-	var main = get_tree().current_scene
-	if not main or not main.has_node("IsometricMap"):
-		return
-	var iso_map = main.get_node("IsometricMap")
-	if not iso_map:
-		return
-	
-	var tile_w: int = iso_map.TILE_WIDTH
-	var tile_h: int = iso_map.TILE_HEIGHT
-	
-	# 大图模式：基于大图的坐标映射
-	if _full_map_mode:
-		if map_original_size.x <= 0 or map_original_size.y <= 0 or _full_map_world_size.x <= 0:
-			return
-		# 玩家相对于大图中心的偏移
-		var relative: Vector2 = player.position - _full_map_center
-		# 映射到0-1范围，再映射到小图像素
-		var rel_x: float = relative.x / _full_map_world_size.x + 0.5
-		var rel_y: float = relative.y / _full_map_world_size.y + 0.5
-		var marker_x: float = rel_x * map_original_size.x - 6
-		var marker_y: float = rel_y * map_original_size.y - 6
-		player_marker.visible = true
-		player_marker.position = Vector2(marker_x, marker_y)
-		player_arrow.visible = true
-		player_arrow.position = Vector2(marker_x - 2, marker_y - 14)
-		return
-	
-	# 将玩家等距世界坐标反算为瓦片坐标
-	var tile_x: float = (player.position.x / (tile_w / 2.0) + player.position.y / (tile_h / 2.0)) / 2.0
-	var tile_y: float = (player.position.y / (tile_h / 2.0) - player.position.x / (tile_w / 2.0)) / 2.0
-	
-	# 等距投影到大图像素坐标
-	var sx: float = (tile_x - tile_y) * _map_scale_x - _map_min_x + 10
-	var sy: float = (tile_x + tile_y) * _map_scale_y - _map_min_y + 10
-	
-	# 映射到MapImage的坐标
 	if map_original_size.x <= 0 or map_original_size.y <= 0:
 		return
 	
-	var rel_x: float = sx / _map_img_w
-	var rel_y: float = sy / _map_img_h
+	if not _terrain_layer:
+		return
 	
-	# 设置标记位置（相对于MapImage）
-	var marker_x: float = rel_x * map_original_size.x - 6
-	var marker_y: float = rel_y * map_original_size.y - 6
+	# 关键修复：将玩家全局坐标转换为TerrainLayer的本地坐标，再转瓦片坐标
+	var local_pos = _terrain_layer.to_local(player.position)
+	var tile_pos = _terrain_layer.local_to_map(local_pos)
+	
+	# 相对于地图偏移的瓦片坐标
+	var relative_tile = tile_pos - _map_tile_offset
+	
+	# 映射到地图像素坐标
+	var marker_x: float = relative_tile.x * _map_tile_scale - 6
+	var marker_y: float = relative_tile.y * _map_tile_scale - 6
 	
 	player_marker.visible = true
 	player_marker.position = Vector2(marker_x, marker_y)
