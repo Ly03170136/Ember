@@ -54,6 +54,9 @@ static var _npc_textures: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("npc")
+	# 使用PhysicsLayers系统设置碰撞层和mask（确保NPC之间、NPC与资源之间有体积碰撞）
+	if PhysicsLayers and PhysicsLayers.has_method("set_collision"):
+		PhysicsLayers.set_collision(self, "npc")
 	# 初始化NPC类型
 	if NPC_TYPES.has(npc_type):
 		_type_config = NPC_TYPES[npc_type]

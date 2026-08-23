@@ -42,6 +42,9 @@ static var _zombie_textures: Dictionary = {}
 
 
 func _ready() -> void:
+	# 使用PhysicsLayers系统设置碰撞层和mask（确保丧尸之间、丧尸与资源之间有体积碰撞）
+	if PhysicsLayers and PhysicsLayers.has_method("set_collision"):
+		PhysicsLayers.set_collision(self, "enemy")
 	# 初始化丧尸类型
 	if ZOMBIE_TYPES.has(zombie_type):
 		_type_config = ZOMBIE_TYPES[zombie_type]
