@@ -13,7 +13,7 @@ var tile_healths: Dictionary = {}  # Vector2i(瓦片坐标) -> 生命值
 var is_inside: bool = false
 var player_inside: Node = null
 
-@onready var interior_layer: TileMapLayer = $InteriorLayer
+@onready var interior_floor: Sprite2D = $InteriorFloor
 @onready var exterior_layer: TileMapLayer = $ExteriorLayer
 @onready var door_gap: Area2D = $Door_Gap
 @onready var roof: Sprite2D = $Roof

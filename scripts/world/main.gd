@@ -247,6 +247,11 @@ func _async_loading() -> void:
 	
 	_update_loading_progress(25, "世界地图生成完成")
 	
+	# 阶段2.5：加载固定地图（建筑等手动放置的实体）
+	if USE_FIXED_MAP:
+		_update_loading_progress(27, "加载固定地图建筑...")
+		_load_fixed_map()
+	
 	# 阶段3：生成实验室（40%）
 	_update_loading_progress(30, "放置实验室和病毒源头...")
 	_generate_lab_only()

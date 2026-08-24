@@ -11,10 +11,6 @@ size = Vector2(21.139114, 63.048485)
 script = ExtResource("1_tilehouse")
 
 [node name="InteriorFloor" type="Sprite2D" parent="." unique_id=377898496]
-position = Vector2(-4.425602, 5.224181)
-rotation = 0.62133723
-scale = Vector2(0.5907319, 0.74695843)
-skew = 0.46425757
 texture = ExtResource("2_0fc70")
 
 [node name="ExteriorLayer" type="TileMapLayer" parent="." unique_id=1976529207]

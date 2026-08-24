@@ -16,5 +16,5 @@ script = ExtResource("1_fm")
 
 [node name="Laboratory" type="Node2D" parent="." unique_id=117635740]
 
-[node name="TileHouse" parent="." unique_id=43009660 instance=ExtResource("2_16qq4")]
-position = Vector2(680, 400)
+[node name="TileHouse" parent="Buildings" unique_id=43009660 instance=ExtResource("2_16qq4")]
+position = Vector2(200, 200)
