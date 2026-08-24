@@ -38,7 +38,7 @@ const NPC_SCENE := preload("res://scenes/entities/npc.tscn")
 # 固定地图场景（玩家在编辑器中手动设计）
 const FIXED_MAP_SCENE := preload("res://scenes/world/fixed_map.tscn")
 var fixed_map: Node2D = null
-const USE_FIXED_MAP := false  # 设置为true使用固定地图，false使用随机生成
+const USE_FIXED_MAP := true  # 设置为true使用固定地图，false使用随机生成
 
 # TileMap地形系统
 const TERRAIN_MAP_SCENE := preload("res://scenes/world/terrain_map.tscn")
@@ -1006,8 +1006,9 @@ func _update_day_night(delta: float) -> void:
 func _load_fixed_map() -> void:
 	## 加载固定地图场景（玩家在编辑器中手动设计）
 	print("[FixedMap] 正在加载固定地图...")
-	map_w = 50.0 * 64.0
-	map_h = 50.0 * 64.0
+	# 地图大小和 terrain_map 保持一致（400x300瓦片，瓦片64x64）
+	map_w = 400.0 * 64.0
+	map_h = 300.0 * 64.0
 	# 加载固定地图场景
 	fixed_map = FIXED_MAP_SCENE.instantiate()
 	fixed_map.name = "FixedMap"
@@ -1061,10 +1062,10 @@ func is_position_walkable(pos: Vector2) -> bool:
 
 
 func _generate_initial_resources() -> void:
-	# 如果使用固定地图，加载固定地图场景并注册实体
+	# 如果使用固定地图，加载固定地图场景（建筑等手动放置的实体）
 	if USE_FIXED_MAP:
 		_load_fixed_map()
-		return
+		# 注意：不 return，继续随机生成实验室、树木、石头、NPC、载具等
 	# 顶视角地图中心和范围（400x300瓦片，瓦片64x64）
 	map_w = 400.0 * 64.0
 	map_h = 300.0 * 64.0
