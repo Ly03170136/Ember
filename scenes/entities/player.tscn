@@ -1,47 +1,47 @@
-[gd_scene load_steps=4 format=3 uid="uid://bplayer0001"]
+[gd_scene format=3 uid="uid://bplayer0001"]
 
-[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
-[ext_resource type="Script" path="res://scripts/player/inventory.gd" id="2_inventory"]
+[ext_resource type="Script" uid="uid://b6w2t66nqi0wd" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="Script" uid="uid://223q641aac56" path="res://scripts/player/inventory.gd" id="2_inventory"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 16.0
 
-[node name="Player" type="CharacterBody2D"]
-script = ExtResource("1_player")
+[node name="Player" type="CharacterBody2D" unique_id=1449581008]
 collision_layer = 2
 collision_mask = 1261
+script = ExtResource("1_player")
 
-[node name="Sprite" type="Sprite2D" parent="."]
+[node name="Sprite" type="Sprite2D" parent="." unique_id=714982493]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=497531704]
 shape = SubResource("CircleShape2D_player")
 
-[node name="NameLabel" type="Label" parent="."]
+[node name="NameLabel" type="Label" parent="." unique_id=1555883901]
 offset_left = -50.0
 offset_top = -48.0
 offset_right = 50.0
 offset_bottom = -32.0
-horizontal_alignment = 1
-vertical_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 text = "Player"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="HealthBar" type="ProgressBar" parent="."]
+[node name="HealthBar" type="ProgressBar" parent="." unique_id=1870372414]
 offset_left = -24.0
 offset_top = -36.0
 offset_right = 24.0
 offset_bottom = -30.0
-max_value = 100.0
 value = 100.0
 show_percentage = false
 
-[node name="Inventory" type="Node" parent="."]
+[node name="Inventory" type="Node" parent="." unique_id=128187044]
 script = ExtResource("2_inventory")
 
-[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=17666634]
 replication_interval = 0.05
 
-[node name="Camera" type="Camera2D" parent="."]
-zoom = Vector2(3.0, 3.0)
+[node name="Camera" type="Camera2D" parent="." unique_id=2035144134]
+ignore_rotation = false
+zoom = Vector2(3, 3)
