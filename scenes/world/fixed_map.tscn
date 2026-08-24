@@ -4,9 +4,13 @@
 [ext_resource type="PackedScene" uid="uid://btilehouse001" path="res://scenes/entities/tile_house.tscn" id="2_16qq4"]
 
 [node name="FixedMap" type="Node2D" unique_id=1938293949]
+position = Vector2(584, 416)
 script = ExtResource("1_fm")
 
 [node name="Buildings" type="Node2D" parent="." unique_id=1058458223]
+
+[node name="TileHouse" parent="Buildings" unique_id=43009660 instance=ExtResource("2_16qq4")]
+position = Vector2(200, 200)
 
 [node name="Resources" type="Node2D" parent="." unique_id=331368429]
 
@@ -15,6 +19,3 @@ script = ExtResource("1_fm")
 [node name="Vehicles" type="Node2D" parent="." unique_id=740312494]
 
 [node name="Laboratory" type="Node2D" parent="." unique_id=117635740]
-
-[node name="TileHouse" parent="Buildings" unique_id=43009660 instance=ExtResource("2_16qq4")]
-position = Vector2(200, 200)

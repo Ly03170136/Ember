@@ -358,9 +358,11 @@ func _handle_key_event(event: InputEventKey) -> void:
 
 func _handle_mouse_button_event(event: InputEventMouseButton) -> void:
 	var button_index: int = event.button_index
+	print("[InputManager] 鼠标按钮事件: button=", button_index, " pressed=", event.pressed, " ui_focused=", _ui_focused)
 	for action in _action_bindings.keys():
 		var bindings: Array = _action_bindings[action]
 		if bindings.has(button_index):
+			print("[InputManager] 匹配到 action: ", action)
 			if event.pressed:
 				_pressed_actions[action] = true
 				action_pressed.emit(action)

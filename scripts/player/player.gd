@@ -60,7 +60,7 @@ var is_sprinting: bool = false
 var facing: Vector2 = Vector2.DOWN
 var attack_cooldown: float = 0.0
 const ATTACK_DAMAGE := 25.0
-const ATTACK_RANGE := 70.0
+const ATTACK_RANGE := 500.0
 const ATTACK_COOLDOWN_TIME := 0.4
 
 # 动画相关
@@ -323,7 +323,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _on_input_action_pressed(action: String) -> void:
 	## 处理InputManager的action_pressed信号，处理攻击、互动、快捷栏等瞬时动作
+	print("[Player] _on_input_action_pressed: ", action, " is_local=", is_local(), " is_down=", is_down)
 	if not is_local() or is_down:
+		print("[Player] 不是本地玩家或已倒下，跳过")
 		return
 	# 攻击
 	if action == "attack":
@@ -331,13 +333,16 @@ func _on_input_action_pressed(action: String) -> void:
 		var ui_menus: Array = get_tree().get_nodes_in_group("ui_menu")
 		for menu in ui_menus:
 			if menu and menu.is_open:
+				print("[Player] UI菜单打开中，跳过攻击: ", menu.name)
 				return  # UI菜单打开时不攻击
 		# 检查是否处于建造放置模式
 		var build_ui_nodes: Array = get_tree().get_nodes_in_group("build_ui")
 		if build_ui_nodes.size() > 0:
 			var build_ui = build_ui_nodes[0]
 			if build_ui and build_ui.is_placing:
+				print("[Player] 建造放置模式中，跳过攻击")
 				return  # 放置模式下不攻击
+		print("[Player] 调用 _attack()")
 		_attack()
 		return
 	# 互动/采集
@@ -363,7 +368,9 @@ func _on_input_action_pressed(action: String) -> void:
 
 
 func _attack() -> void:
+	print("[Attack] _attack() 被调用，冷却: ", attack_cooldown)
 	if attack_cooldown > 0:
+		print("[Attack] 冷却中，跳过")
 		return
 	attack_cooldown = ATTACK_COOLDOWN_TIME / get_attack_speed_multiplier()
 	is_attacking = true
@@ -376,27 +383,66 @@ func _attack() -> void:
 		AudioManager.play_sfx(AudioManager.SFX.ATTACK)
 	# 产生噪音，吸引附近丧尸
 	emit_noise(15.0)
-	# 攻击朝向方向上最近的目标（丧尸或NPC）
+	# 攻击朝向方向上最近的目标（丧尸、NPC或建筑）
 	var world: Node = get_tree().current_scene
 	if not world:
+		print("[Attack] 没有找到 current_scene")
 		return
 	var world_layer: Node = world.get_node_or_null("WorldLayer")
 	if not world_layer:
+		print("[Attack] 没有找到 WorldLayer")
 		return
 	var nearest_target: Node = null
 	var nearest_dist: float = ATTACK_RANGE
-	for child in world_layer.get_children():
-		# 检测丧尸或NPC
-		if child.is_in_group("zombie") or child.name.begins_with("Zombie") or child.is_in_group("npc"):
-			var dist: float = position.distance_to(child.position)
-			if dist < nearest_dist:
-				nearest_dist = dist
-				nearest_target = child
-	if nearest_target and nearest_target.has_method("take_damage"):
-		var damage: float = ATTACK_DAMAGE * get_attack_damage_multiplier()
+	# 递归检测所有子节点中的目标
+	var all_targets: Array = []
+	_collect_targets(world_layer, all_targets)
+	print("[Attack] 玩家位置: ", global_position, " 检测到 ", all_targets.size(), " 个目标")
+	for target in all_targets:
+		var dist: float = global_position.distance_to(target.global_position)
+		if dist < nearest_dist:
+			nearest_dist = dist
+			nearest_target = target
+	if not nearest_target:
+		# 打印最近的3个目标
+		var closest_list: Array = []
+		for t in all_targets:
+			closest_list.append({"name": t.name, "pos": t.global_position, "dist": global_position.distance_to(t.global_position)})
+		for i in range(closest_list.size()):
+			for j in range(i + 1, closest_list.size()):
+				if closest_list[j].dist < closest_list[i].dist:
+					var tmp = closest_list[i]
+					closest_list[i] = closest_list[j]
+					closest_list[j] = tmp
+		for i in range(min(3, closest_list.size())):
+			print("[Attack] 最近目标", i, ": ", closest_list[i].name, " 位置: ", closest_list[i].pos, " 距离: ", closest_list[i].dist)
+		print("[Attack] 没有找到近距离目标，攻击范围: ", ATTACK_RANGE)
+		return
+	print("[Attack] 最近目标: ", nearest_target.name, " 距离: ", nearest_dist, " 组: ", nearest_target.get_groups())
+	var damage: float = ATTACK_DAMAGE * get_attack_damage_multiplier()
+	# 对丧尸/NPC调用take_damage
+	if nearest_target.has_method("take_damage"):
 		nearest_target.take_damage(damage, self)
 		var target_name: String = nearest_target.name if nearest_target.name else "Unknown"
 		print("[Attack] 攻击 %s，造成 %d 伤害（职业:%s）" % [target_name, damage, player_class])
+	# 对瓦片房屋调用damage_tile_at_world_pos
+	elif nearest_target.is_in_group("tile_house") and nearest_target.has_method("damage_tile_at_world_pos"):
+		# 计算攻击点（玩家朝向方向上的位置）
+		var attack_pos: Vector2 = global_position + facing.normalized() * 100.0
+		print("[Attack] 攻击房屋，玩家位置: ", global_position, " 朝向: ", facing, " 攻击点: ", attack_pos)
+		var hit: bool = nearest_target.damage_tile_at_world_pos(attack_pos, damage)
+		if hit:
+			print("[Attack] 攻击房屋瓦片命中，造成 %d 伤害" % damage)
+		else:
+			print("[Attack] 攻击房屋瓦片未命中，攻击点不在瓦片上")
+
+
+func _collect_targets(node: Node, results: Array) -> void:
+	## 递归收集所有可攻击目标（丧尸、NPC、瓦片房屋）
+	for child in node.get_children():
+		if child.is_in_group("zombie") or child.name.begins_with("Zombie") or child.is_in_group("npc") or child.is_in_group("tile_house"):
+			results.append(child)
+		_collect_targets(child, results)
 
 
 func _interact_with_nearest() -> bool:

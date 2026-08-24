@@ -54,6 +54,8 @@ func damage_tile_at_world_pos(world_pos: Vector2, amount: float) -> bool:
 	# 转换世界坐标为瓦片坐标
 	var local_pos = exterior_layer.to_local(world_pos)
 	var tile_pos = exterior_layer.local_to_map(local_pos)
+	print("[TileHouse] 攻击世界坐标: ", world_pos, " 局部坐标: ", local_pos, " 瓦片坐标: ", tile_pos)
+	print("[TileHouse] 当前瓦片数量: ", tile_healths.size(), " 瓦片列表: ", tile_healths.keys())
 	return damage_tile(tile_pos, amount)
 
 
