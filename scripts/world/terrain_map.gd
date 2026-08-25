@@ -1,9 +1,11 @@
 extends Node2D
-## TileMap地形管理器 - 支持外部TileSet，完全手绘地形（使用Godot 4.7 TileMapLayer）
+## TileMap地形管理器 - 等距视角（正二侧，瓦片128×64，2:1比例）
 
-const TILE_SIZE := 64
-const MAP_WIDTH := 400   # 瓦片数量
-const MAP_HEIGHT := 300  # 瓦片数量
+const TILE_SIZE := 128      # 等距瓦片宽度
+const TILE_HEIGHT := 64     # 等距瓦片高度（2:1比例）
+const MAP_WIDTH := 400      # 瓦片数量
+const MAP_HEIGHT := 300     # 瓦片数量
+const IS_ISOMETRIC := true  # 等距模式开关
 
 # 地形层
 @onready var terrain_layer: TileMapLayer = $TerrainLayer
@@ -13,6 +15,11 @@ var _world_ready: bool = false
 
 
 func _ready() -> void:
+	# 等距模式需要在TileSet中配置（Tile Size: 128x64, Tile Shape: Isometric）
+	# TileMapLayer会自动使用TileSet的配置
+	if IS_ISOMETRIC:
+		print("[TerrainMap] 等距模式已启用，请确保TileSet配置为: Tile Size=128x64, Tile Shape=Isometric")
+	
 	# 检查是否已设置TileSet（在编辑器中手动设置）
 	if terrain_layer.tile_set == null:
 		print("[TerrainMap] 警告：TerrainLayer未设置TileSet，请在编辑器中导入瓦片素材并设置TileSet")
@@ -26,28 +33,36 @@ func _ready() -> void:
 
 
 func _create_boundary_walls() -> void:
-	## 创建地图四个边界的空气墙
-	var map_world_width = MAP_WIDTH * TILE_SIZE
-	var map_world_height = MAP_HEIGHT * TILE_SIZE
-	var wall_thickness = 64.0  # 空气墙厚度
+	## 创建地图四个边界的空气墙（等距模式下范围更大）
+	var wall_thickness = 128.0  # 空气墙厚度
 	
-	print("[TerrainMap] 创建地图边界空气墙，地图大小: ", map_world_width, "x", map_world_height)
+	# 等距地图的实际范围（估算，覆盖整个菱形区域）
+	var map_left = -MAP_HEIGHT * TILE_HEIGHT / 2.0 - wall_thickness
+	var map_right = MAP_WIDTH * TILE_SIZE + MAP_HEIGHT * TILE_HEIGHT / 2.0 + wall_thickness
+	var map_top = -wall_thickness
+	var map_bottom = MAP_HEIGHT * TILE_HEIGHT + wall_thickness
+	var map_center_x = (map_left + map_right) / 2.0
+	var map_center_y = (map_top + map_bottom) / 2.0
+	var map_width = map_right - map_left
+	var map_height = map_bottom - map_top
 	
-	# 上边界（y=0）
-	_create_wall(Vector2(map_world_width / 2.0, -wall_thickness / 2.0), 
-		Vector2(map_world_width + wall_thickness * 2, wall_thickness), "BoundaryTop")
+	print("[TerrainMap] 创建地图边界空气墙，等距地图范围: ", map_width, "x", map_height)
 	
-	# 下边界（y=map_world_height）
-	_create_wall(Vector2(map_world_width / 2.0, map_world_height + wall_thickness / 2.0), 
-		Vector2(map_world_width + wall_thickness * 2, wall_thickness), "BoundaryBottom")
+	# 上边界
+	_create_wall(Vector2(map_center_x, map_top + wall_thickness / 2.0), 
+		Vector2(map_width, wall_thickness), "BoundaryTop")
 	
-	# 左边界（x=0）
-	_create_wall(Vector2(-wall_thickness / 2.0, map_world_height / 2.0), 
-		Vector2(wall_thickness, map_world_height + wall_thickness * 2), "BoundaryLeft")
+	# 下边界
+	_create_wall(Vector2(map_center_x, map_bottom - wall_thickness / 2.0), 
+		Vector2(map_width, wall_thickness), "BoundaryBottom")
 	
-	# 右边界（x=map_world_width）
-	_create_wall(Vector2(map_world_width + wall_thickness / 2.0, map_world_height / 2.0), 
-		Vector2(wall_thickness, map_world_height + wall_thickness * 2), "BoundaryRight")
+	# 左边界
+	_create_wall(Vector2(map_left + wall_thickness / 2.0, map_center_y), 
+		Vector2(wall_thickness, map_height), "BoundaryLeft")
+	
+	# 右边界
+	_create_wall(Vector2(map_right - wall_thickness / 2.0, map_center_y), 
+		Vector2(wall_thickness, map_height), "BoundaryRight")
 	
 	print("[TerrainMap] 地图边界空气墙创建完成")
 
@@ -133,12 +148,22 @@ func get_map_size() -> Vector2i:
 
 
 func get_map_size_pixels() -> Vector2:
-	"""获取地图大小（像素）"""
+	"""获取地图大小（像素，等距模式下估算实际范围）"""
+	if IS_ISOMETRIC:
+		# 等距地图实际范围（宽度方向包含高度的偏移）
+		var width = MAP_WIDTH * TILE_SIZE + MAP_HEIGHT * TILE_HEIGHT
+		var height = MAP_HEIGHT * TILE_HEIGHT
+		return Vector2(width, height)
 	return Vector2(MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE)
 
 
 func get_map_center() -> Vector2:
 	"""获取地图中心坐标"""
+	if IS_ISOMETRIC:
+		# 等距地图中心偏移
+		var center_x = MAP_WIDTH * TILE_SIZE / 2.0
+		var center_y = MAP_HEIGHT * TILE_HEIGHT / 2.0
+		return Vector2(center_x, center_y)
 	return get_map_size_pixels() / 2.0
 
 

@@ -6,7 +6,7 @@ signal state_added(state_name)
 signal state_removed(state_name)
 signal transition_denied(from_state, to_state)
 
-var owner = null
+var fsm_owner = null
 var states = {}
 var current_state = null
 var previous_state = null
@@ -41,7 +41,7 @@ func add_state(state):
 		return false
 	if states.has(state.name):
 		print("[StateMachine] Warning: state '%s' already exists, will be overwritten" % state.name)
-	state.owner = owner
+	state.owner = fsm_owner
 	state.fsm = self
 	states[state.name] = state
 	state_added.emit(state.name)
@@ -163,4 +163,4 @@ func print_states():
 
 
 func to_string():
-	return "StateMachine(owner=%s, current=%s, states=%d)" % [str(owner), get_current_state_name(), states.size()]
+	return "StateMachine(owner=%s, current=%s, states=%d)" % [str(fsm_owner), get_current_state_name(), states.size()]

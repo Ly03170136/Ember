@@ -301,14 +301,14 @@ func _input(event: InputEvent) -> void:
 		for menu in ui_menus:
 			if menu.has_method("is_open") and menu.is_open:
 				return
-	# 鼠标滚轮缩放（正常等比例缩放，范围2.0-4.0）
+	# 鼠标滚轮缩放（等距视角，范围0.8-2.5）
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_UP:
-		var new_zoom: float = min(camera.zoom.x + 0.2, 4.0)
+		var new_zoom: float = min(camera.zoom.x + 0.15, 2.5)
 		camera.zoom = Vector2(new_zoom, new_zoom)
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-		var new_zoom: float = max(camera.zoom.x - 0.2, 2.0)
+		var new_zoom: float = max(camera.zoom.x - 0.15, 0.8)
 		camera.zoom = Vector2(new_zoom, new_zoom)
 		get_viewport().set_input_as_handled()
 		return
@@ -425,8 +425,8 @@ func _attack() -> void:
 		nearest_target.take_damage(damage, self)
 		var target_name: String = nearest_target.name if nearest_target.name else "Unknown"
 		print("[Attack] 攻击 %s，造成 %d 伤害（职业:%s）" % [target_name, damage, player_class])
-	# 对瓦片房屋调用damage_tile_at_world_pos
-	elif nearest_target.is_in_group("tile_house") and nearest_target.has_method("damage_tile_at_world_pos"):
+	# 对瓦片房屋/围墙调用damage_tile_at_world_pos
+	elif (nearest_target.is_in_group("tile_house") or nearest_target.is_in_group("wall")) and nearest_target.has_method("damage_tile_at_world_pos"):
 		# 计算攻击点（玩家朝向方向上的位置）
 		var attack_pos: Vector2 = global_position + facing.normalized() * 100.0
 		print("[Attack] 攻击房屋，玩家位置: ", global_position, " 朝向: ", facing, " 攻击点: ", attack_pos)
@@ -440,7 +440,7 @@ func _attack() -> void:
 func _collect_targets(node: Node, results: Array) -> void:
 	## 递归收集所有可攻击目标（丧尸、NPC、瓦片房屋）
 	for child in node.get_children():
-		if child.is_in_group("zombie") or child.name.begins_with("Zombie") or child.is_in_group("npc") or child.is_in_group("tile_house"):
+		if child.is_in_group("zombie") or child.name.begins_with("Zombie") or child.is_in_group("npc") or child.is_in_group("tile_house") or child.is_in_group("wall"):
 			results.append(child)
 		_collect_targets(child, results)
 

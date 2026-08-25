@@ -1,0 +1,11 @@
+[gd_scene format=4 uid="uid://btilewall001"]
+
+[ext_resource type="Script" uid="uid://blptd63t6xpp3" path="res://scripts/world/tile_wall.gd" id="1_tilewall"]
+[ext_resource type="TileSet" uid="uid://b5vfkppuvklfc" path="res://assets/tiles/wall_tileset.tres" id="2_walltileset"]
+
+[node name="TileWall" type="Node2D" unique_id=43009661]
+script = ExtResource("1_tilewall")
+
+[node name="WallLayer" type="TileMapLayer" parent="." unique_id=1976529208]
+tile_map_data = PackedByteArray("AAADAAYAAQAHAAYAAAACAAcAAQAHAAYAAAACAAgAAQAHAAYAAAACAAkAAQAHAAYAAAADAAgAAQAHAAYAAAADAAoAAQAHAAYAAAACAAoAAQAHAAYAAAACAAYAAQAHAAYAAAA=")
+tile_set = ExtResource("2_walltileset")

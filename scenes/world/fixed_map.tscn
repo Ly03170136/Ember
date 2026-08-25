@@ -1,16 +1,14 @@
 [gd_scene format=3 uid="uid://bfixedmap001"]
 
 [ext_resource type="Script" uid="uid://d1cg4l2qc6ht0" path="res://scripts/world/fixed_map.gd" id="1_fm"]
-[ext_resource type="PackedScene" uid="uid://btilehouse001" path="res://scenes/entities/tile_house.tscn" id="2_16qq4"]
+[ext_resource type="PackedScene" uid="uid://btilewall001" path="res://scenes/entities/tile_wall.tscn" id="2_tilewall"]
 
 [node name="FixedMap" type="Node2D" unique_id=1938293949]
-position = Vector2(584, 416)
 script = ExtResource("1_fm")
 
 [node name="Buildings" type="Node2D" parent="." unique_id=1058458223]
 
-[node name="TileHouse" parent="Buildings" unique_id=43009660 instance=ExtResource("2_16qq4")]
-position = Vector2(200, 200)
+[node name="TileWall" parent="Buildings" unique_id=43009661 instance=ExtResource("2_tilewall")]
 
 [node name="Resources" type="Node2D" parent="." unique_id=331368429]
 
@@ -19,3 +17,4 @@ position = Vector2(200, 200)
 [node name="Vehicles" type="Node2D" parent="." unique_id=740312494]
 
 [node name="Laboratory" type="Node2D" parent="." unique_id=117635740]
+position = Vector2(121, 90)

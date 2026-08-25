@@ -22,7 +22,10 @@ func _ready() -> void:
 	# 根据建筑类型初始化
 	if power_building_type == "":
 		# 从 building_id 推断（building.gd 里已声明此变量）
-		power_building_type = self.building_id if self.building_id != "" else "electric_light"
+		if self.building_id != "":
+			power_building_type = self.building_id
+		else:
+			power_building_type = "electric_light"
 	# 注册到电力系统
 	if PowerSystem:
 		if power_building_type in ["small_generator", "medium_generator", "large_generator", "solar_panel"]:
