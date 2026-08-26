@@ -1,0 +1,30 @@
+{
+  "_comment": "示例MOD建筑 - 复制此文件格式添加你自己的建筑",
+  "_version": "1.0.0",
+
+  "mod_tower": {
+    "name": "MOD瞭望塔",
+    "desc": "一个来自MOD的高级防御建筑",
+    "category": "defense",
+    "size": [2, 2],
+    "max_health": 500,
+    "build_time": 5,
+    "cost": {"wood": 50, "stone": 30, "metal": 20},
+    "color": [0.6, 0.4, 0.2, 1.0],
+    "functions": ["defense", "vision"],
+    "vision_range": 300
+  },
+
+  "mod_magic_well": {
+    "name": "MOD魔法井",
+    "desc": "无限产出纯净水的神奇建筑",
+    "category": "production",
+    "size": [1, 1],
+    "max_health": 200,
+    "build_time": 3,
+    "cost": {"stone": 40, "metal": 10},
+    "color": [0.2, 0.6, 0.8, 1.0],
+    "functions": ["water_production"],
+    "production_rate": 1.0
+  }
+}

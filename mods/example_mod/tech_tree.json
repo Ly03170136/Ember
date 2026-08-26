@@ -1,0 +1,46 @@
+{
+  "_comment": "示例MOD科技树 - 复制此文件格式添加你自己的科技",
+  "_version": "1.0.0",
+
+  "public_techs": {
+    "mod_t1_magic": {
+      "name": "MOD魔法基础",
+      "desc": "解锁MOD相关的魔法物品和建筑",
+      "cost": 2,
+      "tier": 1,
+      "requires": [],
+      "category": "magic"
+    },
+    "mod_t2_advanced": {
+      "name": "MOD高级科技",
+      "desc": "解锁更强大的MOD内容",
+      "cost": 3,
+      "tier": 2,
+      "requires": ["mod_t1_magic"],
+      "category": "magic"
+    }
+  },
+
+  "class_techs": {
+    "warrior": {
+      "mod_war_special": {
+        "name": "MOD战士专精",
+        "desc": "MOD专属战士技能，伤害+25%",
+        "cost": 2,
+        "tier": 3,
+        "requires": ["war_t2_gun"]
+      }
+    }
+  },
+
+  "books": {
+    "mod_book_magic": {
+      "name": "MOD魔法书",
+      "desc": "学习MOD魔法，+5科技点",
+      "class_unlock": "",
+      "points": 5,
+      "study_time": 3600.0,
+      "locations": "MOD地牢/神秘遗迹"
+    }
+  }
+}

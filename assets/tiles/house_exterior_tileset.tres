@@ -1,6 +1,15 @@
 [gd_resource type="TileSet" format=3 uid="uid://bnp0xo2iwj35m"]
 
+[ext_resource type="Texture2D" uid="uid://j65i4xrp5vmj" path="res://assets/building/brick_corner.png" id="1_bhcxm"]
 [ext_resource type="Texture2D" uid="uid://c5nb24alf77ht" path="res://assets/building/生成EXE程序 (4).png" id="1_rdkr7"]
+[ext_resource type="Texture2D" uid="uid://bd1v0j1yui3ar" path="res://assets/building/brick_straight.png" id="3_022ya"]
+[ext_resource type="Texture2D" uid="uid://bx37m1oja5y0u" path="res://assets/building/chinese_straight.png" id="4_f4r4d"]
+[ext_resource type="Texture2D" uid="uid://ckdk25x1h05v4" path="res://assets/building/white_corner.png" id="5_ww024"]
+[ext_resource type="Texture2D" uid="uid://dkx7n5vlsd1fd" path="res://assets/building/white_straight.png" id="6_i27di"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ov6vl"]
+texture = ExtResource("1_bhcxm")
+texture_region_size = Vector2i(128, 64)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_rdkr7"]
 texture = ExtResource("1_rdkr7")
@@ -306,8 +315,43 @@ texture_region_size = Vector2i(128, 64)
 2:14/0 = 0
 2:14/0/y_sort_origin = 128
 
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ffrh7"]
+texture = ExtResource("3_022ya")
+texture_region_size = Vector2i(128, 64)
+0:2/0 = 0
+0:1/0 = 0
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_03if4"]
+texture = ExtResource("4_f4r4d")
+texture_region_size = Vector2i(128, 196)
+0:2/0 = 0
+0:1/0 = 0
+0:0/0 = 0
+1:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_8rdvj"]
+texture = ExtResource("5_ww024")
+texture_region_size = Vector2i(128, 196)
+0:2/0 = 0
+0:1/0 = 0
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_cup5w"]
+texture = ExtResource("6_i27di")
+texture_region_size = Vector2i(64, 128)
+0:2/0 = 0
+0:1/0 = 0
+1:0/0 = 0
+0:0/0 = 0
+
 [resource]
 tile_shape = 1
 tile_size = Vector2i(128, 64)
 physics_layer_0/collision_layer = 63
 sources/1 = SubResource("TileSetAtlasSource_rdkr7")
+sources/0 = SubResource("TileSetAtlasSource_ov6vl")
+sources/2 = SubResource("TileSetAtlasSource_ffrh7")
+sources/3 = SubResource("TileSetAtlasSource_03if4")
+sources/4 = SubResource("TileSetAtlasSource_8rdvj")
+sources/5 = SubResource("TileSetAtlasSource_cup5w")

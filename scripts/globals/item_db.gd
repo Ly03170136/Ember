@@ -1298,6 +1298,8 @@ const ITEMS := {
 
 # 获取物品信息
 func get_item(item_id: String) -> Dictionary:
+	if _custom_items.has(item_id):
+		return _custom_items[item_id]
 	if ITEMS.has(item_id):
 		return ITEMS[item_id]
 	return {}
@@ -1334,14 +1336,47 @@ func get_color(item_id: String) -> Color:
 
 
 func item_exists(item_id: String) -> bool:
-	return ITEMS.has(item_id)
+	return _custom_items.has(item_id) or ITEMS.has(item_id)
 
 
 func is_food(item_id: String) -> bool:
-	if ITEMS.has(item_id):
-		return ITEMS[item_id].type == ItemType.FOOD
+	var item := get_item(item_id)
+	if not item.is_empty():
+		return item.type == ItemType.FOOD
 	return false
 
 
 func get_all_items() -> Dictionary:
-	return ITEMS
+	var result: Dictionary = ITEMS.duplicate()
+	for item_id in _custom_items.keys():
+		result[item_id] = _custom_items[item_id]
+	return result
+
+
+# ==================== MOD扩展支持 ====================
+## 运行时添加的自定义物品（MOD内容）
+var _custom_items := {}
+
+
+## 注册/覆盖一个物品（MOD使用）
+## 如果item_id已存在，会覆盖原有物品
+func register_item(item_id: String, data: Dictionary) -> void:
+	_custom_items[item_id] = data
+	print("[ItemDB] MOD注册物品: %s" % item_id)
+
+
+## 取消注册一个物品
+func unregister_item(item_id: String) -> void:
+	if _custom_items.has(item_id):
+		_custom_items.erase(item_id)
+		print("[ItemDB] MOD取消注册物品: %s" % item_id)
+
+
+## 获取所有MOD添加的物品
+func get_custom_items() -> Dictionary:
+	return _custom_items.duplicate()
+
+
+## 检查物品是否来自MOD
+func is_custom_item(item_id: String) -> bool:
+	return _custom_items.has(item_id)

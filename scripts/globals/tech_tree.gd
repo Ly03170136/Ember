@@ -126,6 +126,13 @@ const BOOKS := {
 # ==================== 查询方法 ====================
 
 func get_tech(tech_id: String) -> Dictionary:
+	# 优先查MOD扩展
+	if _custom_public_techs.has(tech_id):
+		return _custom_public_techs[tech_id]
+	for class_id in _custom_class_techs.keys():
+		if _custom_class_techs[class_id].has(tech_id):
+			return _custom_class_techs[class_id][tech_id]
+	# 查基础数据
 	if PUBLIC_TECHS.has(tech_id):
 		return PUBLIC_TECHS[tech_id]
 	for class_id in CLASS_TECHS.keys():
@@ -155,15 +162,22 @@ func get_tech_tier(tech_id: String) -> int:
 
 
 func is_public_tech(tech_id: String) -> bool:
-	return PUBLIC_TECHS.has(tech_id)
+	return _custom_public_techs.has(tech_id) or PUBLIC_TECHS.has(tech_id)
 
 
 func get_class_techs(class_id: String) -> Dictionary:
-	return CLASS_TECHS.get(class_id, {})
+	var result: Dictionary = CLASS_TECHS.get(class_id, {}).duplicate()
+	if _custom_class_techs.has(class_id):
+		for tech_id in _custom_class_techs[class_id].keys():
+			result[tech_id] = _custom_class_techs[class_id][tech_id]
+	return result
 
 
 func get_all_public_techs() -> Dictionary:
-	return PUBLIC_TECHS
+	var result: Dictionary = PUBLIC_TECHS.duplicate()
+	for tech_id in _custom_public_techs.keys():
+		result[tech_id] = _custom_public_techs[tech_id]
+	return result
 
 
 func get_techs_by_tier(tier: int) -> Array:
@@ -213,11 +227,16 @@ func unlock_tech(tech_id: String, player: Node) -> bool:
 # ==================== 书籍学习 ====================
 
 func get_book_info(book_id: String) -> Dictionary:
+	if _custom_books.has(book_id):
+		return _custom_books[book_id]
 	return BOOKS.get(book_id, {})
 
 
 func get_all_books() -> Dictionary:
-	return BOOKS
+	var result: Dictionary = BOOKS.duplicate()
+	for book_id in _custom_books.keys():
+		result[book_id] = _custom_books[book_id]
+	return result
 
 
 func can_study_book(book_id: String, player: Node) -> bool:
@@ -244,3 +263,68 @@ func study_book(book_id: String, player: Node) -> bool:
 func get_study_time(book_id: String) -> float:
 	var book: Dictionary = get_book_info(book_id)
 	return book.get("study_time", 3600.0)
+
+
+# ==================== MOD扩展支持 ====================
+## 运行时添加的自定义公共科技
+var _custom_public_techs := {}
+## 运行时添加的自定义职业科技 {class_id: {tech_id: data}}
+var _custom_class_techs := {}
+## 运行时添加的自定义书籍
+var _custom_books := {}
+
+
+## 注册/覆盖一个公共科技（MOD使用）
+func register_public_tech(tech_id: String, data: Dictionary) -> void:
+	_custom_public_techs[tech_id] = data
+	print("[TechTree] MOD注册公共科技: %s" % tech_id)
+
+
+## 注册/覆盖一个职业专属科技（MOD使用）
+func register_class_tech(class_id: String, tech_id: String, data: Dictionary) -> void:
+	if not _custom_class_techs.has(class_id):
+		_custom_class_techs[class_id] = {}
+	_custom_class_techs[class_id][tech_id] = data
+	print("[TechTree] MOD注册职业科技: %s/%s" % [class_id, tech_id])
+
+
+## 注册/覆盖一本书籍（MOD使用）
+func register_book(book_id: String, data: Dictionary) -> void:
+	_custom_books[book_id] = data
+	print("[TechTree] MOD注册书籍: %s" % book_id)
+
+
+## 取消注册公共科技
+func unregister_public_tech(tech_id: String) -> void:
+	if _custom_public_techs.has(tech_id):
+		_custom_public_techs.erase(tech_id)
+		print("[TechTree] MOD取消注册公共科技: %s" % tech_id)
+
+
+## 取消注册职业科技
+func unregister_class_tech(class_id: String, tech_id: String) -> void:
+	if _custom_class_techs.has(class_id) and _custom_class_techs[class_id].has(tech_id):
+		_custom_class_techs[class_id].erase(tech_id)
+		print("[TechTree] MOD取消注册职业科技: %s/%s" % [class_id, tech_id])
+
+
+## 取消注册书籍
+func unregister_book(book_id: String) -> void:
+	if _custom_books.has(book_id):
+		_custom_books.erase(book_id)
+		print("[TechTree] MOD取消注册书籍: %s" % book_id)
+
+
+## 获取所有MOD添加的公共科技
+func get_custom_public_techs() -> Dictionary:
+	return _custom_public_techs.duplicate()
+
+
+## 获取所有MOD添加的职业科技
+func get_custom_class_techs() -> Dictionary:
+	return _custom_class_techs.duplicate()
+
+
+## 获取所有MOD添加的书籍
+func get_custom_books() -> Dictionary:
+	return _custom_books.duplicate()

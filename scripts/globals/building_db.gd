@@ -515,6 +515,8 @@ const BUILDINGS := {
 
 # 获取建筑信息
 func get_building(building_id: String) -> Dictionary:
+	if _custom_buildings.has(building_id):
+		return _custom_buildings[building_id]
 	if BUILDINGS.has(building_id):
 		return BUILDINGS[building_id]
 	return {}
@@ -563,11 +565,14 @@ func get_category(building_id: String) -> String:
 
 
 func get_all_buildings() -> Dictionary:
-	return BUILDINGS
+	var result: Dictionary = BUILDINGS.duplicate()
+	for building_id in _custom_buildings.keys():
+		result[building_id] = _custom_buildings[building_id]
+	return result
 
 
 func building_exists(building_id: String) -> bool:
-	return BUILDINGS.has(building_id)
+	return _custom_buildings.has(building_id) or BUILDINGS.has(building_id)
 
 
 # 检查是否有足够材料建造
@@ -689,3 +694,31 @@ func get_building_level_stats(building_id: String, level: int) -> Dictionary:
 		for key in upgrade.keys():
 			stats[key] = upgrade[key]
 	return stats
+
+
+# ==================== MOD扩展支持 ====================
+## 运行时添加的自定义建筑（MOD内容）
+var _custom_buildings := {}
+
+
+## 注册/覆盖一个建筑（MOD使用）
+func register_building(building_id: String, data: Dictionary) -> void:
+	_custom_buildings[building_id] = data
+	print("[BuildingDB] MOD注册建筑: %s" % building_id)
+
+
+## 取消注册一个建筑
+func unregister_building(building_id: String) -> void:
+	if _custom_buildings.has(building_id):
+		_custom_buildings.erase(building_id)
+		print("[BuildingDB] MOD取消注册建筑: %s" % building_id)
+
+
+## 获取所有MOD添加的建筑
+func get_custom_buildings() -> Dictionary:
+	return _custom_buildings.duplicate()
+
+
+## 检查建筑是否来自MOD
+func is_custom_building(building_id: String) -> bool:
+	return _custom_buildings.has(building_id)

@@ -1,0 +1,10 @@
+{
+  "name": "示例MOD - 更多物品",
+  "id": "example_mod",
+  "version": "1.0.0",
+  "author": "游戏开发者",
+  "description": "这是一个示例MOD，展示如何添加新物品、建筑、配方和科技。你可以复制这个目录来创建自己的MOD。",
+  "enabled": true,
+  "website": "",
+  "dependencies": []
+}

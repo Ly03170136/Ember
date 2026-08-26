@@ -416,6 +416,8 @@ const RECIPES := {
 
 # 获取配方
 func get_recipe(recipe_id: String) -> Dictionary:
+	if _custom_recipes.has(recipe_id):
+		return _custom_recipes[recipe_id]
 	if RECIPES.has(recipe_id):
 		return RECIPES[recipe_id]
 	return {}
@@ -423,7 +425,10 @@ func get_recipe(recipe_id: String) -> Dictionary:
 
 # 获取所有配方
 func get_all_recipes() -> Dictionary:
-	return RECIPES
+	var result: Dictionary = RECIPES.duplicate()
+	for recipe_id in _custom_recipes.keys():
+		result[recipe_id] = _custom_recipes[recipe_id]
+	return result
 
 
 # 检查是否能制作（材料足够 + 工作站条件）
@@ -478,4 +483,32 @@ func get_recipe_station(recipe_id: String) -> String:
 
 # 配方是否存在
 func recipe_exists(recipe_id: String) -> bool:
-	return RECIPES.has(recipe_id)
+	return _custom_recipes.has(recipe_id) or RECIPES.has(recipe_id)
+
+
+# ==================== MOD扩展支持 ====================
+## 运行时添加的自定义配方（MOD内容）
+var _custom_recipes := {}
+
+
+## 注册/覆盖一个配方（MOD使用）
+func register_recipe(recipe_id: String, data: Dictionary) -> void:
+	_custom_recipes[recipe_id] = data
+	print("[RecipeDB] MOD注册配方: %s" % recipe_id)
+
+
+## 取消注册一个配方
+func unregister_recipe(recipe_id: String) -> void:
+	if _custom_recipes.has(recipe_id):
+		_custom_recipes.erase(recipe_id)
+		print("[RecipeDB] MOD取消注册配方: %s" % recipe_id)
+
+
+## 获取所有MOD添加的配方
+func get_custom_recipes() -> Dictionary:
+	return _custom_recipes.duplicate()
+
+
+## 检查配方是否来自MOD
+func is_custom_recipe(recipe_id: String) -> bool:
+	return _custom_recipes.has(recipe_id)

@@ -1,0 +1,20 @@
+{
+  "_comment": "示例MOD配方 - 复制此文件格式添加你自己的配方",
+  "_version": "1.0.0",
+
+  "mod_sword_recipe": {
+    "result": "mod_sword",
+    "count": 1,
+    "ingredients": {"mod_crystal": 3, "metal": 10, "wood": 5},
+    "station": "workbench",
+    "name": "制作MOD之剑"
+  },
+
+  "mod_potion_recipe": {
+    "result": "mod_potion",
+    "count": 2,
+    "ingredients": {"mod_crystal": 1, "berry": 5, "water": 1},
+    "station": "campfire",
+    "name": "酿造MOD药水"
+  }
+}
