@@ -1,25 +1,138 @@
-[gd_scene load_steps=2 format=3 uid="uid://bhud000001"]
+[gd_scene load_steps=11 format=3 uid="uid://bhud000001"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+[ext_resource type="Theme" path="res://assets/ui/ember_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://assets/ui/bar_bg.jpg" id="3_bar_bg"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_panel"]
+bg_color = Color(0.06, 0.06, 0.08, 0.82)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.45, 0.32, 0.15, 0.9)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_bar_bg"]
+texture = ExtResource("3_bar_bg")
+texture_margin_left = 50.0
+texture_margin_top = 16.0
+texture_margin_right = 50.0
+texture_margin_bottom = 16.0
+draw_center = true
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill_health"]
+bg_color = Color(0.85, 0.18, 0.15, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill_hunger"]
+bg_color = Color(0.9, 0.55, 0.15, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill_thirst"]
+bg_color = Color(0.2, 0.55, 0.85, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill_stamina"]
+bg_color = Color(0.35, 0.75, 0.3, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill_sanity"]
+bg_color = Color(0.6, 0.4, 0.85, 1)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
 
-[node name="BottomLeft" type="Panel" parent="."]
+[node name="UIRoot" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+mouse_filter = 2
+
+[node name="BottomLeft" type="Panel" parent="UIRoot"]
 offset_left = 24.0
 offset_top = 872.0
 offset_right = 330.0
 offset_bottom = 1056.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
 
-[node name="HealthLabel" type="Label" parent="BottomLeft"]
+[node name="HealthLabel" type="Label" parent="UIRoot/BottomLeft"]
 offset_left = 12.0
 offset_top = 14.0
 offset_right = 84.0
 offset_bottom = 36.0
 text = "生命"
 theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.95, 0.3, 0.25, 1)
 
-[node name="HealthBar" type="ProgressBar" parent="BottomLeft"]
+[node name="HealthBar" type="ProgressBar" parent="UIRoot/BottomLeft"]
 offset_left = 90.0
 offset_top = 16.0
 offset_right = 306.0
@@ -27,16 +140,19 @@ offset_bottom = 36.0
 max_value = 100.0
 value = 100.0
 show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxTexture_bar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill_health")
 
-[node name="HungerLabel" type="Label" parent="BottomLeft"]
+[node name="HungerLabel" type="Label" parent="UIRoot/BottomLeft"]
 offset_left = 12.0
 offset_top = 46.0
 offset_right = 84.0
 offset_bottom = 68.0
 text = "饥饿"
 theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.95, 0.6, 0.2, 1)
 
-[node name="HungerBar" type="ProgressBar" parent="BottomLeft"]
+[node name="HungerBar" type="ProgressBar" parent="UIRoot/BottomLeft"]
 offset_left = 90.0
 offset_top = 48.0
 offset_right = 306.0
@@ -44,16 +160,19 @@ offset_bottom = 68.0
 max_value = 100.0
 value = 100.0
 show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxTexture_bar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill_hunger")
 
-[node name="ThirstLabel" type="Label" parent="BottomLeft"]
+[node name="ThirstLabel" type="Label" parent="UIRoot/BottomLeft"]
 offset_left = 12.0
 offset_top = 78.0
 offset_right = 84.0
 offset_bottom = 100.0
 text = "口渴"
 theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.3, 0.65, 0.9, 1)
 
-[node name="ThirstBar" type="ProgressBar" parent="BottomLeft"]
+[node name="ThirstBar" type="ProgressBar" parent="UIRoot/BottomLeft"]
 offset_left = 90.0
 offset_top = 80.0
 offset_right = 306.0
@@ -61,16 +180,19 @@ offset_bottom = 100.0
 max_value = 100.0
 value = 100.0
 show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxTexture_bar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill_thirst")
 
-[node name="StaminaLabel" type="Label" parent="BottomLeft"]
+[node name="StaminaLabel" type="Label" parent="UIRoot/BottomLeft"]
 offset_left = 12.0
 offset_top = 110.0
 offset_right = 84.0
 offset_bottom = 132.0
 text = "体力"
 theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.4, 0.8, 0.35, 1)
 
-[node name="StaminaBar" type="ProgressBar" parent="BottomLeft"]
+[node name="StaminaBar" type="ProgressBar" parent="UIRoot/BottomLeft"]
 offset_left = 90.0
 offset_top = 112.0
 offset_right = 306.0
@@ -78,17 +200,19 @@ offset_bottom = 132.0
 max_value = 100.0
 value = 100.0
 show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxTexture_bar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill_stamina")
 
-[node name="SanityLabel" type="Label" parent="BottomLeft"]
+[node name="SanityLabel" type="Label" parent="UIRoot/BottomLeft"]
 offset_left = 12.0
 offset_top = 142.0
 offset_right = 84.0
 offset_bottom = 164.0
 text = "理智"
 theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.7, 0.7, 0.9, 1)
+theme_override_colors/font_color = Color(0.7, 0.5, 0.95, 1)
 
-[node name="SanityBar" type="ProgressBar" parent="BottomLeft"]
+[node name="SanityBar" type="ProgressBar" parent="UIRoot/BottomLeft"]
 offset_left = 90.0
 offset_top = 144.0
 offset_right = 306.0
@@ -96,14 +220,17 @@ offset_bottom = 164.0
 max_value = 100.0
 value = 100.0
 show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxTexture_bar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill_sanity")
 
-[node name="TopRight" type="Panel" parent="."]
+[node name="TopRight" type="Panel" parent="UIRoot"]
 offset_left = 1560.0
 offset_top = 20.0
 offset_right = 1896.0
 offset_bottom = 160.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
 
-[node name="DayLabel" type="Label" parent="TopRight"]
+[node name="DayLabel" type="Label" parent="UIRoot/TopRight"]
 offset_left = 12.0
 offset_top = 8.0
 offset_right = 324.0
@@ -111,8 +238,9 @@ offset_bottom = 34.0
 horizontal_alignment = 1
 text = "已存活 1 天"
 theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 0.75, 0.3, 1)
 
-[node name="MonthSeasonLabel" type="Label" parent="TopRight"]
+[node name="MonthSeasonLabel" type="Label" parent="UIRoot/TopRight"]
 offset_left = 12.0
 offset_top = 36.0
 offset_right = 324.0
@@ -120,8 +248,9 @@ offset_bottom = 60.0
 horizontal_alignment = 1
 text = "3月 | 春季"
 theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.8, 0.75, 0.65, 1)
 
-[node name="WeatherTempLabel" type="Label" parent="TopRight"]
+[node name="WeatherTempLabel" type="Label" parent="UIRoot/TopRight"]
 offset_left = 12.0
 offset_top = 62.0
 offset_right = 324.0
@@ -129,9 +258,9 @@ offset_bottom = 86.0
 horizontal_alignment = 1
 text = "晴 | -2°C 凉爽"
 theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.85, 0.85, 0.75, 1)
+theme_override_colors/font_color = Color(0.85, 0.82, 0.72, 1)
 
-[node name="TimeLabel" type="Label" parent="TopRight"]
+[node name="TimeLabel" type="Label" parent="UIRoot/TopRight"]
 offset_left = 12.0
 offset_top = 88.0
 offset_right = 324.0
@@ -139,47 +268,51 @@ offset_bottom = 120.0
 horizontal_alignment = 1
 text = "12:00"
 theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.95, 0.9, 0.8, 1)
 
-[node name="BottomRight" type="Panel" parent="."]
+[node name="BottomRight" type="Panel" parent="UIRoot"]
 offset_left = 1590.0
 offset_top = 840.0
 offset_right = 1896.0
 offset_bottom = 1056.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
 
-[node name="Title" type="Label" parent="BottomRight"]
+[node name="Title" type="Label" parent="UIRoot/BottomRight"]
 offset_left = 12.0
 offset_top = 6.0
 offset_right = 294.0
 offset_bottom = 30.0
 text = "玩家列表"
 theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(1, 0.7, 0.25, 1)
 
-[node name="PlayerList" type="VBoxContainer" parent="BottomRight"]
+[node name="PlayerList" type="VBoxContainer" parent="UIRoot/BottomRight"]
 offset_left = 12.0
 offset_top = 36.0
 offset_right = 294.0
 offset_bottom = 210.0
 theme_override_constants/separation = 4
 
-[node name="Chat" type="Panel" parent="."]
+[node name="Chat" type="Panel" parent="UIRoot"]
 offset_left = 24.0
 offset_top = 580.0
 offset_right = 485.0
 offset_bottom = 810.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
 
-[node name="Scroll" type="ScrollContainer" parent="Chat"]
+[node name="Scroll" type="ScrollContainer" parent="UIRoot/Chat"]
 offset_left = 8.0
 offset_top = 8.0
 offset_right = 453.0
 offset_bottom = 185.0
 horizontal_scroll_mode = 0
 
-[node name="ChatBox" type="VBoxContainer" parent="Chat/Scroll"]
+[node name="ChatBox" type="VBoxContainer" parent="UIRoot/Chat/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="ChatInput" type="LineEdit" parent="Chat"]
+[node name="ChatInput" type="LineEdit" parent="UIRoot/Chat"]
 offset_left = 8.0
 offset_top = 195.0
 offset_right = 453.0
@@ -187,7 +320,7 @@ offset_bottom = 230.0
 placeholder_text = "按 Enter 聊天..."
 theme_override_font_sizes/font_size = 18
 
-[node name="Notification" type="Label" parent="."]
+[node name="Notification" type="Label" parent="UIRoot"]
 offset_left = 510.0
 offset_top = 150.0
 offset_right = 1410.0

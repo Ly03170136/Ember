@@ -15,10 +15,10 @@ func _ready() -> void:
 		btn.custom_minimum_size = Vector2(56, 56)
 		btn.text = str(i + 1)
 		btn.name = "QuickSlot_%d" % i
-		# 设置格子样式：深色背景+灰色边框
+		# 设置格子样式：深色背景+琥珀棕色边框
 		var normal_style := StyleBoxFlat.new()
-		normal_style.bg_color = Color(0.12, 0.12, 0.15, 0.9)
-		normal_style.border_color = Color(0.4, 0.4, 0.5, 0.8)
+		normal_style.bg_color = Color(0.1, 0.09, 0.11, 0.92)
+		normal_style.border_color = Color(0.4, 0.3, 0.15, 0.85)
 		normal_style.border_width_left = 2
 		normal_style.border_width_right = 2
 		normal_style.border_width_top = 2
@@ -95,8 +95,8 @@ func _highlight_selected() -> void:
 		else:
 			# 未选中的格子：恢复默认深色边框
 			var normal_style := StyleBoxFlat.new()
-			normal_style.bg_color = Color(0.12, 0.12, 0.15, 0.9)
-			normal_style.border_color = Color(0.4, 0.4, 0.5, 0.8)
+			normal_style.bg_color = Color(0.1, 0.09, 0.11, 0.92)
+			normal_style.border_color = Color(0.4, 0.3, 0.15, 0.85)
 			normal_style.border_width_left = 2
 			normal_style.border_width_right = 2
 			normal_style.border_width_top = 2

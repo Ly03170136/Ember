@@ -1,20 +1,20 @@
 extends CanvasLayer
 ## 游戏内HUD：状态栏、时间、聊天、通知
 
-@onready var health_bar: ProgressBar = $BottomLeft/HealthBar
-@onready var hunger_bar: ProgressBar = $BottomLeft/HungerBar
-@onready var thirst_bar: ProgressBar = $BottomLeft/ThirstBar
-@onready var stamina_bar: ProgressBar = $BottomLeft/StaminaBar
-@onready var sanity_bar: ProgressBar = $BottomLeft/SanityBar
-@onready var day_label: Label = $TopRight/DayLabel
-@onready var month_season_label: Label = $TopRight/MonthSeasonLabel
-@onready var weather_temp_label: Label = $TopRight/WeatherTempLabel
-@onready var time_label: Label = $TopRight/TimeLabel
-@onready var chat_box: VBoxContainer = $Chat/Scroll/ChatBox
-@onready var chat_input: LineEdit = $Chat/ChatInput
-@onready var chat_panel: Control = $Chat
-@onready var notification: Label = $Notification
-@onready var player_list: VBoxContainer = $BottomRight/PlayerList
+@onready var health_bar: ProgressBar = $UIRoot/BottomLeft/HealthBar
+@onready var hunger_bar: ProgressBar = $UIRoot/BottomLeft/HungerBar
+@onready var thirst_bar: ProgressBar = $UIRoot/BottomLeft/ThirstBar
+@onready var stamina_bar: ProgressBar = $UIRoot/BottomLeft/StaminaBar
+@onready var sanity_bar: ProgressBar = $UIRoot/BottomLeft/SanityBar
+@onready var day_label: Label = $UIRoot/TopRight/DayLabel
+@onready var month_season_label: Label = $UIRoot/TopRight/MonthSeasonLabel
+@onready var weather_temp_label: Label = $UIRoot/TopRight/WeatherTempLabel
+@onready var time_label: Label = $UIRoot/TopRight/TimeLabel
+@onready var chat_box: VBoxContainer = $UIRoot/Chat/Scroll/ChatBox
+@onready var chat_input: LineEdit = $UIRoot/Chat/ChatInput
+@onready var chat_panel: Control = $UIRoot/Chat
+@onready var notification: Label = $UIRoot/Notification
+@onready var player_list: VBoxContainer = $UIRoot/BottomRight/PlayerList
 
 var notification_timer: float = 0.0
 var chat_visible: bool = false

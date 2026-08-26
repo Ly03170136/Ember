@@ -1,0 +1,196 @@
+[gd_resource type="Theme" load_steps=17 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/ui/button_normal.jpg" id="1_btn_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/button_hover.jpg" id="2_btn_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/button_pressed.jpg" id="3_btn_pressed"]
+[ext_resource type="Texture2D" path="res://assets/ui/panel_border.jpg" id="4_panel_border"]
+[ext_resource type="Texture2D" path="res://assets/ui/input_bg.jpg" id="5_input"]
+[ext_resource type="Texture2D" path="res://assets/ui/bar_bg.jpg" id="6_bar_bg"]
+[ext_resource type="Texture2D" path="res://assets/ui/bar_fill_red.jpg" id="7_bar_fill"]
+[ext_resource type="Texture2D" path="res://assets/ui/slot.jpg" id="8_slot"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_btn_normal"]
+texture = ExtResource("1_btn_normal")
+texture_margin_left = 120.0
+texture_margin_top = 40.0
+texture_margin_right = 120.0
+texture_margin_bottom = 40.0
+expand_margin_left = 0.0
+expand_margin_top = 0.0
+expand_margin_right = 0.0
+expand_margin_bottom = 0.0
+content_margin_left = 20.0
+content_margin_top = 8.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
+draw_center = true
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_btn_hover"]
+texture = ExtResource("2_btn_hover")
+texture_margin_left = 120.0
+texture_margin_top = 40.0
+texture_margin_right = 120.0
+texture_margin_bottom = 40.0
+content_margin_left = 20.0
+content_margin_top = 8.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
+draw_center = true
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_btn_pressed"]
+texture = ExtResource("3_btn_pressed")
+texture_margin_left = 120.0
+texture_margin_top = 40.0
+texture_margin_right = 120.0
+texture_margin_bottom = 40.0
+content_margin_left = 20.0
+content_margin_top = 8.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
+draw_center = true
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel"]
+texture = ExtResource("4_panel_border")
+texture_margin_left = 100.0
+texture_margin_top = 100.0
+texture_margin_right = 100.0
+texture_margin_bottom = 100.0
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+draw_center = true
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
+bg_color = Color(0.08, 0.08, 0.1, 0.92)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_input_normal"]
+texture = ExtResource("5_input")
+texture_margin_left = 100.0
+texture_margin_top = 35.0
+texture_margin_right = 100.0
+texture_margin_bottom = 35.0
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+draw_center = true
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_input_focus"]
+texture = ExtResource("5_input")
+texture_margin_left = 100.0
+texture_margin_top = 35.0
+texture_margin_right = 100.0
+texture_margin_bottom = 35.0
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+draw_center = true
+modulate_color = Color(1.2, 1.1, 0.9, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_bar_bg"]
+texture = ExtResource("6_bar_bg")
+texture_margin_left = 60.0
+texture_margin_top = 18.0
+texture_margin_right = 60.0
+texture_margin_bottom = 18.0
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+draw_center = true
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_bar_fill"]
+texture = ExtResource("7_bar_fill")
+texture_margin_left = 40.0
+texture_margin_top = 12.0
+texture_margin_right = 40.0
+texture_margin_bottom = 12.0
+content_margin_left = 4.0
+content_margin_top = 2.0
+content_margin_right = 4.0
+content_margin_bottom = 2.0
+draw_center = true
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_slot"]
+texture = ExtResource("8_slot")
+texture_margin_left = 60.0
+texture_margin_top = 60.0
+texture_margin_right = 60.0
+texture_margin_bottom = 60.0
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+draw_center = true
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_separator"]
+bg_color = Color(0.4, 0.3, 0.15, 0.6)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
+bg_color = Color(0.1, 0.09, 0.08, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.5, 0.38, 0.18, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+
+[resource]
+default_font_size = 16
+Button/normal = SubResource("StyleBoxTexture_btn_normal")
+Button/hover = SubResource("StyleBoxTexture_btn_hover")
+Button/pressed = SubResource("StyleBoxTexture_btn_pressed")
+Button/disabled = SubResource("StyleBoxTexture_btn_normal")
+Button/font_color = Color(0.95, 0.88, 0.7, 1)
+Button/font_hover_color = Color(1, 0.95, 0.8, 1)
+Button/font_pressed_color = Color(0.8, 0.7, 0.5, 1)
+Button/font_disabled_color = Color(0.4, 0.4, 0.4, 1)
+Button/font_outline_size = 2
+Button/font_outline_color = Color(0, 0, 0, 0.8)
+Panel/panel = SubResource("StyleBoxTexture_panel")
+Label/font_color = Color(0.9, 0.85, 0.75, 1)
+Label/font_outline_size = 1
+Label/font_outline_color = Color(0, 0, 0, 0.6)
+LineEdit/normal = SubResource("StyleBoxTexture_input_normal")
+LineEdit/focus = SubResource("StyleBoxTexture_input_focus")
+LineEdit/font_color = Color(0.95, 0.92, 0.85, 1)
+LineEdit/font_selected_color = Color(1, 1, 1, 1)
+LineEdit/selection_color = Color(1, 0.65, 0.2, 0.4)
+LineEdit/caret_color = Color(1, 0.75, 0.3, 1)
+LineEdit/placeholder_color = Color(0.5, 0.5, 0.5, 1)
+ProgressBar/background = SubResource("StyleBoxTexture_bar_bg")
+ProgressBar/fill = SubResource("StyleBoxTexture_bar_fill")
+HSeparator/separator = SubResource("StyleBoxFlat_separator")
+VSeparator/separator = SubResource("StyleBoxFlat_separator")
+TooltipPanel/panel = SubResource("StyleBoxFlat_tooltip")
+VBoxContainer/separation = 8
+HBoxContainer/separation = 8
+GridContainer/h_separation = 6
+GridContainer/v_separation = 6
+ScrollContainer/h_separation = 4
+ScrollContainer/v_separation = 4
+ItemList/normal = SubResource("StyleBoxFlat_panel_bg")
+ItemList/hover = SubResource("StyleBoxFlat_panel_bg")
+ItemList/font_color = Color(0.9, 0.85, 0.75, 1)
+ItemList/font_hover_color = Color(1, 0.95, 0.8, 1)

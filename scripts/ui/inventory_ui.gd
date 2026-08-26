@@ -34,6 +34,27 @@ func _ready() -> void:
 		btn.text = ""
 		btn.name = "Slot_%d" % i
 		btn.tooltip_text = ""
+		# 末日风格格子样式
+		var slot_style := StyleBoxFlat.new()
+		slot_style.bg_color = Color(0.1, 0.09, 0.11, 0.92)
+		slot_style.border_color = Color(0.4, 0.3, 0.15, 0.85)
+		slot_style.border_width_left = 2
+		slot_style.border_width_right = 2
+		slot_style.border_width_top = 2
+		slot_style.border_width_bottom = 2
+		slot_style.corner_radius_top_left = 3
+		slot_style.corner_radius_top_right = 3
+		slot_style.corner_radius_bottom_left = 3
+		slot_style.corner_radius_bottom_right = 3
+		slot_style.content_margin_left = 3
+		slot_style.content_margin_right = 3
+		slot_style.content_margin_top = 3
+		slot_style.content_margin_bottom = 3
+		btn.add_theme_stylebox_override("normal", slot_style)
+		btn.add_theme_stylebox_override("hover", slot_style)
+		btn.add_theme_stylebox_override("pressed", slot_style)
+		btn.add_theme_font_size_override("font_size", 12)
+		btn.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7, 1))
 		btn.gui_input.connect(_on_slot_gui_input.bind(i))
 		grid.add_child(btn)
 		slot_buttons.append(btn)
