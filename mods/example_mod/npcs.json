@@ -1,0 +1,70 @@
+{
+  "_comment": "示例MOD NPC类型 - 复制此文件格式添加你自己的NPC",
+  "_version": "1.0.0",
+
+  "npc_merchant": {
+    "name": "商人",
+    "speed": 35.0,
+    "max_health": 80.0,
+    "color": [0.8, 0.6, 0.3, 1.0],
+    "scale": 1.0,
+    "is_police": false,
+    "behavior": "civilian",
+    "can_trade": true,
+    "trade_items": ["wood", "stone", "metal", "food", "medicine"],
+    "dialogue_tree": "dialogues/merchant.json",
+    "spawn_weight": 5,
+    "faction": "civilian"
+  },
+
+  "npc_hunter": {
+    "name": "猎人",
+    "speed": 70.0,
+    "max_health": 120.0,
+    "color": [0.3, 0.5, 0.2, 1.0],
+    "scale": 1.05,
+    "is_police": false,
+    "damage": 25.0,
+    "attack_range": 150.0,
+    "attack_cooldown": 1.5,
+    "behavior": "hunter_hunt",
+    "can_trade": true,
+    "trade_items": ["meat", "leather", "arrow", "bow"],
+    "dialogue_tree": "",
+    "spawn_weight": 3,
+    "faction": "civilian"
+  },
+
+  "npc_doctor": {
+    "name": "医生",
+    "speed": 45.0,
+    "max_health": 70.0,
+    "color": [0.9, 0.9, 0.95, 1.0],
+    "scale": 1.0,
+    "is_police": false,
+    "behavior": "civilian",
+    "can_trade": true,
+    "trade_items": ["bandage", "medicine", "antibiotic", "first_aid_kit"],
+    "dialogue_tree": "dialogues/doctor.json",
+    "spawn_weight": 2,
+    "faction": "civilian"
+  },
+
+  "npc_soldier": {
+    "name": "士兵",
+    "speed": 65.0,
+    "max_health": 150.0,
+    "color": [0.4, 0.4, 0.3, 1.0],
+    "scale": 1.1,
+    "is_police": true,
+    "damage": 25.0,
+    "attack_range": 200.0,
+    "attack_cooldown": 0.8,
+    "behavior": "police",
+    "can_trade": false,
+    "trade_items": [],
+    "dialogue_tree": "",
+    "spawn_weight": 2,
+    "faction": "military"
+  }
+}

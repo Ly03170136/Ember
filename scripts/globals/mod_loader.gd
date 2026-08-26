@@ -16,6 +16,8 @@ var stats := {
 	"public_techs": 0,
 	"class_techs": 0,
 	"books": 0,
+	"npcs": 0,
+	"behaviors": 0,
 }
 
 
@@ -45,9 +47,9 @@ func load_all_mods() -> void:
 			print("[ModLoader] 跳过目录 %s（缺少mod.json）" % mod_name)
 	
 	print("[ModLoader] MOD加载完成：共加载 %d 个MOD" % loaded_mods.size())
-	print("[ModLoader] 加载统计：物品 %d, 建筑 %d, 配方 %d, 科技 %d" % [
+	print("[ModLoader] 加载统计：物品 %d, 建筑 %d, 配方 %d, 科技 %d, NPC %d" % [
 		stats.items, stats.buildings, stats.recipes,
-		stats.public_techs + stats.class_techs
+		stats.public_techs + stats.class_techs, stats.npcs
 	])
 
 
@@ -87,6 +89,14 @@ func load_mod(mod_id: String, mod_path: String) -> bool:
 	var tech_path := mod_path + "tech_tree.json"
 	if FileAccess.file_exists(tech_path):
 		_load_mod_tech_tree(tech_path)
+	
+	var npcs_path := mod_path + "npcs.json"
+	if FileAccess.file_exists(npcs_path):
+		_load_mod_npcs(npcs_path)
+	
+	var behaviors_path := mod_path + "behaviors.json"
+	if FileAccess.file_exists(behaviors_path):
+		_load_mod_behaviors(behaviors_path)
 	
 	print("[ModLoader] MOD加载完成: %s" % mod_name)
 	return true
@@ -189,6 +199,48 @@ func _load_mod_tech_tree(file_path: String) -> void:
 			print("[ModLoader]   加载书籍: %d 个" % count)
 
 
+## 加载MOD NPC类型
+func _load_mod_npcs(file_path: String) -> void:
+	var data = _load_json_file(file_path)
+	if data.is_empty():
+		return
+	
+	var count := 0
+	for npc_type in data.keys():
+		if npc_type.begins_with("_"):
+			continue
+		var npc_data = data[npc_type]
+		if npc_data is Dictionary:
+			NPCDB.register_npc(npc_type, npc_data)
+			count += 1
+	
+	stats.npcs += count
+	print("[ModLoader]   加载NPC类型: %d 个" % count)
+
+
+## 加载MOD行为模板
+func _load_mod_behaviors(file_path: String) -> void:
+	var data = _load_json_file(file_path)
+	if data.is_empty():
+		return
+	
+	var count := 0
+	for behavior_name in data.keys():
+		if behavior_name.begins_with("_"):
+			continue
+		var behavior_data = data[behavior_name]
+		var desc = ""
+		if behavior_data is Dictionary:
+			desc = behavior_data.get("description", "")
+		elif behavior_data is String:
+			desc = behavior_data
+		NPCDB.register_behavior(behavior_name, desc)
+		count += 1
+	
+	stats.behaviors += count
+	print("[ModLoader]   加载行为模板: %d 个" % count)
+
+
 ## 加载JSON文件
 func _load_json_file(file_path: String) -> Dictionary:
 	if not FileAccess.file_exists(file_path):
@@ -232,5 +284,5 @@ func get_stats() -> Dictionary:
 func reload_all_mods() -> void:
 	print("[ModLoader] 重新加载所有MOD...")
 	loaded_mods.clear()
-	stats = {"items": 0, "buildings": 0, "recipes": 0, "public_techs": 0, "class_techs": 0, "books": 0}
+	stats = {"items": 0, "buildings": 0, "recipes": 0, "public_techs": 0, "class_techs": 0, "books": 0, "npcs": 0, "behaviors": 0}
 	load_all_mods()

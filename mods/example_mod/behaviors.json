@@ -1,0 +1,20 @@
+{
+  "_comment": "示例MOD行为模板 - 注册自定义NPC行为名称",
+  "_version": "1.0.0",
+  "_note": "行为逻辑需要在MOD脚本中实现，并通过EventBus钩子连接到NPC",
+
+  "hunter_hunt": {
+    "description": "猎人行为：主动搜索并攻击野生动物，收集掉落物",
+    "author": "示例MOD"
+  },
+
+  "merchant_trade": {
+    "description": "商人行为：在固定区域巡逻，玩家靠近时打开交易界面",
+    "author": "示例MOD"
+  },
+
+  "doctor_heal": {
+    "description": "医生行为：检测附近受伤玩家并提供治疗服务",
+    "author": "示例MOD"
+  }
+}

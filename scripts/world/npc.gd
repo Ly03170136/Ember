@@ -57,8 +57,10 @@ func _ready() -> void:
 	# 使用PhysicsLayers系统设置碰撞层和mask（确保NPC之间、NPC与资源之间有体积碰撞）
 	if PhysicsLayers and PhysicsLayers.has_method("set_collision"):
 		PhysicsLayers.set_collision(self, "npc")
-	# 初始化NPC类型
-	if NPC_TYPES.has(npc_type):
+	# 初始化NPC类型（优先从NPCDB获取，支持MOD扩展）
+	if NPCDB and NPCDB.npc_exists(npc_type):
+		_type_config = NPCDB.get_npc(npc_type)
+	elif NPC_TYPES.has(npc_type):
 		_type_config = NPC_TYPES[npc_type]
 	else:
 		_type_config = NPC_TYPES["civilian"]
