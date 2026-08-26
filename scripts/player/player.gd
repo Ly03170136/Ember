@@ -60,7 +60,7 @@ var is_sprinting: bool = false
 var facing: Vector2 = Vector2.DOWN
 var attack_cooldown: float = 0.0
 const ATTACK_DAMAGE := 25.0
-const ATTACK_RANGE := 500.0
+const ATTACK_RANGE := 70.0
 const ATTACK_COOLDOWN_TIME := 0.4
 
 # 动画相关
@@ -420,16 +420,34 @@ func _attack() -> void:
 		return
 	print("[Attack] 最近目标: ", nearest_target.name, " 距离: ", nearest_dist, " 组: ", nearest_target.get_groups())
 	var damage: float = ATTACK_DAMAGE * get_attack_damage_multiplier()
+	# 优先检测鼠标指向的围墙/房屋（不受70范围限制，鼠标离玩家200以内即可）
+	var mouse_pos: Vector2 = get_global_mouse_position()
+	if global_position.distance_to(mouse_pos) < 200.0:
+		for target in all_targets:
+			# 瓦片房屋/旧围墙（按瓦片破坏）
+			if (target.is_in_group("tile_house") or target.is_in_group("wall")) and target.has_method("damage_tile_at_world_pos"):
+				var hit: bool = target.damage_tile_at_world_pos(mouse_pos, damage)
+				if hit:
+					print("[Attack] 鼠标指向攻击命中，目标: ", target.name, " 位置: ", mouse_pos)
+					return
+			# 独立Sprite2D墙体（整面墙破坏）
+			elif target.is_in_group("wall") and target.has_method("take_damage"):
+				var sprite = target.get_node_or_null("Sprite2D")
+				if sprite:
+					var local_mouse = target.to_local(mouse_pos)
+					if sprite.get_rect().has_point(local_mouse):
+						target.take_damage(damage, self)
+						print("[Attack] 鼠标指向攻击命中（独立墙体），目标: ", target.name)
+						return
 	# 对丧尸/NPC调用take_damage
 	if nearest_target.has_method("take_damage"):
 		nearest_target.take_damage(damage, self)
 		var target_name: String = nearest_target.name if nearest_target.name else "Unknown"
 		print("[Attack] 攻击 %s，造成 %d 伤害（职业:%s）" % [target_name, damage, player_class])
-	# 对瓦片房屋/围墙调用damage_tile_at_world_pos
+	# 对瓦片房屋/围墙调用damage_tile_at_world_pos（最近目标方式）
 	elif (nearest_target.is_in_group("tile_house") or nearest_target.is_in_group("wall")) and nearest_target.has_method("damage_tile_at_world_pos"):
-		# 计算攻击点（玩家朝向方向上的位置）
-		var attack_pos: Vector2 = global_position + facing.normalized() * 100.0
-		print("[Attack] 攻击房屋，玩家位置: ", global_position, " 朝向: ", facing, " 攻击点: ", attack_pos)
+		var attack_pos: Vector2 = mouse_pos
+		print("[Attack] 攻击房屋，玩家位置: ", global_position, " 鼠标位置: ", attack_pos)
 		var hit: bool = nearest_target.damage_tile_at_world_pos(attack_pos, damage)
 		if hit:
 			print("[Attack] 攻击房屋瓦片命中，造成 %d 伤害" % damage)

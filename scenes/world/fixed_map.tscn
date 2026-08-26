@@ -1,14 +1,15 @@
 [gd_scene format=3 uid="uid://bfixedmap001"]
 
 [ext_resource type="Script" uid="uid://d1cg4l2qc6ht0" path="res://scripts/world/fixed_map.gd" id="1_fm"]
-[ext_resource type="PackedScene" uid="uid://btilewall001" path="res://scenes/entities/tile_wall.tscn" id="2_tilewall"]
+[ext_resource type="PackedScene" uid="uid://bwall001" path="res://scenes/entities/wall.tscn" id="3_wall"]
 
 [node name="FixedMap" type="Node2D" unique_id=1938293949]
 script = ExtResource("1_fm")
 
 [node name="Buildings" type="Node2D" parent="." unique_id=1058458223]
 
-[node name="TileWall" parent="Buildings" unique_id=43009661 instance=ExtResource("2_tilewall")]
+[node name="Wall" parent="Buildings" instance=ExtResource("3_wall")]
+position = Vector2(0, 0)
 
 [node name="Resources" type="Node2D" parent="." unique_id=331368429]
 

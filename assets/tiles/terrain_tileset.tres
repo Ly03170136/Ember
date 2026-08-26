@@ -1,6 +1,61 @@
 [gd_resource type="TileSet" format=3 uid="uid://dyphmyd1f5v2h"]
 
+[ext_resource type="Texture2D" uid="uid://di6keedrc0ypi" path="res://assets/tiles/TerrainLayer/shear_left.png" id="1_clpbi"]
 [ext_resource type="Texture2D" uid="uid://bel08c26hko4d" path="res://assets/tiles/TerrainLayer/草地1.png" id="1_fsnex"]
+[ext_resource type="Texture2D" uid="uid://cisiv8786t63h" path="res://assets/tiles/TerrainLayer/shear_right.png" id="3_ykcb8"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4xcxg"]
+texture = ExtResource("1_clpbi")
+texture_region_size = Vector2i(128, 64)
+4:0/0 = 0
+4:1/0 = 0
+3:1/0 = 0
+3:2/0 = 0
+3:3/0 = 0
+2:3/0 = 0
+2:4/0 = 0
+1:4/0 = 0
+1:5/0 = 0
+0:6/0 = 0
+0:7/0 = 0
+0:8/0 = 0
+0:9/0 = 0
+0:10/0 = 0
+0:5/0 = 0
+0:4/0 = 0
+1:3/0 = 0
+1:2/0 = 0
+2:1/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+2:2/0 = 0
+4:2/0 = 0
+3:4/0 = 0
+3:5/0 = 0
+3:6/0 = 0
+2:7/0 = 0
+1:8/0 = 0
+0:11/0 = 0
+1:10/0 = 0
+1:9/0 = 0
+2:8/0 = 0
+4:5/0 = 0
+4:4/0 = 0
+4:3/0 = 0
+2:5/0 = 0
+1:6/0 = 0
+1:7/0 = 0
+2:6/0 = 0
+4:6/0 = 0
+3:7/0 = 0
+2:9/0 = 0
+3:8/0 = 0
+4:7/0 = 0
+2:10/0 = 0
+1:11/0 = 0
+2:11/0 = 0
+3:9/0 = 0
+4:8/0 = 0
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_2fg5e"]
 texture = ExtResource("1_fsnex")
@@ -46,7 +101,52 @@ texture_region_size = Vector2i(128, 64)
 3:7/0 = 0
 4:7/0 = 0
 
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ja71c"]
+texture = ExtResource("3_ykcb8")
+texture_region_size = Vector2i(128, 64)
+0:1/0 = 0
+1:2/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+2:4/0 = 0
+3:4/0 = 0
+3:5/0 = 0
+4:5/0 = 0
+4:6/0 = 0
+4:7/0 = 0
+4:8/0 = 0
+4:9/0 = 0
+3:7/0 = 0
+2:6/0 = 0
+1:5/0 = 0
+1:4/0 = 0
+0:4/0 = 0
+0:3/0 = 0
+0:2/0 = 0
+2:7/0 = 0
+3:8/0 = 0
+3:9/0 = 0
+4:10/0 = 0
+4:11/0 = 0
+3:10/0 = 0
+2:9/0 = 0
+2:8/0 = 0
+1:8/0 = 0
+1:7/0 = 0
+0:7/0 = 0
+0:6/0 = 0
+0:5/0 = 0
+2:5/0 = 0
+3:6/0 = 0
+1:6/0 = 0
+0:0/0 = 0
+1:1/0 = 0
+2:2/0 = 0
+4:4/0 = 0
+
 [resource]
 tile_shape = 1
 tile_size = Vector2i(128, 64)
 sources/1 = SubResource("TileSetAtlasSource_2fg5e")
+sources/0 = SubResource("TileSetAtlasSource_4xcxg")
+sources/2 = SubResource("TileSetAtlasSource_ja71c")

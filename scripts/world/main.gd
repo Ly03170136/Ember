@@ -159,10 +159,10 @@ func _ready() -> void:
 	hud.layer = 10
 	hud.visible = true
 	print("[Main] HUD layer设置为10，visible=", hud.visible)
-	# 设置斜45度视角的Y轴排序（Godot原生支持，稳定可靠）
+	# 设置等距视角的Y轴排序（Godot原生支持，稳定可靠）
 	# 所有放在world_layer下的实体会自动按Y坐标排序，Y值大的在前面
 	world_layer.y_sort_enabled = true
-	print("[Main] 斜45度视角Y轴排序已启用（world_layer.y_sort_enabled = true）")
+	print("[Main] 等距视角Y轴排序已启用（world_layer.y_sort_enabled = true）")
 	# 初始化丧尸对象池（预加载100个普通丧尸，支持自动扩容）
 	ObjectPool.init_pool("res://scenes/entities/zombie.tscn", 100, "zombie", true)
 	print("[Main] 丧尸对象池已初始化（100个预加载，支持自动扩容）")
