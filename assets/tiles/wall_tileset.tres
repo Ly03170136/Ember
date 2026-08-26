@@ -1,24 +1,6 @@
 [gd_resource type="TileSet" format=3 uid="uid://b5vfkppuvklfc"]
 
-[ext_resource type="Texture2D" path="res://assets/building/墙1.png" id="1_im4bj"]
-
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_k6cht"]
-texture = ExtResource("1_im4bj")
-texture_region_size = Vector2i(64, 128)
-2:25/0 = 0
-1:25/0 = 0
-2:26/0 = 0
-3:12/0 = 0
-12:14/0 = 0
-13:14/0 = 0
-14:14/0 = 0
-15:14/0 = 0
-11:14/0 = 0
-10:14/0 = 0
-9:14/0 = 0
-
 [resource]
 tile_shape = 1
 tile_size = Vector2i(128, 64)
 physics_layer_0/collision_layer = 63
-sources/1 = SubResource("TileSetAtlasSource_k6cht")
