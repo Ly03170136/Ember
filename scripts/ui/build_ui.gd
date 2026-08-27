@@ -303,8 +303,12 @@ func _check_can_place(pos: Vector2) -> bool:
 	var size: Vector2 = BuildingDB.get_building_size(selected_building)
 	var buildings: Array = get_tree().get_nodes_in_group("building")
 	for b: Node2D in buildings:
+		# 检查节点是否有building_id属性（wall等节点可能没有）
+		var b_id = b.get("building_id")
+		if b_id == null:
+			continue
 		var b_pos: Vector2 = b.global_position
-		var b_size: Vector2 = BuildingDB.get_building_size(b.building_id)
+		var b_size: Vector2 = BuildingDB.get_building_size(b_id)
 		if abs(pos.x - b_pos.x) < (size.x + b_size.x) / 2 and abs(pos.y - b_pos.y) < (size.y + b_size.y) / 2:
 			return false
 	return true
@@ -319,12 +323,17 @@ func _try_place_building() -> void:
 		round(mouse_pos.x / grid_size) * grid_size,
 		round(mouse_pos.y / grid_size) * grid_size
 	)
+	var player_pos: Vector2 = GameManager.get_local_player().position if GameManager.get_local_player() else Vector2.ZERO
+	print("[BuildUI] 放置调试: mouse=", mouse_pos, " snapped=", snapped_pos, " player=", player_pos)
 	if not _check_can_place(snapped_pos):
+		print("[BuildUI] 无法放置：位置冲突 ", snapped_pos)
 		return
 	if not BuildingDB.can_build(selected_building, inventory):
+		print("[BuildUI] 无法放置：材料不足 ", selected_building)
 		return
 	# 消耗材料并放置建筑
 	BuildingDB.consume_build_materials(selected_building, inventory)
+	print("[BuildUI] 放置建筑: ", selected_building, " at ", snapped_pos, " is_server=", GameManager.is_server)
 	emit_signal("building_placed", selected_building, snapped_pos)
 	# 继续放置同一种建筑
 	_update_preview_position()

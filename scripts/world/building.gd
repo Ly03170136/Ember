@@ -35,6 +35,7 @@ func _ready() -> void:
 func _setup_building() -> void:
 	var data: Dictionary = BuildingDB.get_building(building_id)
 	if data.is_empty():
+		print("[Building] 警告：未找到建筑数据 ", building_id)
 		return
 	max_health = data.max_health
 	health = max_health
@@ -45,6 +46,9 @@ func _setup_building() -> void:
 		sprite.texture = tex
 		sprite.modulate = Color.WHITE  # 图标已自带颜色，不额外染色
 		base_scale = sprite.scale
+		print("[Building] 设置纹理: ", building_id, " size=", BuildingDB.get_building_size(building_id), " tex=", tex)
+	else:
+		print("[Building] 警告：没有Sprite节点!")
 	# 设置碰撞形状
 	var collision: CollisionShape2D = get_node_or_null("CollisionShape2D")
 	if collision:

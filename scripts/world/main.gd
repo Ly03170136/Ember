@@ -1436,3 +1436,12 @@ func _create_building(building_id: String, position: Vector2) -> void:
 func _rpc_place_building(building_id: String, position: Vector2) -> void:
 	if GameManager.is_server:
 		_create_building(building_id, position)
+		# 服务器创建后，广播给所有客户端创建建筑
+		_rpc_create_building.rpc(building_id, position)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_create_building(building_id: String, position: Vector2) -> void:
+	# 客户端收到服务器广播后创建建筑（服务器不执行，因为call_remote）
+	if not GameManager.is_server:
+		_create_building(building_id, position)

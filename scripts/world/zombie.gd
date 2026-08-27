@@ -60,10 +60,10 @@ func _ready() -> void:
 		sprite.texture = _zombie_textures[zombie_type]
 		sprite.modulate = _type_config.color
 		sprite.scale = Vector2(_type_config.scale, _type_config.scale)
-	if synchronizer:
-		synchronizer.set_multiplayer_authority(1)  # 服务器权威
-		# 不设置root_path，属性路径直接用 ../ 指向丧尸节点
-		synchronizer.replication_config = _build_replication_config()
+	if synchronizer and is_instance_valid(synchronizer):
+		# 已改用RPC手动同步位置，彻底移除MultiplayerSynchronizer避免报错
+		synchronizer.queue_free()
+		synchronizer = null
 	# 只有服务器运行AI
 	if not GameManager.is_server:
 		set_physics_process(false)

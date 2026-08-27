@@ -140,12 +140,11 @@ func _ready() -> void:
 		else:
 			if camera:
 				camera.make_current()
-	# 同步器配置（服务器权威：服务器计算位置并同步给所有客户端）
-	if synchronizer:
-		synchronizer.set_multiplayer_authority(1)  # authority设为服务器，由服务器发送位置同步
-		# 不设置root_path，属性路径直接用 ../ 指向玩家节点
-		synchronizer.replication_config = _build_replication_config()
-		print("[Player] 同步器已配置，authority=1, is_local=%s" % str(is_local()))
+	# 同步器配置（已改用RPC手动同步位置，彻底移除MultiplayerSynchronizer避免报错）
+	if synchronizer and is_instance_valid(synchronizer):
+		synchronizer.queue_free()
+		synchronizer = null
+		print("[Player] MultiplayerSynchronizer已移除，使用RPC同步位置")
 	# 健康条初始
 	_update_health_bar()
 	# 使用场景文件中已有的Inventory节点（不要重复创建）

@@ -190,7 +190,8 @@ func _spawn_player_remote(pid: int, pname: String, pclass: String, pos: Vector2)
 	player.position = pos
 	game_world.add_child(player)
 	player.set_multiplayer_authority(pid)
-	print("[Spawn] 客户端生成玩家 %d (%s) at %s, is_local=%s" % [pid, pname, str(pos), str(player.is_local())])
+	players[pid] = player  # 注册到players字典，否则get_local_player()返回null
+	print("[Spawn] 客户端生成玩家 %d (%s) at %s, is_local=%s, 已注册到players字典" % [pid, pname, str(pos), str(player.is_local())])
 
 
 func _despawn_player(peer_id: int) -> void:

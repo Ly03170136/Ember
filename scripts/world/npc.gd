@@ -76,7 +76,6 @@ func _ready() -> void:
 	# 网络同步：客户端不运行AI，只接收服务器位置同步
 	if GameManager and not GameManager.is_server:
 		set_physics_process(false)
-		print("[NPC] 客户端NPC ", name, " 禁用AI，等待服务器位置同步")
 
 
 # ==================== 网络位置同步 ====================
