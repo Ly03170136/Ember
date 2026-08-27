@@ -61,6 +61,8 @@ func _ready() -> void:
 		sprite.modulate = _type_config.color
 		sprite.scale = Vector2(_type_config.scale, _type_config.scale)
 	if synchronizer:
+		synchronizer.set_multiplayer_authority(1)  # 服务器权威
+		# 不设置root_path，属性路径直接用 ../ 指向丧尸节点
 		synchronizer.replication_config = _build_replication_config()
 	# 只有服务器运行AI
 	if not GameManager.is_server:
@@ -87,8 +89,8 @@ func set_zombie_type(new_type: String) -> void:
 
 func _build_replication_config() -> SceneReplicationConfig:
 	var config := SceneReplicationConfig.new()
-	config.add_property(NodePath("position"))
-	config.add_property(NodePath("health"))
+	config.add_property(NodePath("../position"))
+	config.add_property(NodePath("../health"))
 	return config
 
 

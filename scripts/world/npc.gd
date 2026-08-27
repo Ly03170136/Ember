@@ -73,6 +73,39 @@ func _ready() -> void:
 		sprite.texture = _npc_textures[npc_type]
 		sprite.modulate = _type_config.color
 		sprite.scale = Vector2(_type_config.scale, _type_config.scale)
+	# 网络同步：客户端不运行AI，只接收服务器位置同步
+	if GameManager and not GameManager.is_server:
+		set_physics_process(false)
+		print("[NPC] 客户端NPC ", name, " 禁用AI，等待服务器位置同步")
+
+
+# ==================== 网络位置同步 ====================
+var _position_sync_timer: float = 0.0
+const NPC_POSITION_SYNC_INTERVAL: float = 1.0 / 10.0  # 每秒10次
+var _interpolation_target: Vector2 = Vector2.ZERO
+var _has_interp_target: bool = false
+
+
+func _process(delta: float) -> void:
+	if GameManager and GameManager.is_server:
+		# 服务器：定期发送位置
+		_position_sync_timer += delta
+		if _position_sync_timer >= NPC_POSITION_SYNC_INTERVAL:
+			_position_sync_timer = 0.0
+			_receive_npc_position.rpc(position)
+	else:
+		# 客户端：位置插值
+		if _has_interp_target:
+			position = position.lerp(_interpolation_target, delta * 10.0)
+
+
+@rpc("any_peer", "call_local", "unreliable")
+func _receive_npc_position(server_pos: Vector2) -> void:
+	## 接收服务器同步的NPC位置
+	if GameManager and GameManager.is_server:
+		return
+	_interpolation_target = server_pos
+	_has_interp_target = true
 
 
 func _physics_process(delta: float) -> void:
@@ -329,7 +362,9 @@ static func _make_npc_texture(npc_type: String = "civilian") -> Texture2D:
 	var center := size / 2.0
 	var body_color := Color(0.7, 0.6, 0.5, 1)
 	var head_color := Color(0.85, 0.7, 0.55, 1)
-	match npc_type:
+	# 统一处理类型前缀（npc_civilian -> civilian, npc_police -> police）
+	var normalized_type := npc_type.replace("npc_", "")
+	match normalized_type:
 		"civilian":
 			# 普通市民
 			img.fill_rect(Rect2(center - 8, center + 4, 16, 16), body_color)
@@ -339,5 +374,10 @@ static func _make_npc_texture(npc_type: String = "civilian") -> Texture2D:
 			img.fill_rect(Rect2(center - 9, center + 4, 18, 16), Color(0.2, 0.3, 0.6, 1))
 			img.fill_rect(Rect2(center - 6, center - 8, 12, 12), head_color)
 			img.fill_rect(Rect2(center - 7, center - 10, 14, 4), Color(0.15, 0.2, 0.5, 1))
+		_:
+			# 默认类型：普通市民
+			print("[NPC] 警告：未知NPC类型 ", npc_type, "，使用默认市民纹理")
+			img.fill_rect(Rect2(center - 8, center + 4, 16, 16), body_color)
+			img.fill_rect(Rect2(center - 6, center - 8, 12, 12), head_color)
 	var tex := ImageTexture.create_from_image(img)
 	return tex

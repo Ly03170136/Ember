@@ -32,6 +32,10 @@ var _reconnect_timer: float = 0.0  # 清理超时断线玩家的计时器
 var infection_complete: bool = false  # 病毒是否已扩散全图
 var game_completed: bool = false  # 游戏是否通关（实验室被摧毁）
 
+# 世界种子（用于客户端和服务器生成相同的随机世界）
+var world_seed: int = 12345  # 默认固定种子，服务器启动时可随机化
+var world_seed_received: bool = false  # 客户端是否已收到服务器的世界种子
+
 # 玩家颜色（用于区分不同玩家）
 const PLAYER_COLORS := [
 	Color("#ff6b6b"), Color("#4ecdc4"), Color("#ffe66d"), Color("#95e1d3"),
@@ -160,8 +164,33 @@ func _spawn_player(peer_id: int) -> void:
 	var spawn_pos: Vector2 = Vector2(0, 0)
 	player.position = spawn_pos
 	game_world.add_child(player)
+	# 设置多人权限，让客户端的 is_local() 正确返回 true
+	player.set_multiplayer_authority(peer_id)
 	players[peer_id] = player
-	print("[Spawn] Player %d (%s) spawned at %s" % [peer_id, player.player_name, str(player.position)])
+	print("[Spawn] Player %d (%s) spawned at %s, authority=%d" % [peer_id, player.player_name, str(player.position), peer_id])
+	# 通过 RPC 通知所有客户端生成玩家节点（替代不可靠的 MultiplayerSpawner）
+	_spawn_player_remote.rpc(peer_id, player.player_name, player.player_class, spawn_pos)
+
+
+@rpc("any_peer", "call_local")
+func _spawn_player_remote(pid: int, pname: String, pclass: String, pos: Vector2) -> void:
+	## 在客户端生成玩家节点（由服务器调用，同步到所有客户端）
+	if game_world == null:
+		print("[Spawn] 警告：game_world 为 null，无法生成玩家 %d" % pid)
+		return
+	var node_name := "Player_%d" % pid
+	if game_world.has_node(node_name):
+		print("[Spawn] 玩家 %d 已存在，跳过生成" % pid)
+		return
+	var player: CharacterBody2D = PLAYER_SCENE.instantiate()
+	player.name = node_name
+	player.peer_id = pid
+	player.player_name = pname
+	player.player_class = pclass
+	player.position = pos
+	game_world.add_child(player)
+	player.set_multiplayer_authority(pid)
+	print("[Spawn] 客户端生成玩家 %d (%s) at %s, is_local=%s" % [pid, pname, str(pos), str(player.is_local())])
 
 
 func _despawn_player(peer_id: int) -> void:
@@ -171,6 +200,21 @@ func _despawn_player(peer_id: int) -> void:
 			player.queue_free()
 		players.erase(peer_id)
 		print("[Despawn] Player %d removed" % peer_id)
+	# 通知所有客户端移除玩家节点
+	_despawn_player_remote.rpc(peer_id)
+
+
+@rpc("any_peer", "call_local")
+func _despawn_player_remote(pid: int) -> void:
+	## 在客户端移除玩家节点
+	if game_world == null:
+		return
+	var node_name := "Player_%d" % pid
+	if game_world.has_node(node_name):
+		var player = game_world.get_node(node_name)
+		if is_instance_valid(player):
+			player.queue_free()
+		print("[Despawn] 客户端移除玩家 %d" % pid)
 
 
 # ==================== 断线重连系统 ====================
@@ -294,11 +338,48 @@ func _on_peer_connected(peer_id: int) -> void:
 	GameLogger.info("玩家加入，peer_id: %d" % peer_id, "Network")
 	player_joined.emit(peer_id)
 	if is_server:
-		# 服务器为新玩家生成角色
-		_spawn_player(peer_id)
-		# 通知所有玩家更新名字和职业
+		# 不在连接时立即生成玩家，等待客户端场景加载完成后通过 _client_ready 通知
+		# 这样可以确保 MultiplayerSpawner 同步时客户端已准备好
 		_sync_player_names.rpc()
 		_sync_player_classes.rpc()
+
+
+@rpc("any_peer", "call_local")
+func _client_ready() -> void:
+	## 客户端通知服务器：场景已加载完成，可以生成玩家角色了
+	var pid := multiplayer.get_remote_sender_id()
+	if pid == 0:
+		pid = local_peer_id
+	print("[Net] Client ready RPC received: pid=%d, is_server=%s, game_world=%s" % [pid, str(is_server), str(game_world != null)])
+	if is_server and game_world:
+		if players.has(pid):
+			print("[Net] 玩家 %d 已存在，跳过生成" % pid)
+		else:
+			_spawn_player(pid)
+		_sync_player_names.rpc()
+		_sync_player_classes.rpc()
+		# 把世界种子发给客户端，让客户端生成相同的随机世界
+		_receive_world_seed.rpc_id(pid, world_seed)
+		print("[Net] 已发送世界种子 %d 给客户端 %d" % [world_seed, pid])
+		# 把所有已存在的玩家都同步给新客户端（解决主机玩家在客户端连接前生成导致看不到的问题）
+		for existing_pid in players.keys():
+			var existing_player = players[existing_pid]
+			if is_instance_valid(existing_player):
+				_spawn_player_remote.rpc_id(pid, existing_pid, existing_player.player_name, existing_player.player_class, existing_player.position)
+				print("[Net] 同步已存在玩家 %d (%s) 给新客户端 %d" % [existing_pid, existing_player.player_name, pid])
+	elif not is_server:
+		print("[Net] 警告：_client_ready 在非服务器端执行，is_server=%s" % str(is_server))
+	elif not game_world:
+		print("[Net] 警告：game_world 为 null，无法生成玩家")
+
+
+@rpc("any_peer", "call_local")
+func _receive_world_seed(seed_val: int) -> void:
+	## 客户端接收服务器发来的世界种子，设置全局随机数生成器
+	world_seed = seed_val
+	world_seed_received = true
+	seed(seed_val)
+	print("[Net] 客户端收到世界种子: %d，已设置全局随机种子" % seed_val)
 
 
 func _on_peer_disconnected(peer_id: int) -> void:

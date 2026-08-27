@@ -63,30 +63,18 @@ const ATTACK_DAMAGE := 25.0
 const ATTACK_RANGE := 70.0
 const ATTACK_COOLDOWN_TIME := 0.4
 
-# ==================== 网络同步：服务器权威 + 客户端预测 ====================
-# --- 基础输入同步 ---
-var remote_input := {"up": false, "down": false, "left": false, "right": false, "sprint": false}
+# ==================== 网络同步（服务器权威移动） ====================
+# 客户端发来的输入状态（服务器端使用，用于计算非主机玩家的移动）
+var remote_input := {
+	"up": false,
+	"down": false,
+	"left": false,
+	"right": false,
+	"sprint": false,
+}
+# 输入发送计时器（客户端使用，固定频率发给服务器）
 var input_send_timer: float = 0.0
 const INPUT_SEND_INTERVAL: float = 1.0 / 30.0  # 每秒30次输入同步
-
-# --- 客户端预测 ---
-var input_sequence: int = 0  # 当前输入序列号（递增）
-var predicted_inputs: Array = []  # 预测输入队列（已发送未确认的输入）
-const MAX_PREDICTED_INPUTS: int = 120  # 预测队列最大长度（4秒@30fps）
-var server_position: Vector2 = Vector2.ZERO  # 服务器同步的权威位置
-var last_processed_sequence: int = -1  # 服务器最后处理的输入序列号
-const RECONCILIATION_THRESHOLD: float = 3.0  # 校正阈值（像素，超过才校正）
-var is_reconciling: bool = false  # 是否正在校正中
-
-# --- 其他玩家位置插值 ---
-var interpolation_target: Vector2 = Vector2.ZERO  # 插值目标位置
-var interpolation_timer: float = 0.0  # 插值计时器
-const INTERPOLATION_INTERVAL: float = 1.0 / 20.0  # 插值间隔（每秒20次）
-var has_interpolation_target: bool = false  # 是否有插值目标
-
-# --- RPC位置同步（替代不可靠的MultiplayerSynchronizer）---
-var _position_sync_timer: float = 0.0
-const POSITION_SYNC_INTERVAL: float = 1.0 / 20.0  # 每秒20次位置同步
 
 # 动画相关
 var anim_timer: float = 0.0
@@ -102,20 +90,12 @@ var interact_anim_timer: float = 0.0
 @onready var name_label: Label = $NameLabel
 @onready var health_bar: ProgressBar = $HealthBar
 @onready var synchronizer: MultiplayerSynchronizer = $MultiplayerSynchronizer
-var camera: Camera2D = null
+@onready var camera: Camera2D = $Camera
 
 var inventory: Node = null
 
 
 func _ready() -> void:
-	# 安全获取 Camera 节点（网络同步时序可能导致 @onready 获取失败）
-	camera = get_node_or_null("Camera") as Camera2D
-	if camera == null:
-		print("[Player] 警告：未找到 Camera 节点，将动态创建")
-		camera = Camera2D.new()
-		camera.name = "Camera"
-		camera.zoom = Vector2(2.5, 2.5)
-		add_child(camera)
 	# 添加到玩家组（用于NPC识别玩家）
 	add_to_group("player")
 	# 使用职业精灵
@@ -126,13 +106,16 @@ func _ready() -> void:
 	# 设置名字
 	if name_label:
 		name_label.text = player_name
+	# 只有本地玩家处理输入和启用相机
 	# 服务器权威模式：服务器上所有玩家都运行物理（计算移动）
-	# 客户端只有本地玩家运行物理（预测移动+发送输入）
+	# 客户端只有本地玩家运行物理（发送输入）
 	if GameManager and GameManager.is_server:
+		# 服务器：所有玩家都运行物理
 		set_physics_process(true)
 		if camera and not is_local():
-			camera.queue_free()
+			camera.queue_free()  # 非本地玩家不需要相机
 	else:
+		# 客户端：只有本地玩家运行物理
 		if not is_local():
 			set_physics_process(false)
 			if camera:
@@ -140,12 +123,10 @@ func _ready() -> void:
 		else:
 			if camera:
 				camera.make_current()
-	# 同步器配置（服务器权威：服务器计算位置并同步给所有客户端）
+	# 同步器配置
 	if synchronizer:
-		synchronizer.set_multiplayer_authority(1)  # authority设为服务器，由服务器发送位置同步
-		# 不设置root_path，属性路径直接用 ../ 指向玩家节点
+		synchronizer.set_multiplayer_authority(peer_id)
 		synchronizer.replication_config = _build_replication_config()
-		print("[Player] 同步器已配置，authority=1, is_local=%s" % str(is_local()))
 	# 健康条初始
 	_update_health_bar()
 	# 使用场景文件中已有的Inventory节点（不要重复创建）
@@ -169,71 +150,46 @@ func _ready() -> void:
 
 func _build_replication_config() -> SceneReplicationConfig:
 	var config := SceneReplicationConfig.new()
-	# 属性路径用 ../ 指向玩家节点（MultiplayerSynchronizer是玩家的子节点）
-	config.add_property(NodePath("../position"))
-	config.add_property(NodePath("../health"))
-	config.add_property(NodePath("../hunger"))
-	config.add_property(NodePath("../thirst"))
-	config.add_property(NodePath("../stamina"))
-	config.add_property(NodePath("../is_down"))
-	# 动画状态同步
-	config.add_property(NodePath("../facing_direction"))
-	config.add_property(NodePath("../is_moving"))
-	config.add_property(NodePath("../is_attacking"))
-	config.add_property(NodePath("../anim_state"))
+	config.add_property(NodePath("position"))
+	config.add_property(NodePath("health"))
+	config.add_property(NodePath("hunger"))
+	config.add_property(NodePath("thirst"))
+	config.add_property(NodePath("stamina"))
+	config.add_property(NodePath("is_down"))
+	# 动画状态同步（让客户端正确显示其他玩家的动画）
+	config.add_property(NodePath("facing_direction"))
+	config.add_property(NodePath("is_moving"))
+	config.add_property(NodePath("is_attacking"))
+	config.add_property(NodePath("anim_state"))
 	return config
 
 
-func _process(delta: float) -> void:
-	# ==================== RPC位置同步 ====================
-	if GameManager and GameManager.is_server:
-		# 服务器：定期发送位置给所有客户端
-		_position_sync_timer += delta
-		if _position_sync_timer >= POSITION_SYNC_INTERVAL:
-			_position_sync_timer = 0.0
-			_receive_server_position.rpc(position)
-	else:
-		# 客户端：非本地玩家进行位置插值
-		if not is_local() and has_interpolation_target:
-			position = position.lerp(interpolation_target, delta * 10.0)
-
-
-@rpc("any_peer", "call_local", "unreliable")
-func _receive_server_position(server_pos: Vector2) -> void:
-	## 接收服务器同步的位置（客户端用）
-	if GameManager and GameManager.is_server:
-		return  # 服务器不需要接收
-	if is_local():
-		return  # 本地玩家自己控制，不需要同步位置
-	# 设置插值目标
-	interpolation_target = server_pos
-	has_interpolation_target = true
-
-
 func _physics_process(delta: float) -> void:
-	# ==================== 服务器权威 + 客户端预测 ====================
-	# 服务器：权威计算所有玩家移动
-	# 客户端本地玩家：预测移动 + 发送输入 + 服务器校正
-	# 客户端其他玩家：不运行物理，位置由服务器同步
-
+	# ==================== 服务器权威移动架构 ====================
+	# 服务器：计算所有玩家的移动（本地玩家用本地输入，远程玩家用客户端发来的输入）
+	# 客户端：只有本地玩家运行，发送输入给服务器，不自己算移动（位置由服务器同步）
+	
 	if GameManager and GameManager.is_server:
 		# ===== 服务器端：权威计算 =====
 		if is_down:
-			update_down_state(delta)
+			if GameManager.is_server:
+				update_down_state(delta)
 			var focus_owner_down: Control = get_viewport().gui_get_focus_owner()
 			if focus_owner_down and (focus_owner_down is LineEdit or focus_owner_down is TextEdit):
 				velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
 				move_and_slide()
 				_update_animation(delta)
 				return
+			# 倒地爬行：本地玩家用本地输入，远程玩家用远程输入
 			if is_local():
 				_crawl(delta)
 			else:
 				_crawl_remote(delta)
 			_update_animation(delta)
 			return
-
+		
 		attack_cooldown = max(0, attack_cooldown - delta)
+		# 检查是否有输入框获得焦点（仅本地玩家有效）
 		if is_local():
 			var focus_owner: Control = get_viewport().gui_get_focus_owner()
 			if focus_owner and (focus_owner is LineEdit or focus_owner is TextEdit):
@@ -245,6 +201,8 @@ func _physics_process(delta: float) -> void:
 				_update_sickness(delta)
 				_update_sanity(delta)
 				return
+		# 计算移动：本地玩家用本地输入，远程玩家用远程输入
+		if is_local():
 			_handle_input(delta)
 		else:
 			_handle_remote_input(delta)
@@ -254,52 +212,19 @@ func _physics_process(delta: float) -> void:
 		update_noise(delta)
 		_update_sickness(delta)
 		_update_sanity(delta)
-
+	
 	else:
-		# ===== 客户端端 =====
+		# ===== 客户端端：发送输入，不计算移动 =====
 		if not is_local():
-			return  # 其他玩家不运行物理
-
-		# --- 客户端本地玩家：预测移动 ---
-		if is_down:
-			# 倒地状态不预测，等服务器同步
-			attack_cooldown = max(0, attack_cooldown - delta)
-			_update_animation(delta)
 			return
-
-		attack_cooldown = max(0, attack_cooldown - delta)
-		var focus_owner: Control = get_viewport().gui_get_focus_owner()
-		if focus_owner and (focus_owner is LineEdit or focus_owner is TextEdit):
-			velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
-			move_and_slide()
-			_update_stats(delta)
-			_update_animation(delta)
-			update_noise(delta)
-			_update_sickness(delta)
-			_update_sanity(delta)
-			return
-
-		# 1. 收集输入
-		var input_data := _collect_input()
-		# 2. 分配序列号并加入预测队列
-		input_sequence += 1
-		var predicted_entry := {"seq": input_sequence, "input": input_data, "pos": position}
-		predicted_inputs.append(predicted_entry)
-		if predicted_inputs.size() > MAX_PREDICTED_INPUTS:
-			predicted_inputs.pop_front()
-		# 3. 发送输入给服务器（带序列号）
+		# 固定频率发送输入给服务器
 		input_send_timer += delta
 		if input_send_timer >= INPUT_SEND_INTERVAL:
 			input_send_timer = 0.0
-			_send_input_to_server(input_data, input_sequence)
-		# 4. 本地预测：立即应用输入
-		_apply_input_data(input_data, delta)
-		move_and_slide()
-		_update_stats(delta)
+			_send_input_to_server()
+		# 客户端不计算移动，只更新动画和冷却（位置由服务器通过MultiplayerSynchronizer同步）
+		attack_cooldown = max(0, attack_cooldown - delta)
 		_update_animation(delta)
-		update_noise(delta)
-		_update_sickness(delta)
-		_update_sanity(delta)
 
 
 func _crawl(delta: float) -> void:
@@ -356,33 +281,21 @@ func _handle_input(delta: float) -> void:
 		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
 
 
-func _collect_input() -> Dictionary:
-	## 收集当前输入状态（用于客户端预测和发送给服务器）
-	if not InputManager:
-		return {"up": false, "down": false, "left": false, "right": false, "sprint": false}
-	return {
-		"up": InputManager.is_action_pressed("move_up"),
-		"down": InputManager.is_action_pressed("move_down"),
-		"left": InputManager.is_action_pressed("move_left"),
-		"right": InputManager.is_action_pressed("move_right"),
-		"sprint": InputManager.is_action_pressed("sprint"),
-	}
-
-
-func _apply_input_data(input_data: Dictionary, delta: float) -> void:
-	## 根据输入数据计算移动（不调用move_and_slide，用于客户端预测）
+func _handle_remote_input(delta: float) -> void:
+	## 服务器端：根据客户端发来的远程输入计算移动（用于非主机玩家）
 	var input_dir := Vector2.ZERO
-	if input_data.get("up", false):
+	if remote_input.get("up", false):
 		input_dir.y -= 1
-	if input_data.get("down", false):
+	if remote_input.get("down", false):
 		input_dir.y += 1
-	if input_data.get("left", false):
+	if remote_input.get("left", false):
 		input_dir.x -= 1
-	if input_data.get("right", false):
+	if remote_input.get("right", false):
 		input_dir.x += 1
 	input_dir = input_dir.normalized()
 
-	is_sprinting = input_data.get("sprint", false) and stamina > 0 and input_dir != Vector2.ZERO
+	# 冲刺
+	is_sprinting = remote_input.get("sprint", false) and stamina > 0 and input_dir != Vector2.ZERO
 	if is_sprinting:
 		stamina = max(0, stamina - 20 * delta)
 	else:
@@ -400,11 +313,6 @@ func _apply_input_data(input_data: Dictionary, delta: float) -> void:
 	else:
 		is_moving = false
 		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
-
-
-func _handle_remote_input(delta: float) -> void:
-	## 服务器端：根据客户端发来的远程输入计算移动
-	_apply_input_data(remote_input, delta)
 
 
 func _crawl_remote(delta: float) -> void:
@@ -558,60 +466,34 @@ func _on_input_action_pressed(action: String) -> void:
 		return
 
 
-# ==================== 网络同步：输入发送与服务器校正 ====================
+# ==================== 网络同步：输入发送与接收 ====================
 
-func _send_input_to_server(input_data: Dictionary, sequence: int) -> void:
-	## 客户端：把输入状态和序列号发送给服务器
+func _send_input_to_server() -> void:
+	## 客户端：把当前输入状态发送给服务器（固定频率调用）
 	if GameManager and GameManager.is_server:
-		return  # 主机不需要发输入
-	rpc_id(1, "_server_receive_input", input_data, sequence)
+		return  # 主机不需要发输入（本地就是服务器）
+	if not InputManager:
+		return
+	var input_data := {
+		"up": InputManager.is_action_pressed("move_up"),
+		"down": InputManager.is_action_pressed("move_down"),
+		"left": InputManager.is_action_pressed("move_left"),
+		"right": InputManager.is_action_pressed("move_right"),
+		"sprint": InputManager.is_action_pressed("sprint"),
+	}
+	# 发送给服务器（peer_id=1），unreliable模式适合高频输入同步
+	rpc_id(1, "_server_receive_input", input_data)
 
 
 @rpc("any_peer", "call_local", "unreliable")
-func _server_receive_input(input_data: Dictionary, sequence: int) -> void:
-	## 服务器：接收客户端发来的输入和序列号
+func _server_receive_input(input_data: Dictionary) -> void:
+	## 服务器：接收客户端发来的输入状态，用于计算该玩家的移动
 	if not (GameManager and GameManager.is_server):
 		return
+	# 只处理其他玩家发来的输入（主机自己的输入本地处理）
 	if is_local():
-		return  # 主机自己的输入本地处理
+		return
 	remote_input = input_data
-	last_processed_sequence = sequence
-	# 立即把服务器状态发回客户端（位置+已处理的序列号）
-	rpc_id(multiplayer.get_remote_sender_id(), "_client_receive_server_state", position, sequence)
-
-
-@rpc("any_peer", "call_local", "unreliable")
-func _client_receive_server_state(server_pos: Vector2, server_seq: int) -> void:
-	## 客户端：接收服务器同步的位置和已处理的序列号，执行预测校正
-	if GameManager and GameManager.is_server:
-		return  # 主机不需要校正
-	if not is_local():
-		return  # 只校正本地玩家
-	_reconcile_prediction(server_pos, server_seq)
-
-
-func _reconcile_prediction(server_pos: Vector2, server_seq: int) -> void:
-	## 客户端预测校正：对比预测位置和服务器位置，差异大则校正并重算
-	# 从预测队列中移除已确认的输入
-	var i := 0
-	while i < predicted_inputs.size():
-		if predicted_inputs[i]["seq"] <= server_seq:
-			predicted_inputs.remove_at(i)
-		else:
-			i += 1
-
-	# 计算当前预测位置和服务器位置的差异
-	var diff: float = position.distance_to(server_pos)
-	if diff > RECONCILIATION_THRESHOLD:
-		# 差异超过阈值，校正位置
-		is_reconciling = true
-		position = server_pos
-		velocity = Vector2.ZERO
-		# 重新应用所有未确认的输入（回滚重算）
-		for entry in predicted_inputs:
-			_apply_input_data(entry["input"], get_physics_process_delta_time())
-			move_and_slide()
-		is_reconciling = false
 
 
 func _attack() -> void:

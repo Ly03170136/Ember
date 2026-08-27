@@ -209,6 +209,10 @@ func _ready() -> void:
 			print("[Main] 单人游戏模式，强制设置is_server=true")
 		# 异步分阶段加载，显示真实进度
 		call_deferred("_async_loading")
+	else:
+		# 客户端：等待服务器同步玩家角色，然后关闭加载界面
+		print("[Main] 客户端模式，启动客户端加载流程")
+		call_deferred("_client_loading")
 	# 连接聊天信号
 	GameManager.chat_received.connect(_on_chat_received)
 	# 连接InputManager的action_pressed信号，处理ESC键（更可靠，不受其他UI拦截影响）
@@ -229,6 +233,11 @@ func _async_loading() -> void:
 	
 	# 阶段1：初始化（5%）
 	_update_loading_progress(5, "初始化游戏引擎...")
+	
+	# 设置世界随机种子（服务器使用固定种子，确保客户端能生成相同世界）
+	if GameManager:
+		seed(GameManager.world_seed)
+		print("[Loading] 世界随机种子已设置: ", GameManager.world_seed)
 	
 	# 阶段2：等待地图生成（25%）
 	_update_loading_progress(15, "生成世界地图...")
@@ -283,6 +292,104 @@ func _async_loading() -> void:
 	if loading_screen:
 		loading_screen.visible = false
 	print("[Loading] ===== 加载完成 =====")
+
+
+func _client_loading() -> void:
+	## 客户端加载流程：等待世界种子 → 生成世界 → 等待玩家同步
+	print("[Client Loading] ===== 客户端开始加载 =====")
+	if loading_screen:
+		loading_screen.visible = true
+		loading_screen.z_index = 100
+
+	_update_loading_progress(5, "连接服务器...")
+
+	# 重置种子接收标志
+	if GameManager:
+		GameManager.world_seed_received = false
+
+	# 通知服务器：客户端场景已加载完成，请发送世界种子并生成玩家
+	if GameManager:
+		GameManager._client_ready.rpc_id(1)
+		print("[Client Loading] 已通知服务器客户端就绪，等待世界种子...")
+
+	_update_loading_progress(10, "等待世界种子...")
+
+	# 等待收到世界种子（最多等待10秒）
+	var seed_wait_time := 0.0
+	while seed_wait_time < 10.0 and not (GameManager and GameManager.world_seed_received):
+		await get_tree().create_timer(0.1).timeout
+		seed_wait_time += 0.1
+		_update_loading_progress(10.0 + min(seed_wait_time * 2.0, 10.0), "等待世界种子...")
+
+	if GameManager and GameManager.world_seed_received:
+		print("[Client Loading] 收到世界种子: ", GameManager.world_seed, "，开始生成世界...")
+		seed(GameManager.world_seed)
+	else:
+		print("[Client Loading] 警告：未收到世界种子，使用默认种子")
+
+	# 生成世界地图
+	_update_loading_progress(25, "生成世界地图...")
+	if USE_TILEMAP_TERRAIN:
+		_init_tilemap_terrain()
+	else:
+		var map_node: Node = get_node_or_null("IsometricMap")
+		if map_node and map_node.has_method("is_ready"):
+			var wait_count: int = 0
+			while not map_node.is_ready() and wait_count < 100:
+				wait_count += 1
+				await get_tree().create_timer(0.05).timeout
+
+	_update_loading_progress(25, "世界地图生成完成")
+
+	# 加载固定地图建筑
+	if USE_FIXED_MAP:
+		_update_loading_progress(27, "加载固定地图建筑...")
+		_load_fixed_map()
+
+	# 生成实验室
+	_update_loading_progress(30, "放置实验室和病毒源头...")
+	_generate_lab_only()
+	_update_loading_progress(40, "实验室放置完成")
+
+	# 生成资源节点
+	_update_loading_progress(45, "生成资源节点（树木/石头/浆果）...")
+	_generate_resources_only()
+	_update_loading_progress(55, "资源节点生成完成")
+
+	# 生成载具
+	_update_loading_progress(60, "生成废弃载具残骸...")
+	_generate_vehicles_only()
+	_update_loading_progress(70, "载具生成完成")
+
+	# 生成NPC
+	_update_loading_progress(75, "生成人类NPC...")
+	_generate_npcs_only()
+	_update_loading_progress(85, "NPC生成完成")
+
+	_update_loading_progress(90, "等待玩家数据同步...")
+
+	# 等待本地玩家角色生成（最多等待15秒）
+	var wait_time := 0.0
+	var local_peer_id := multiplayer.get_unique_id()
+	var player_node_name := "Player_%d" % local_peer_id
+	print("[Client Loading] 等待玩家节点: ", player_node_name)
+	while wait_time < 15.0:
+		if world_layer and world_layer.has_node(player_node_name):
+			break
+		await get_tree().create_timer(0.1).timeout
+		wait_time += 0.1
+		_update_loading_progress(90.0 + min(wait_time * 0.5, 9.0), "等待玩家数据同步...")
+
+	if world_layer and world_layer.has_node(player_node_name):
+		_update_loading_progress(100, "准备就绪，幸存者加油！")
+		if loading_screen:
+			loading_screen.visible = false
+		print("[Client Loading] ===== 客户端加载完成 =====")
+	else:
+		_update_loading_progress(100, "连接超时，请检查网络后重试")
+		print("[Client Loading] ===== 客户端加载超时（15秒）=====")
+		if world_layer:
+			print("[Client Loading] world_layer子节点数量: ", world_layer.get_child_count())
 
 
 func _update_loading_progress(progress: float, stage_text: String) -> void:
@@ -1286,8 +1393,10 @@ func get_day_in_month() -> int:
 
 func _connect_inventory_ui() -> void:
 	var player: Node = GameManager.get_local_player()
+	print("[Main] _connect_inventory_ui: player=", player, " local_peer_id=", GameManager.local_peer_id)
 	if player and is_instance_valid(player):
 		var inv: Node = player.get_node_or_null("Inventory")
+		print("[Main] Inventory节点: ", inv)
 		if inv:
 			inventory_ui.set_inventory(inv)
 			quickbar.set_inventory(inv)
@@ -1299,6 +1408,10 @@ func _connect_inventory_ui() -> void:
 				character_ui.set_player(player)
 			inventory_ui_connected = true
 			print("[Main] 所有UI已连接")
+		else:
+			print("[Main] 警告：玩家没有Inventory节点！")
+	else:
+		print("[Main] 警告：本地玩家不存在，players字典: ", GameManager.players.keys())
 
 
 func _on_building_placed(building_id: String, position: Vector2) -> void:
