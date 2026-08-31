@@ -28,6 +28,7 @@ const NPC_TYPES := {
 }
 
 @export var npc_type: String = "civilian"
+var npc_id: int = -1  # 服务器分配的唯一ID，用于网络同步
 var _type_config: Dictionary = {}
 var health: float = 50.0
 var is_infected: bool = false
@@ -43,6 +44,10 @@ var criminal_target: Node2D = null  # 犯罪目标（攻击过平民的玩家）
 var ai_update_interval: float = 0.2  # AI更新间隔（默认0.2秒更新一次，不是每帧）
 var ai_update_timer: float = 0.0  # AI更新计时器
 var entity_type: String = "npc"  # 实体类型（用于LOD系统识别）
+
+# 客户端插值
+var _interpolation_target: Vector2 = Vector2.ZERO
+var _has_interp_target: bool = false
 
 # 静态犯罪玩家列表（所有警察共享）
 static var criminal_players: Dictionary = {}  # {player_id: expire_time}
@@ -106,31 +111,17 @@ func _ready() -> void:
 		set_physics_process(false)
 
 
-# ==================== 网络位置同步 ====================
-var _position_sync_timer: float = 0.0
-const NPC_POSITION_SYNC_INTERVAL: float = 1.0 / 10.0  # 每秒10次
-var _interpolation_target: Vector2 = Vector2.ZERO
-var _has_interp_target: bool = false
-
-
+# ==================== 客户端位置插值 ====================
 func _process(delta: float) -> void:
 	if GameManager and GameManager.is_server:
-		# 服务器：定期发送位置
-		_position_sync_timer += delta
-		if _position_sync_timer >= NPC_POSITION_SYNC_INTERVAL:
-			_position_sync_timer = 0.0
-			_receive_npc_position.rpc(position)
-	else:
-		# 客户端：位置插值
-		if _has_interp_target:
-			position = position.lerp(_interpolation_target, delta * 10.0)
+		return  # 服务器不插值，直接由AI控制
+	# 客户端：位置插值
+	if _has_interp_target:
+		position = position.lerp(_interpolation_target, delta * 10.0)
 
 
-@rpc("any_peer", "call_local", "unreliable")
-func _receive_npc_position(server_pos: Vector2) -> void:
-	## 接收服务器同步的NPC位置
-	if GameManager and GameManager.is_server:
-		return
+func set_target_position(server_pos: Vector2) -> void:
+	## 由main.gd统一调用，设置客户端插值目标
 	_interpolation_target = server_pos
 	_has_interp_target = true
 
@@ -339,31 +330,20 @@ func _notify_police(attacker: Node2D) -> void:
 
 
 func _die() -> void:
-	## NPC死亡（权威服务器：服务器死亡后通知所有客户端移除）
+	## NPC死亡（服务器权威：服务器死亡后通知main.gd广播给所有客户端）
 	is_dead = true
-	print("[NPC] %s 死亡" % _type_config.name)
+	print("[NPC] %s 死亡, npc_id=%d" % [_type_config.name, npc_id])
 	if GameManager.is_server:
-		# 服务器通知所有客户端移除该NPC（传递位置用于查找）
-		_rpc_remove_npc.rpc(global_position)
+		# 服务器通知main.gd广播死亡事件
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_npc_died"):
+			main._on_npc_died(npc_id)
 	# 死亡后变成僵尸（如果未感染，直接死亡；如果感染，变成僵尸）
 	if is_infected:
 		_turn_into_zombie()
 	else:
 		# 普通死亡，掉落物品
 		queue_free()
-
-
-@rpc("any_peer", "call_remote")
-func _rpc_remove_npc(pos: Vector2) -> void:
-	## 客户端收到服务器通知，在位置附近查找NPC并移除
-	if GameManager.is_server:
-		return
-	var npcs: Array = get_tree().get_nodes_in_group("npc")
-	for npc in npcs:
-		if npc and is_instance_valid(npc) and npc.global_position.distance_to(pos) < 30:
-			print("[NPC] 客户端移除死亡NPC: ", npc.name, " at ", pos)
-			npc.queue_free()
-			break
 
 
 func infect() -> void:
@@ -383,7 +363,12 @@ func infect() -> void:
 
 func _turn_into_zombie() -> void:
 	## NPC变成僵尸（使用对象池）
-	print("[NPC] %s 变成僵尸！" % _type_config.name)
+	print("[NPC] %s 变成僵尸！npc_id=%d" % [_type_config.name, npc_id])
+	if GameManager.is_server:
+		# 服务器通知main.gd广播变僵尸事件
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_npc_turned_zombie"):
+			main._on_npc_turned_zombie(npc_id, position)
 	# 从对象池获取僵尸
 	var zombie = ObjectPool.acquire("zombie")
 	if zombie:

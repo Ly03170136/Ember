@@ -368,6 +368,14 @@ func _client_ready() -> void:
 			if is_instance_valid(existing_player):
 				_spawn_player_remote.rpc_id(pid, existing_pid, existing_player.player_name, existing_player.player_class, existing_player.position)
 				print("[Net] 同步已存在玩家 %d (%s) 给新客户端 %d" % [existing_pid, existing_player.player_name, pid])
+		# 发送NPC初始数据给客户端（服务器权威NPC同步）
+		# 注意：game_world是world_layer节点，NPC同步方法在main节点上，需要通过current_scene获取
+		var main_scene: Node = get_tree().current_scene
+		if main_scene and main_scene.has_method("_send_npc_initial_sync"):
+			main_scene._send_npc_initial_sync(pid)
+			print("[Net] 已发送NPC初始数据给客户端 %d" % pid)
+		else:
+			print("[Net] 警告：无法发送NPC初始数据，main_scene=", main_scene, " has_method=", main_scene.has_method("_send_npc_initial_sync") if main_scene else "N/A")
 	elif not is_server:
 		print("[Net] 警告：_client_ready 在非服务器端执行，is_server=%s" % str(is_server))
 	elif not game_world:

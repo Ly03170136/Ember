@@ -53,6 +53,13 @@ const MAX_ZOMBIES := 100
 const ZOMBIE_SPAWN_INTERVAL := 5.0
 var zombie_spawn_timer: float = 0.0
 
+# ==================== NPC服务器权威同步系统 ====================
+var npc_map: Dictionary = {}  # {npc_id: npc_node}，服务器和客户端共用
+var _next_npc_id: int = 0  # 下一个NPC ID（服务器分配）
+var _npc_pos_sync_timer: float = 0.0
+const NPC_POS_SYNC_INTERVAL: float = 0.15  # NPC位置同步间隔（秒）
+const NPC_SYNC_RANGE: float = 1500.0  # 兴趣管理：只同步玩家附近1500像素内的NPC
+
 # ==================== P1: 季节天气系统（长春气候，含月份） ====================
 const SEASON_LENGTH := 12  # 每个季节12天（3个月×4天）
 const SEASONS := ["spring", "summer", "autumn", "winter"]
@@ -365,10 +372,16 @@ func _client_loading() -> void:
 	_generate_vehicles_only()
 	_update_loading_progress(70, "载具生成完成")
 
-	# 生成NPC
-	_update_loading_progress(75, "生成人类NPC...")
-	_generate_npcs_only()
-	_update_loading_progress(85, "NPC生成完成")
+	# 生成NPC（客户端不生成，等待服务器同步）
+	_update_loading_progress(75, "等待服务器同步NPC数据...")
+	# 等待NPC初始同步（最多等待10秒）
+	var npc_wait_time := 0.0
+	while npc_wait_time < 10.0 and npc_map.is_empty():
+		await get_tree().create_timer(0.1).timeout
+		npc_wait_time += 0.1
+		_update_loading_progress(75.0 + min(npc_wait_time * 1.0, 10.0), "等待服务器同步NPC数据...")
+	print("[Client Loading] NPC同步完成，共%d个NPC" % npc_map.size())
+	_update_loading_progress(85, "NPC同步完成")
 
 	_update_loading_progress(90, "等待玩家数据同步...")
 
@@ -472,12 +485,17 @@ func _generate_vehicles_only() -> void:
 
 
 func _generate_npcs_only() -> void:
-	## 只生成NPC - 使用智能资源生成器
+	## 只生成NPC - 使用智能资源生成器，并分配npc_id
 	var resource_generator := preload("res://scripts/world/resource_generator.gd").new()
 	var results: Dictionary = resource_generator.generate_selected_types(["npc_civilian", "npc_police"], world_layer)
-	var civilian_count: int = results.get("npc_civilian", 0)
-	var police_count: int = results.get("npc_police", 0)
-	print("[World] NPC生成完成: %d市民, %d警察" % [civilian_count, police_count])
+	# 给所有新生成的NPC分配npc_id并注册到npc_map
+	var npcs: Array = get_tree().get_nodes_in_group("npc")
+	for npc in npcs:
+		if npc and is_instance_valid(npc) and npc.npc_id == -1:
+			npc.npc_id = _next_npc_id
+			_next_npc_id += 1
+			npc_map[npc.npc_id] = npc
+	print("[World] NPC生成完成: 共%d个NPC" % npc_map.size())
 
 
 func _process(delta: float) -> void:
@@ -506,6 +524,11 @@ func _process(delta: float) -> void:
 		if _time_sync_timer >= TIME_SYNC_INTERVAL:
 			_time_sync_timer = 0.0
 			_sync_time_of_day.rpc(current_time, day_count)
+		# 定期同步NPC位置给客户端（兴趣管理：只同步玩家附近的）
+		_npc_pos_sync_timer += delta
+		if _npc_pos_sync_timer >= NPC_POS_SYNC_INTERVAL:
+			_npc_pos_sync_timer = 0.0
+			_sync_npc_positions_to_clients()
 	else:
 		# 客户端：本地推进时间（用于平滑显示），服务器会定期校正
 		_update_day_night(delta)
@@ -1271,16 +1294,22 @@ func _generate_initial_resources() -> void:
 	for i in range(500):
 		var npc: Node2D = NPC_SCENE.instantiate()
 		npc.npc_type = "civilian"
+		npc.npc_id = _next_npc_id
+		_next_npc_id += 1
 		npc.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
 		world_layer.add_child(npc)
 		_register_chunk_entity(npc)
+		npc_map[npc.npc_id] = npc
 	for i in range(80):
 		var police: Node2D = NPC_SCENE.instantiate()
 		police.npc_type = "police"
+		police.npc_id = _next_npc_id
+		_next_npc_id += 1
 		police.position = Vector2(center_x + randf_range(-range_x, range_x), center_y + randf_range(-range_y, range_y))
 		world_layer.add_child(police)
 		_register_chunk_entity(police)
-	print("[World] 生成了500个市民和80个警察")
+		npc_map[police.npc_id] = police
+	print("[World] 生成了500个市民和80个警察，共%d个NPC" % npc_map.size())
 	# 在玩家出生点附近额外生成一些资源，确保玩家一开始就能看到
 	for i in range(30):
 		var tree: Node2D = TREE_SCENE.instantiate()
@@ -1470,3 +1499,139 @@ func _rpc_create_building(building_id: String, position: Vector2) -> void:
 	# 客户端收到服务器广播后创建建筑（服务器不执行，因为call_remote）
 	if not GameManager.is_server:
 		_create_building(building_id, position)
+
+
+# ==================== NPC服务器权威同步系统 ====================
+
+func _send_npc_initial_sync(peer_id: int) -> void:
+	## 服务器：发送所有NPC的初始数据给指定客户端
+	if not GameManager.is_server:
+		return
+	var npc_data: Array = []
+	for npc_id: int in npc_map.keys():
+		var npc: Node2D = npc_map[npc_id]
+		if npc and is_instance_valid(npc) and not npc.is_dead:
+			# 格式：[npc_id, npc_type, pos_x, pos_y, health, is_infected]
+			npc_data.append([npc_id, npc.npc_type, npc.position.x, npc.position.y, npc.health, npc.is_infected])
+	print("[NPC Sync] 发送NPC初始数据给客户端%d，共%d个NPC" % [peer_id, npc_data.size()])
+	_rpc_receive_npc_initial_sync.rpc_id(peer_id, npc_data)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_receive_npc_initial_sync(npc_data: Array) -> void:
+	## 客户端：接收NPC初始数据并创建NPC
+	if GameManager.is_server:
+		return
+	print("[NPC Sync] 收到NPC初始数据，共%d个" % npc_data.size())
+	for data in npc_data:
+		var npc_id: int = data[0]
+		var npc_type: String = data[1]
+		var pos: Vector2 = Vector2(data[2], data[3])
+		var health: float = data[4]
+		var is_infected: bool = data[5]
+		_create_npc_from_data(npc_id, npc_type, pos, health, is_infected)
+	print("[NPC Sync] NPC初始同步完成，共%d个NPC" % npc_map.size())
+
+
+func _create_npc_from_data(npc_id: int, npc_type: String, pos: Vector2, health: float, is_infected: bool) -> void:
+	## 客户端：根据服务器数据创建NPC
+	if npc_map.has(npc_id):
+		return  # 已存在，跳过
+	var npc: Node2D = NPC_SCENE.instantiate()
+	npc.npc_id = npc_id
+	npc.npc_type = npc_type
+	npc.position = pos
+	npc.health = health
+	npc.is_infected = is_infected
+	world_layer.add_child(npc)
+	_register_chunk_entity(npc)
+	npc_map[npc_id] = npc
+
+
+func _sync_npc_positions_to_clients() -> void:
+	## 服务器：向每个客户端同步其玩家附近的NPC位置（兴趣管理）
+	if not GameManager.is_server or npc_map.is_empty():
+		return
+	# 遍历所有玩家，为每个玩家收集附近的NPC位置
+	for peer_id: int in GameManager.players.keys():
+		var player: Node2D = GameManager.players[peer_id]
+		if not player or not is_instance_valid(player):
+			continue
+		var positions: Array = []
+		var player_pos: Vector2 = player.position
+		for npc_id: int in npc_map.keys():
+			var npc: Node2D = npc_map[npc_id]
+			if npc and is_instance_valid(npc) and not npc.is_dead:
+				if npc.position.distance_to(player_pos) <= NPC_SYNC_RANGE:
+					positions.append([npc_id, npc.position.x, npc.position.y])
+		if not positions.is_empty():
+			_rpc_npc_position_update.rpc_id(peer_id, positions)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_npc_position_update(positions: Array) -> void:
+	## 客户端：接收NPC位置更新并设置插值目标
+	if GameManager.is_server:
+		return
+	for data in positions:
+		var npc_id: int = data[0]
+		var pos: Vector2 = Vector2(data[1], data[2])
+		if npc_map.has(npc_id):
+			var npc: Node2D = npc_map[npc_id]
+			if npc and is_instance_valid(npc):
+				npc.set_target_position(pos)
+
+
+# NPC状态事件类型
+const NPC_EVENT_DIED := 0
+const NPC_EVENT_INFECTED := 1
+const NPC_EVENT_TURNED_ZOMBIE := 2
+
+func _on_npc_died(npc_id: int) -> void:
+	## 服务器：NPC死亡时调用，广播给所有客户端
+	if not GameManager.is_server:
+		return
+	print("[NPC Sync] NPC死亡，广播给所有客户端: npc_id=%d" % npc_id)
+	_rpc_npc_state_event.rpc(npc_id, NPC_EVENT_DIED, {})
+	# 服务器端从map中移除
+	if npc_map.has(npc_id):
+		npc_map.erase(npc_id)
+
+
+func _on_npc_turned_zombie(npc_id: int, position: Vector2) -> void:
+	## 服务器：NPC变成僵尸时调用，广播给所有客户端
+	if not GameManager.is_server:
+		return
+	print("[NPC Sync] NPC变成僵尸，广播给所有客户端: npc_id=%d" % npc_id)
+	_rpc_npc_state_event.rpc(npc_id, NPC_EVENT_TURNED_ZOMBIE, {"x": position.x, "y": position.y})
+	# 服务器端从map中移除
+	if npc_map.has(npc_id):
+		npc_map.erase(npc_id)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_npc_state_event(npc_id: int, event_type: int, event_data: Dictionary) -> void:
+	## 客户端：接收NPC状态事件
+	if GameManager.is_server:
+		return
+	match event_type:
+		NPC_EVENT_DIED:
+			print("[NPC Sync] 客户端移除死亡NPC: npc_id=%d" % npc_id)
+			_destroy_npc(npc_id)
+		NPC_EVENT_INFECTED:
+			if npc_map.has(npc_id):
+				var npc: Node2D = npc_map[npc_id]
+				if npc and is_instance_valid(npc):
+					npc.is_infected = true
+		NPC_EVENT_TURNED_ZOMBIE:
+			print("[NPC Sync] 客户端移除变僵尸NPC: npc_id=%d" % npc_id)
+			_destroy_npc(npc_id)
+
+
+func _destroy_npc(npc_id: int) -> void:
+	## 客户端：销毁指定NPC
+	if npc_map.has(npc_id):
+		var npc: Node2D = npc_map[npc_id]
+		if npc and is_instance_valid(npc):
+			npc.queue_free()
+		npc_map.erase(npc_id)
