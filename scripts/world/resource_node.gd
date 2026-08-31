@@ -118,13 +118,50 @@ func _process(delta: float) -> void:
 func hit(damage: float = 1.0, attacker_pos: Vector2 = Vector2.ZERO) -> void:
 	if is_depleted:
 		return
-	# 触发抖动反馈
-	hit_shake_timer = 0.3
+	# 客户端：通过main.gd通知服务器（通过位置查找，不依赖节点名）
 	if not GameManager.is_server:
-		return  # 只有服务器能修改资源状态
+		print("[Resource] 客户端攻击资源: ", resource_name, " 位置: ", position, " 伤害: ", damage)
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_rpc_request_resource_hit"):
+			main._rpc_request_resource_hit.rpc_id(1, position.x, position.y, damage)
+		return
+	# 服务器：执行受击逻辑
+	_server_hit(damage)
+
+
+func _server_hit(damage: float) -> void:
+	## 服务器端受击处理：抖动 + 扣血 + 广播抖动
+	hit_shake_timer = 0.3
+	print("[Resource] 服务器受击: ", resource_name, " 位置: ", position, " 伤害: ", damage, " 剩余血量: ", health - damage)
+	# 广播抖动给所有客户端
+	_rpc_resource_shake.rpc()
 	health -= damage
 	if health <= 0:
+		print("[Resource] 资源被采集: ", resource_name, " 位置: ", position)
 		_collect()
+
+
+@rpc("any_peer", "call_local")
+func _rpc_request_hit(damage: float) -> void:
+	## 客户端请求服务器处理资源受击
+	if not GameManager.is_server:
+		return
+	print("[Resource] 收到客户端攻击请求: ", resource_name, " 位置: ", position, " 伤害: ", damage)
+	if is_depleted:
+		# 资源已经被采集，重新广播采集状态给请求的客户端
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_resource_collected"):
+			main._on_resource_collected(position)
+		return
+	_server_hit(damage)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_resource_shake() -> void:
+	## 客户端接收抖动广播
+	if GameManager.is_server:
+		return
+	hit_shake_timer = 0.3
 
 
 func _collect() -> void:
@@ -142,6 +179,31 @@ func _collect() -> void:
 		respawn_timer = respawn_time
 	else:
 		queue_free()
+	# 服务器：广播采集状态给所有客户端
+	if GameManager.is_server:
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_resource_collected"):
+			main._on_resource_collected(position)
+
+
+func _set_collected_state(collected: bool) -> void:
+	## 客户端：设置采集状态（由服务器同步调用）
+	is_depleted = collected
+	health = 0 if collected else max_health
+	if collected:
+		# 关键：设置重生计时器，否则 _process 会立即触发 _respawn()
+		respawn_timer = respawn_time
+	else:
+		respawn_timer = 0.0
+	print("[Resource] _set_collected_state: ", resource_name, " collected=", collected, " sprite=", sprite, " sprite_valid=", is_instance_valid(sprite), " respawn_timer=", respawn_timer)
+	if sprite and is_instance_valid(sprite):
+		sprite.visible = not collected
+		print("[Resource] sprite.visible 设置为: ", sprite.visible)
+	else:
+		print("[Resource] 警告：sprite 为 null 或无效！")
+	var collision: CollisionShape2D = get_node_or_null("CollisionShape2D")
+	if collision:
+		collision.disabled = collected
 
 
 func _drop_items() -> void:
@@ -177,6 +239,11 @@ func _respawn() -> void:
 	var collision: CollisionShape2D = get_node_or_null("CollisionShape2D")
 	if collision:
 		collision.disabled = false
+	# 服务器：广播重生状态给所有客户端
+	if GameManager.is_server:
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_resource_respawned"):
+			main._on_resource_respawned(position)
 
 
 func _on_body_entered(body: Node) -> void:

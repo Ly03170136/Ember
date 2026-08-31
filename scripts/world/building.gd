@@ -156,6 +156,9 @@ func _update_flame_animation() -> void:
 func take_damage(amount: float) -> void:
 	if not is_built:
 		return  # 建造中的建筑不会被攻击
+	# 只有服务器能造成伤害
+	if not GameManager.is_server:
+		return
 	health = max(0, health - amount)
 	if health <= 0:
 		_on_destroyed()
@@ -163,6 +166,11 @@ func take_damage(amount: float) -> void:
 
 func _on_destroyed() -> void:
 	print("[Building] %s 被摧毁" % BuildingDB.get_building_name(building_id))
+	# 服务器：广播销毁事件给所有客户端
+	if GameManager.is_server:
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_building_destroyed"):
+			main._on_building_destroyed(position)
 	queue_free()
 
 

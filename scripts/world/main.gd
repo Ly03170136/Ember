@@ -60,6 +60,13 @@ var _npc_pos_sync_timer: float = 0.0
 const NPC_POS_SYNC_INTERVAL: float = 0.15  # NPC位置同步间隔（秒）
 const NPC_SYNC_RANGE: float = 1500.0  # 兴趣管理：只同步玩家附近1500像素内的NPC
 
+# ==================== 丧尸服务器权威同步系统 ====================
+var zombie_map: Dictionary = {}  # {zombie_id: zombie_node}，服务器和客户端共用
+var _next_zombie_id: int = 0  # 下一个丧尸ID（服务器分配）
+var _zombie_pos_sync_timer: float = 0.0
+const ZOMBIE_POS_SYNC_INTERVAL: float = 0.15  # 丧尸位置同步间隔（秒）
+const ZOMBIE_SYNC_RANGE: float = 1500.0  # 兴趣管理：只同步玩家附近1500像素内的丧尸
+
 # ==================== P1: 季节天气系统（长春气候，含月份） ====================
 const SEASON_LENGTH := 12  # 每个季节12天（3个月×4天）
 const SEASONS := ["spring", "summer", "autumn", "winter"]
@@ -529,6 +536,11 @@ func _process(delta: float) -> void:
 		if _npc_pos_sync_timer >= NPC_POS_SYNC_INTERVAL:
 			_npc_pos_sync_timer = 0.0
 			_sync_npc_positions_to_clients()
+		# 定期同步丧尸位置给客户端（兴趣管理：只同步玩家附近的）
+		_zombie_pos_sync_timer += delta
+		if _zombie_pos_sync_timer >= ZOMBIE_POS_SYNC_INTERVAL:
+			_zombie_pos_sync_timer = 0.0
+			_sync_zombie_positions_to_clients()
 	else:
 		# 客户端：本地推进时间（用于平滑显示），服务器会定期校正
 		_update_day_night(delta)
@@ -596,9 +608,33 @@ func _change_weather() -> void:
 	weather = possible_weather[randi() % possible_weather.size()]
 	weather_duration = randf_range(60.0, 180.0)
 	print("[Weather] 天气变为: %s，持续%.0f秒" % [WEATHER_NAMES[weather], weather_duration])
+	# 服务器：广播天气变化给所有客户端
+	if GameManager.is_server:
+		_sync_weather.rpc(weather, weather_duration)
 	# 小概率触发特殊事件
 	if randf() < 0.08:
 		_trigger_special_event()
+
+
+@rpc("any_peer", "call_remote")
+func _sync_weather(server_weather: String, server_duration: float) -> void:
+	## 客户端：接收天气同步
+	if GameManager.is_server:
+		return
+	weather = server_weather
+	weather_duration = server_duration
+	print("[Weather] 客户端同步天气: ", WEATHER_NAMES.get(weather, weather))
+
+
+@rpc("any_peer", "call_remote")
+func _sync_season(server_season: String, server_month: int, server_day_in_month: int) -> void:
+	## 客户端：接收季节同步
+	if GameManager.is_server:
+		return
+	season = server_season
+	current_month = server_month
+	day_in_month = server_day_in_month
+	print("[Season] 客户端同步季节: ", SEASON_NAMES.get(season, season))
 
 
 func _trigger_special_event() -> void:
@@ -643,6 +679,9 @@ func _on_day_changed() -> void:
 			GameManager.send_chat.rpc("%s来了！" % SEASON_NAMES[season])
 			if AudioManager:
 				AudioManager.play_sfx(AudioManager.SFX.SUCCESS)
+			# 服务器：广播季节变化
+			if GameManager.is_server:
+				_sync_season.rpc(season, current_month, day_in_month)
 		print("[Month] 月份变为: %s, 平均温度: %.0f°C" % [MONTH_NAMES[current_month], MONTH_TEMPS[current_month]])
 		GameManager.send_chat.rpc("进入%s，平均温度%.0f°C" % [MONTH_NAMES[current_month], MONTH_TEMPS[current_month]])
 	# 季节天数检查（兼容旧逻辑）
@@ -765,8 +804,10 @@ func _spawn_zombie_from_lab() -> void:
 	if zombie == null:
 		print("[Main] 警告：无法从对象池获取丧尸")
 		return
+	zombie.zombie_id = _next_zombie_id
+	_next_zombie_id += 1
 	zombie.position = spawn_pos
-	zombie.name = "LabZombie_%d" % randi()
+	zombie.name = "LabZombie_%d" % zombie.zombie_id
 	# 实验室丧尸更强大，随机类型
 	if zombie.has_method("set_zombie_type"):
 		var types: Array = ["normal", "fast", "fat", "spitter"]
@@ -775,6 +816,9 @@ func _spawn_zombie_from_lab() -> void:
 	zombie.add_to_group("zombie")
 	# 注册到分块加载系统
 	_register_chunk_entity(zombie)
+	zombie_map[zombie.zombie_id] = zombie
+	# 广播给所有客户端
+	_rpc_zombie_spawn.rpc(zombie.zombie_id, zombie.zombie_type, spawn_pos.x, spawn_pos.y)
 
 
 # ==================== 尸潮系统 ====================
@@ -837,8 +881,10 @@ func _spawn_horde_zombie() -> void:
 	if zombie == null:
 		print("[Main] 警告：无法从对象池获取尸潮丧尸")
 		return
+	zombie.zombie_id = _next_zombie_id
+	_next_zombie_id += 1
 	zombie.position = spawn_pos
-	zombie.name = "HordeZombie_%d" % randi()
+	zombie.name = "HordeZombie_%d" % zombie.zombie_id
 	# 尸潮优化：标记为尸潮丧尸，使用简化AI
 	zombie.set("is_horde_zombie", true)
 	# 尸潮丧尸更强大
@@ -850,7 +896,10 @@ func _spawn_horde_zombie() -> void:
 	zombie.add_to_group("zombie")
 	# 注册到分块加载系统
 	_register_chunk_entity(zombie)
+	zombie_map[zombie.zombie_id] = zombie
 	horde_zombies_spawned += 1
+	# 广播给所有客户端
+	_rpc_zombie_spawn.rpc(zombie.zombie_id, zombie.zombie_type, spawn_pos.x, spawn_pos.y)
 
 
 # ==================== 病毒传播系统 ====================
@@ -1637,3 +1686,275 @@ func _destroy_npc(npc_id: int) -> void:
 		if npc and is_instance_valid(npc):
 			npc.queue_free()
 		npc_map.erase(npc_id)
+
+
+# ==================== 丧尸服务器权威同步系统 ====================
+
+func _send_zombie_initial_sync(peer_id: int) -> void:
+	## 服务器：发送所有现有丧尸的初始数据给指定客户端
+	if not GameManager.is_server:
+		return
+	var zombie_data: Array = []
+	for zombie_id: int in zombie_map.keys():
+		var zombie: Node2D = zombie_map[zombie_id]
+		if zombie and is_instance_valid(zombie):
+			zombie_data.append([zombie_id, zombie.zombie_type, zombie.position.x, zombie.position.y])
+	print("[Zombie Sync] 发送丧尸初始数据给客户端%d，共%d只" % [peer_id, zombie_data.size()])
+	_rpc_receive_zombie_initial_sync.rpc_id(peer_id, zombie_data)
+
+
+func _send_resource_state_sync(peer_id: int) -> void:
+	## 服务器：发送所有已采集资源的位置给指定客户端（初始状态同步）
+	if not GameManager.is_server:
+		return
+	var collected_resources: Array = []
+	var resources: Array = get_tree().get_nodes_in_group("resource")
+	for r in resources:
+		if r and is_instance_valid(r) and r.get("is_depleted"):
+			collected_resources.append([r.position.x, r.position.y])
+	print("[Resource Sync] 发送资源状态同步给客户端%d，已采集%d个" % [peer_id, collected_resources.size()])
+	_rpc_receive_resource_state_sync.rpc_id(peer_id, collected_resources)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_receive_resource_state_sync(collected_resources: Array) -> void:
+	## 客户端：接收资源初始状态，更新已采集的资源
+	if GameManager.is_server:
+		return
+	print("[Resource Sync] 收到资源状态同步，已采集%d个" % collected_resources.size())
+	for data in collected_resources:
+		var pos: Vector2 = Vector2(data[0], data[1])
+		var resource: Node = _find_resource_at_position(pos)
+		if resource and resource.has_method("_set_collected_state"):
+			resource._set_collected_state(true)
+
+
+@rpc("any_peer", "call_local")
+func _rpc_request_resource_hit(pos_x: float, pos_y: float, damage: float) -> void:
+	## 客户端请求服务器攻击指定位置的资源节点（通过位置查找，不依赖节点名）
+	if not GameManager.is_server:
+		return
+	var pos: Vector2 = Vector2(pos_x, pos_y)
+	var resource: Node = _find_resource_at_position(pos)
+	if resource:
+		print("[Resource Sync] 服务器收到资源攻击请求: 位置", pos, " 找到: ", resource.resource_name)
+		if resource.has_method("_server_hit"):
+			resource._server_hit(damage)
+		else:
+			resource.hit(damage)
+	else:
+		print("[Resource Sync] 服务器未找到位置对应的资源: ", pos)
+
+
+@rpc("any_peer", "call_local")
+func _rpc_request_tree_hit(pos_x: float, pos_y: float, damage: float, attacker_x: float, attacker_y: float) -> void:
+	## 客户端请求服务器攻击指定位置的树木（通过位置查找）
+	if not GameManager.is_server:
+		return
+	var pos: Vector2 = Vector2(pos_x, pos_y)
+	var resource: Node = _find_resource_at_position(pos)
+	if resource:
+		print("[Resource Sync] 服务器收到树木攻击请求: 位置", pos, " 找到: ", resource.resource_name)
+		if resource.has_method("_server_hit"):
+			resource._server_hit(damage, Vector2(attacker_x, attacker_y))
+	else:
+		print("[Resource Sync] 服务器未找到位置对应的树木: ", pos)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_receive_zombie_initial_sync(zombie_data: Array) -> void:
+	## 客户端：接收丧尸初始数据并创建
+	if GameManager.is_server:
+		return
+	print("[Zombie Sync] 收到丧尸初始数据，共%d只" % zombie_data.size())
+	for data in zombie_data:
+		var zombie_id: int = data[0]
+		var zombie_type: String = data[1]
+		var pos: Vector2 = Vector2(data[2], data[3])
+		_create_zombie_from_data(zombie_id, zombie_type, pos)
+
+
+func _create_zombie_from_data(zombie_id: int, zombie_type: String, pos: Vector2) -> void:
+	## 客户端：根据服务器数据创建丧尸（从对象池获取）
+	if zombie_map.has(zombie_id):
+		return
+	var zombie = ObjectPool.acquire("zombie")
+	if zombie == null:
+		print("[Zombie Sync] 警告：无法从对象池获取丧尸")
+		return
+	zombie.zombie_id = zombie_id
+	zombie.position = pos
+	if zombie.has_method("set_zombie_type"):
+		zombie.set_zombie_type(zombie_type)
+	zombie.name = "Zombie_%d" % zombie_id
+	world_layer.add_child(zombie)
+	zombie.add_to_group("zombie")
+	_register_chunk_entity(zombie)
+	zombie_map[zombie_id] = zombie
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_zombie_spawn(zombie_id: int, zombie_type: String, pos_x: float, pos_y: float) -> void:
+	## 客户端：接收丧尸生成事件
+	if GameManager.is_server:
+		return
+	_create_zombie_from_data(zombie_id, zombie_type, Vector2(pos_x, pos_y))
+
+
+func _sync_zombie_positions_to_clients() -> void:
+	## 服务器：向每个客户端同步其玩家附近的丧尸位置（兴趣管理）
+	if not GameManager.is_server or zombie_map.is_empty():
+		return
+	for peer_id: int in GameManager.players.keys():
+		var player: Node2D = GameManager.players[peer_id]
+		if not player or not is_instance_valid(player):
+			continue
+		var positions: Array = []
+		var player_pos: Vector2 = player.position
+		for zombie_id: int in zombie_map.keys():
+			var zombie: Node2D = zombie_map[zombie_id]
+			if zombie and is_instance_valid(zombie):
+				if zombie.position.distance_to(player_pos) <= ZOMBIE_SYNC_RANGE:
+					positions.append([zombie_id, zombie.position.x, zombie.position.y])
+		if not positions.is_empty():
+			_rpc_zombie_position_update.rpc_id(peer_id, positions)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_zombie_position_update(positions: Array) -> void:
+	## 客户端：接收丧尸位置更新并设置插值目标
+	if GameManager.is_server:
+		return
+	for data in positions:
+		var zombie_id: int = data[0]
+		var pos: Vector2 = Vector2(data[1], data[2])
+		if zombie_map.has(zombie_id):
+			var zombie: Node2D = zombie_map[zombie_id]
+			if zombie and is_instance_valid(zombie) and zombie.has_method("set_target_position"):
+				zombie.set_target_position(pos)
+
+
+func _on_zombie_died(zombie_id: int) -> void:
+	## 服务器：丧尸死亡时调用，广播给所有客户端
+	if not GameManager.is_server:
+		return
+	print("[Zombie Sync] 丧尸死亡，广播给所有客户端: zombie_id=%d" % zombie_id)
+	_rpc_zombie_die.rpc(zombie_id)
+	if zombie_map.has(zombie_id):
+		zombie_map.erase(zombie_id)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_zombie_die(zombie_id: int) -> void:
+	## 客户端：接收丧尸死亡事件
+	if GameManager.is_server:
+		return
+	print("[Zombie Sync] 客户端移除死亡丧尸: zombie_id=%d" % zombie_id)
+	_destroy_zombie(zombie_id)
+
+
+func _destroy_zombie(zombie_id: int) -> void:
+	## 客户端：销毁指定丧尸（回收到对象池）
+	if zombie_map.has(zombie_id):
+		var zombie = zombie_map[zombie_id]
+		if zombie and is_instance_valid(zombie):
+			if zombie.is_in_group("zombie"):
+				zombie.remove_from_group("zombie")
+			ObjectPool.recycle("zombie", zombie)
+		zombie_map.erase(zombie_id)
+
+
+func _spawn_zombie_at_position(zombie_type: String, pos: Vector2) -> void:
+	## 服务器：在指定位置生成丧尸（统一入口，分配id并广播）
+	if not GameManager.is_server:
+		return
+	var zombie = ObjectPool.acquire("zombie")
+	if zombie == null:
+		print("[Main] 警告：无法从对象池获取丧尸")
+		return
+	zombie.zombie_id = _next_zombie_id
+	_next_zombie_id += 1
+	zombie.position = pos
+	zombie.name = "Zombie_%d" % zombie.zombie_id
+	if zombie.has_method("set_zombie_type"):
+		zombie.set_zombie_type(zombie_type)
+	world_layer.add_child(zombie)
+	zombie.add_to_group("zombie")
+	_register_chunk_entity(zombie)
+	zombie_map[zombie.zombie_id] = zombie
+	# 广播给所有客户端
+	_rpc_zombie_spawn.rpc(zombie.zombie_id, zombie_type, pos.x, pos.y)
+
+
+# ==================== 资源节点状态同步 ====================
+
+func _on_resource_collected(pos: Vector2) -> void:
+	## 服务器：资源节点被采集，广播给所有客户端
+	if not GameManager.is_server:
+		return
+	print("[Resource Sync] 服务器广播采集事件: 位置", pos)
+	_rpc_resource_collected.rpc(pos.x, pos.y)
+
+
+func _on_resource_respawned(pos: Vector2) -> void:
+	## 服务器：资源节点重生，广播给所有客户端
+	if not GameManager.is_server:
+		return
+	_rpc_resource_respawned.rpc(pos.x, pos.y)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_resource_collected(pos_x: float, pos_y: float) -> void:
+	## 客户端：接收资源采集事件
+	if GameManager.is_server:
+		return
+	print("[Resource Sync] 客户端收到采集事件: 位置(", pos_x, ", ", pos_y, ")")
+	var resource: Node = _find_resource_at_position(Vector2(pos_x, pos_y))
+	if resource and resource.has_method("_set_collected_state"):
+		print("[Resource Sync] 找到资源: ", resource.resource_name, " 设置采集状态")
+		resource._set_collected_state(true)
+	else:
+		print("[Resource Sync] 未找到位置对应的资源节点！")
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_resource_respawned(pos_x: float, pos_y: float) -> void:
+	## 客户端：接收资源重生事件
+	if GameManager.is_server:
+		return
+	var resource: Node = _find_resource_at_position(Vector2(pos_x, pos_y))
+	if resource and resource.has_method("_set_collected_state"):
+		resource._set_collected_state(false)
+
+
+func _find_resource_at_position(pos: Vector2) -> Node:
+	## 查找指定位置的资源节点（允许小范围误差）
+	var resources: Array = get_tree().get_nodes_in_group("resource")
+	for r in resources:
+		if r and is_instance_valid(r):
+			if r.position.distance_to(pos) < 5.0:
+				return r
+	return null
+
+
+# ==================== 建筑销毁同步 ====================
+
+func _on_building_destroyed(pos: Vector2) -> void:
+	## 服务器：建筑被摧毁，广播给所有客户端
+	if not GameManager.is_server:
+		return
+	_rpc_building_destroyed.rpc(pos.x, pos.y)
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_building_destroyed(pos_x: float, pos_y: float) -> void:
+	## 客户端：接收建筑销毁事件
+	if GameManager.is_server:
+		return
+	var buildings: Array = get_tree().get_nodes_in_group("building")
+	for b in buildings:
+		if b and is_instance_valid(b):
+			if b.position.distance_to(Vector2(pos_x, pos_y)) < 10.0:
+				print("[Building Sync] 客户端移除被摧毁建筑 at ", Vector2(pos_x, pos_y))
+				b.queue_free()
+				break

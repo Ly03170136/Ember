@@ -365,21 +365,16 @@ func _turn_into_zombie() -> void:
 	## NPC变成僵尸（使用对象池）
 	print("[NPC] %s 变成僵尸！npc_id=%d" % [_type_config.name, npc_id])
 	if GameManager.is_server:
-		# 服务器通知main.gd广播变僵尸事件
+		# 服务器：通过main.gd统一生成丧尸（分配zombie_id并广播）
 		var main: Node = get_tree().current_scene
+		if main and main.has_method("_spawn_zombie_at_position"):
+			main._spawn_zombie_at_position("normal", position)
+		# 通知main.gd广播NPC销毁事件
 		if main and main.has_method("_on_npc_turned_zombie"):
 			main._on_npc_turned_zombie(npc_id, position)
-	# 从对象池获取僵尸
-	var zombie = ObjectPool.acquire("zombie")
-	if zombie:
-		zombie.position = position
-		zombie.name = "InfectedZombie_%d" % randi()
-		get_parent().add_child(zombie)
-		zombie.add_to_group("zombie")
-		# 注册到分块加载系统
-		var main: Node = get_tree().current_scene
-		if main and main.has_method("_register_chunk_entity"):
-			main._register_chunk_entity(zombie)
+	else:
+		# 客户端：只销毁NPC，丧尸由服务器同步生成
+		pass
 	queue_free()
 
 

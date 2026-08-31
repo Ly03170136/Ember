@@ -51,6 +51,19 @@ func hit(damage: float = 1.0, attacker_pos: Vector2 = Vector2.ZERO) -> void:
 	if is_depleted or is_falling:
 		return
 	
+	# 客户端：通过main.gd通知服务器（通过位置查找，不依赖节点名）
+	if not GameManager.is_server:
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_rpc_request_tree_hit"):
+			main._rpc_request_tree_hit.rpc_id(1, position.x, position.y, damage, attacker_pos.x, attacker_pos.y)
+		return
+	
+	# 服务器：执行受击逻辑
+	_server_hit(damage, attacker_pos)
+
+
+func _server_hit(damage: float, attacker_pos: Vector2) -> void:
+	## 服务器端受击处理：摇动 + 扣血 + 广播摇动
 	# 受击抖动反馈
 	hit_shake_timer = 0.3
 	
@@ -61,13 +74,37 @@ func hit(damage: float = 1.0, attacker_pos: Vector2 = Vector2.ZERO) -> void:
 	# 给一个初始角速度（饥荒风格的弹性摇晃）
 	sway_velocity += hit_direction * 8.0
 	
-	# 只有服务器能修改资源状态
-	if not GameManager.is_server:
-		return
+	# 广播摇动给所有客户端
+	_rpc_tree_sway.rpc(hit_direction)
 	
+	# 扣血
 	health -= damage
 	if health <= 0:
 		_collect()
+
+
+@rpc("any_peer", "call_local")
+func _rpc_request_tree_hit(damage: float, attacker_pos_x: float, attacker_pos_y: float) -> void:
+	## 客户端请求服务器处理树木受击
+	if not GameManager.is_server:
+		return
+	if is_depleted or is_falling:
+		# 树木已经被采集，重新广播采集状态给请求的客户端
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_resource_collected"):
+			main._on_resource_collected(position)
+		return
+	_server_hit(damage, Vector2(attacker_pos_x, attacker_pos_y))
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_tree_sway(direction: float) -> void:
+	## 客户端接收摇动广播，播放摇动动画
+	if GameManager.is_server:
+		return
+	hit_shake_timer = 0.3
+	hit_direction = direction
+	sway_velocity += direction * 8.0
 
 
 func _process(delta: float) -> void:
@@ -148,6 +185,12 @@ func _finish_fall() -> void:
 	# 设置重生计时
 	if respawn_time > 0:
 		respawn_timer = respawn_time
+	
+	# 服务器：广播采集状态给所有客户端
+	if GameManager.is_server:
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_resource_collected"):
+			main._on_resource_collected(position)
 
 
 func _collect() -> void:
@@ -183,6 +226,51 @@ func _collect() -> void:
 		_finish_fall()
 
 
+func _set_collected_state(collected: bool) -> void:
+	## 重写父类方法：客户端设置树木采集状态（直接显示树桩，跳过倒下动画）
+	is_depleted = collected
+	health = 0 if collected else max_health
+	is_falling = false
+	if collected:
+		# 关键：设置重生计时器，否则 _process 会立即触发 _respawn()
+		respawn_timer = respawn_time
+	else:
+		respawn_timer = 0.0
+	if collected:
+		# 采集状态：隐藏正常树木，显示树桩和倒木
+		if tree_sprite:
+			tree_sprite.visible = false
+			tree_sprite.rotation = 0
+			tree_sprite.position = Vector2.ZERO
+		if fallen_sprite:
+			fallen_sprite.visible = true
+			fallen_sprite.rotation = deg_to_rad(hit_direction * 90.0)
+			fallen_sprite.position.y = 10
+		if stump_sprite:
+			stump_sprite.visible = true
+			stump_sprite.position = Vector2(0, 12)
+		if stump_collision:
+			stump_collision.disabled = false
+		var collision: CollisionShape2D = get_node_or_null("CollisionShape2D")
+		if collision:
+			collision.disabled = true
+	else:
+		# 重生状态：恢复正常树木
+		if tree_sprite:
+			tree_sprite.visible = true
+			tree_sprite.rotation = 0
+			tree_sprite.position = Vector2.ZERO
+		if fallen_sprite:
+			fallen_sprite.visible = false
+		if stump_sprite:
+			stump_sprite.visible = false
+		if stump_collision:
+			stump_collision.disabled = true
+		var collision2: CollisionShape2D = get_node_or_null("CollisionShape2D")
+		if collision2:
+			collision2.disabled = false
+
+
 func _respawn() -> void:
 	## 重写父类的重生函数，恢复所有状态
 	# 停止可能正在播放的倒下动画
@@ -216,6 +304,12 @@ func _respawn() -> void:
 	var collision: CollisionShape2D = get_node_or_null("CollisionShape2D")
 	if collision:
 		collision.disabled = false
+	
+	# 服务器：广播重生状态给所有客户端
+	if GameManager.is_server:
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_resource_respawned"):
+			main._on_resource_respawned(position)
 
 
 func _on_body_entered(body: Node) -> void:

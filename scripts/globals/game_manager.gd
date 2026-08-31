@@ -376,6 +376,14 @@ func _client_ready() -> void:
 			print("[Net] 已发送NPC初始数据给客户端 %d" % pid)
 		else:
 			print("[Net] 警告：无法发送NPC初始数据，main_scene=", main_scene, " has_method=", main_scene.has_method("_send_npc_initial_sync") if main_scene else "N/A")
+		# 发送丧尸初始数据给客户端（服务器权威丧尸同步）
+		if main_scene and main_scene.has_method("_send_zombie_initial_sync"):
+			main_scene._send_zombie_initial_sync(pid)
+			print("[Net] 已发送丧尸初始数据给客户端 %d" % pid)
+		# 发送资源节点初始状态（哪些已被采集）
+		if main_scene and main_scene.has_method("_send_resource_state_sync"):
+			main_scene._send_resource_state_sync(pid)
+			print("[Net] 已发送资源状态同步给客户端 %d" % pid)
 	elif not is_server:
 		print("[Net] 警告：_client_ready 在非服务器端执行，is_server=%s" % str(is_server))
 	elif not game_world:

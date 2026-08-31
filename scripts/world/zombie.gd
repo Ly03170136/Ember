@@ -18,6 +18,7 @@ const LOSE_TARGET_TIME := 3.0
 
 @export var zombie_type: String = "normal"
 @export var max_health: float = 30.0
+var zombie_id: int = -1  # 服务器分配的唯一ID，用于网络同步
 var health: float = 30.0
 var attack_timer: float = 0.0
 var wander_direction: Vector2 = Vector2.ZERO
@@ -28,6 +29,10 @@ var _type_config: Dictionary = {}
 # 击退僵直
 var stun_timer: float = 0.0
 var knockback_velocity: Vector2 = Vector2.ZERO
+
+# 客户端插值
+var _interpolation_target: Vector2 = Vector2.ZERO
+var _has_interp_target: bool = false
 
 # LOD系统：AI更新间隔控制
 var ai_update_interval: float = 0.0  # AI更新间隔（0=每帧更新，0.2=每0.2秒更新一次）
@@ -68,6 +73,20 @@ func _ready() -> void:
 	if not GameManager.is_server:
 		set_physics_process(false)
 	add_to_group("zombie")
+
+
+func _process(delta: float) -> void:
+	## 客户端：位置插值
+	if GameManager and GameManager.is_server:
+		return
+	if _has_interp_target:
+		position = position.lerp(_interpolation_target, delta * 10.0)
+
+
+func set_target_position(server_pos: Vector2) -> void:
+	## 由main.gd统一调用，设置客户端插值目标
+	_interpolation_target = server_pos
+	_has_interp_target = true
 
 
 func set_zombie_type(new_type: String) -> void:
@@ -281,7 +300,12 @@ func _die() -> void:
 	_drop_loot()
 	# 给附近玩家经验值
 	_give_experience()
-	print("[Zombie] %s died at %s, recycled to pool" % [zombie_type, str(position)])
+	print("[Zombie] %s died at %s, zombie_id=%d, recycled to pool" % [zombie_type, str(position), zombie_id])
+	# 服务器：通知main.gd广播死亡事件
+	if GameManager.is_server:
+		var main: Node = get_tree().current_scene
+		if main and main.has_method("_on_zombie_died"):
+			main._on_zombie_died(zombie_id)
 	# 从组中移除
 	if is_in_group("zombie"):
 		remove_from_group("zombie")
