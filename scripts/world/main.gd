@@ -1473,7 +1473,9 @@ func _on_building_placed(building_id: String, position: Vector2) -> void:
 		# 客户端通过RPC通知主机创建
 		_rpc_place_building.rpc_id(1, building_id, position)
 		return
+	# 服务器：创建建筑并广播给所有客户端
 	_create_building(building_id, position)
+	_rpc_create_building.rpc(building_id, position)
 
 
 func _create_building(building_id: String, position: Vector2) -> void:
