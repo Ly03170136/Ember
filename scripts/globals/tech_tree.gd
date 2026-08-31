@@ -182,8 +182,9 @@ func get_all_public_techs() -> Dictionary:
 
 func get_techs_by_tier(tier: int) -> Array:
 	var result: Array = []
-	for tech_id in PUBLIC_TECHS.keys():
-		if PUBLIC_TECHS[tech_id].tier == tier:
+	var all_techs: Dictionary = get_all_public_techs()
+	for tech_id in all_techs.keys():
+		if all_techs[tech_id].tier == tier:
 			result.append(tech_id)
 	return result
 
@@ -205,8 +206,10 @@ func can_unlock_tech(tech_id: String, player: Node) -> bool:
 	# 职业专属科技检查
 	if not is_public_tech(tech_id):
 		var found: bool = false
-		for class_id in CLASS_TECHS.keys():
-			if CLASS_TECHS[class_id].has(tech_id):
+		var all_class_ids: Array = CLASS_TECHS.keys() + _custom_class_techs.keys()
+		for class_id in all_class_ids:
+			var class_techs: Dictionary = get_class_techs(class_id)
+			if class_techs.has(tech_id):
 				if player.player_class == class_id:
 					found = true
 				break

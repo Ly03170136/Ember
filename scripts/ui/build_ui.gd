@@ -273,8 +273,8 @@ func _start_placing() -> void:
 func _get_world_mouse_pos() -> Vector2:
 	# 通过相机获取世界鼠标位置（DPI缩放下更准确）
 	var player: Node = GameManager.get_local_player()
-	if player and player.has_node("Camera2D"):
-		var camera: Camera2D = player.get_node("Camera2D")
+	if player and player.has_node("Camera"):
+		var camera: Camera2D = player.get_node("Camera")
 		return camera.get_global_mouse_position()
 	# 回退方案：通过视口和画布变换计算
 	var viewport_mouse: Vector2 = get_viewport().get_mouse_position()

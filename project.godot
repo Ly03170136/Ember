@@ -80,6 +80,7 @@ AnimationStateMachine="*res://scripts/globals/animation_state_machine.gd"
 PhysicsLayers="*res://scripts/globals/physics_layers.gd"
 NPCDB="*res://scripts/globals/npc_db.gd"
 ModLoader="*res://scripts/globals/mod_loader.gd"
+NetworkManager="*res://scripts/network/network_manager.gd"
 
 [display]
 

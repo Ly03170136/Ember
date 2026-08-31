@@ -94,7 +94,7 @@ func _try_plant(player: Node) -> void:
 	# 消耗种子
 	player.inventory.remove_item(seed_id, 1)
 	# 获取种子信息
-	var seed_data: Dictionary = ItemDB.ITEMS.get(seed_id, {})
+	var seed_data: Dictionary = ItemDB.get_item(seed_id)
 	crop_id = seed_data.get("crop", seed_id.replace("seed_", ""))
 	grow_time = seed_data.get("grow_time", 150.0)
 	planted_seed = seed_id

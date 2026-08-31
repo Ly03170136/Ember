@@ -139,7 +139,12 @@ func _ready() -> void:
 				camera.queue_free()
 		else:
 			if camera:
+				# 强制重置相机状态，确保跟随玩家
+				camera.enabled = true
+				camera.position = Vector2.ZERO
+				camera.zoom = Vector2(2.5, 2.5)
 				camera.make_current()
+				print("[Player] 本地玩家相机已初始化: pos=", position, " camera_global_pos=", camera.global_position, " zoom=", camera.zoom, " enabled=", camera.enabled)
 	# 同步器配置（已改用RPC手动同步位置，彻底移除MultiplayerSynchronizer避免报错）
 	if synchronizer and is_instance_valid(synchronizer):
 		synchronizer.queue_free()
@@ -685,9 +690,13 @@ func _attack() -> void:
 						target.take_damage(damage, self)
 						print("[Attack] 鼠标指向攻击命中（独立墙体），目标: ", target.name)
 						return
-	# 对丧尸/NPC调用take_damage
+	# 对丧尸/NPC调用take_damage（权威服务器：客户端通过RPC通知服务器）
 	if nearest_target.has_method("take_damage"):
-		nearest_target.take_damage(damage, self)
+		if GameManager.is_server:
+			nearest_target.take_damage(damage, self)
+		else:
+			# 客户端通过RPC通知服务器攻击（传递目标位置和伤害）
+			_rpc_attack_target.rpc_id(1, nearest_target.global_position, damage)
 		var target_name: String = nearest_target.name if nearest_target.name else "Unknown"
 		print("[Attack] 攻击 %s，造成 %d 伤害（职业:%s）" % [target_name, damage, player_class])
 	# 对瓦片房屋/围墙调用damage_tile_at_world_pos（最近目标方式）
@@ -699,6 +708,35 @@ func _attack() -> void:
 			print("[Attack] 攻击房屋瓦片命中，造成 %d 伤害" % damage)
 		else:
 			print("[Attack] 攻击房屋瓦片未命中，攻击点不在瓦片上")
+
+
+@rpc("any_peer", "call_local")
+func _rpc_attack_target(target_pos: Vector2, damage: float) -> void:
+	## 服务器收到客户端攻击请求，在目标位置附近查找NPC/丧尸并造成伤害
+	if not GameManager.is_server:
+		return
+	# 在目标位置附近80像素内查找最近的NPC/丧尸（扩大范围，容忍位置差异）
+	var nearest: Node2D = null
+	var nearest_dist: float = 80.0
+	var npcs: Array = get_tree().get_nodes_in_group("npc")
+	for npc in npcs:
+		if npc and is_instance_valid(npc):
+			var dist: float = npc.global_position.distance_to(target_pos)
+			if dist < nearest_dist:
+				nearest_dist = dist
+				nearest = npc
+	var zombies: Array = get_tree().get_nodes_in_group("zombie")
+	for zombie in zombies:
+		if zombie and is_instance_valid(zombie):
+			var dist: float = zombie.global_position.distance_to(target_pos)
+			if dist < nearest_dist:
+				nearest_dist = dist
+				nearest = zombie
+	if nearest and nearest.has_method("take_damage"):
+		nearest.take_damage(damage, self)
+		print("[Attack] 服务器处理客户端攻击: ", nearest.name, " 受到 ", damage, " 伤害, 目标距离=", nearest_dist)
+	else:
+		print("[Attack] 服务器未找到攻击目标: target_pos=", target_pos, " 最近距离=", nearest_dist)
 
 
 func _collect_targets(node: Node, results: Array) -> void:

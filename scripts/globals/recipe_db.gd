@@ -469,15 +469,17 @@ func craft(recipe_id: String, inventory: Node) -> bool:
 
 # 获取配方名称
 func get_recipe_name(recipe_id: String) -> String:
-	if RECIPES.has(recipe_id):
-		return RECIPES[recipe_id].name
+	var recipe := get_recipe(recipe_id)
+	if not recipe.is_empty():
+		return recipe.get("name", "未知配方")
 	return "未知配方"
 
 
 # 获取配方所需的工作站
 func get_recipe_station(recipe_id: String) -> String:
-	if RECIPES.has(recipe_id):
-		return RECIPES[recipe_id].station
+	var recipe := get_recipe(recipe_id)
+	if not recipe.is_empty():
+		return recipe.get("station", "")
 	return ""
 
 

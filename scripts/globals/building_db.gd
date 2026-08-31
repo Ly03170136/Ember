@@ -523,44 +523,51 @@ func get_building(building_id: String) -> Dictionary:
 
 
 func get_building_name(building_id: String) -> String:
-	if BUILDINGS.has(building_id):
-		return BUILDINGS[building_id].name
+	var building := get_building(building_id)
+	if not building.is_empty():
+		return building.get("name", "未知建筑")
 	return "未知建筑"
 
 
 func get_building_cost(building_id: String) -> Dictionary:
-	if BUILDINGS.has(building_id):
-		return BUILDINGS[building_id].cost
+	var building := get_building(building_id)
+	if not building.is_empty():
+		return building.get("cost", {})
 	return {}
 
 
 func get_build_time(building_id: String) -> float:
-	if BUILDINGS.has(building_id):
-		return BUILDINGS[building_id].build_time
+	var building := get_building(building_id)
+	if not building.is_empty():
+		return building.get("build_time", 0.0)
 	return 0.0
 
 
 func get_max_health(building_id: String) -> float:
-	if BUILDINGS.has(building_id):
-		return BUILDINGS[building_id].max_health
+	var building := get_building(building_id)
+	if not building.is_empty():
+		return building.get("max_health", 0.0)
 	return 0.0
 
 
 func get_building_size(building_id: String) -> Vector2:
-	if BUILDINGS.has(building_id):
-		return BUILDINGS[building_id].size
+	var building := get_building(building_id)
+	if not building.is_empty():
+		return building.get("size", Vector2(48, 48))
 	return Vector2(48, 48)
 
 
 func get_building_color(building_id: String) -> Color:
-	if BUILDINGS.has(building_id):
-		return BUILDINGS[building_id].color
+	var building := get_building(building_id)
+	if not building.is_empty():
+		return building.get("color", Color.GRAY)
 	return Color.GRAY
 
 
 func get_category(building_id: String) -> String:
-	if BUILDINGS.has(building_id):
-		return BUILDINGS[building_id].category
+	var building := get_building(building_id)
+	if not building.is_empty():
+		return building.get("category", "misc")
 	return "misc"
 
 
@@ -703,7 +710,16 @@ var _custom_buildings := {}
 
 ## 注册/覆盖一个建筑（MOD使用）
 func register_building(building_id: String, data: Dictionary) -> void:
-	_custom_buildings[building_id] = data
+	var converted: Dictionary = data.duplicate()
+	# color字段转换：数组 [R,G,B,A] → Color对象
+	if converted.has("color") and converted.color is Array:
+		var c = converted.color
+		converted.color = Color(c[0], c[1], c[2], c[3] if c.size() > 3 else 1.0)
+	# size字段转换：数组 [w,h] → Vector2
+	if converted.has("size") and converted.size is Array:
+		var s = converted.size
+		converted.size = Vector2(s[0], s[1])
+	_custom_buildings[building_id] = converted
 	print("[BuildingDB] MOD注册建筑: %s" % building_id)
 
 

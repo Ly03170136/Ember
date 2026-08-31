@@ -65,14 +65,42 @@ func _ready() -> void:
 	else:
 		_type_config = NPC_TYPES["civilian"]
 		npc_type = "civilian"
-	health = _type_config.max_health
-	# 设置精灵
-	if not _npc_textures.has(npc_type):
+	health = _type_config.get("max_health", 50.0)
+	# 设置精灵（全面兜底：确保sprite存在、纹理存在、可见）
+	if not _npc_textures.has(npc_type) or _npc_textures[npc_type] == null:
 		_npc_textures[npc_type] = _make_npc_texture(npc_type)
-	if sprite:
-		sprite.texture = _npc_textures[npc_type]
-		sprite.modulate = _type_config.color
-		sprite.scale = Vector2(_type_config.scale, _type_config.scale)
+	# 如果sprite节点不存在，动态创建一个
+	if sprite == null:
+		print("[NPC] 警告：sprite节点不存在，动态创建: ", npc_type, " at ", position)
+		sprite = Sprite2D.new()
+		sprite.name = "Sprite"
+		add_child(sprite)
+	# 确保纹理存在
+	var tex: Texture2D = _npc_textures.get(npc_type, null)
+	if tex == null:
+		print("[NPC] 警告：纹理为null，重新生成: ", npc_type)
+		tex = _make_npc_texture(npc_type)
+		_npc_textures[npc_type] = tex
+	sprite.texture = tex
+	# 确保颜色不透明
+	var npc_color: Color = _type_config.get("color", Color(1, 1, 1, 1))
+	if npc_color == null:
+		npc_color = Color(1, 1, 1, 1)
+	if npc_color.a <= 0:
+		npc_color.a = 1.0
+	sprite.modulate = npc_color
+	# 确保缩放正常
+	var npc_scale: float = _type_config.get("scale", 1.0)
+	if npc_scale == null or npc_scale <= 0:
+		npc_scale = 1.0
+	sprite.scale = Vector2(npc_scale, npc_scale)
+	# 确保可见
+	sprite.visible = true
+	sprite.z_index = 100  # 精灵单独设置高z_index，确保Y轴排序下也不被遮挡
+	visible = true
+	# 确保z_index在地形之上
+	z_index = 10
+	print("[NPC] 精灵设置完成: type=", npc_type, " pos=", position, " color=", npc_color, " scale=", npc_scale, " tex=", tex)
 	# 网络同步：客户端不运行AI，只接收服务器位置同步
 	if GameManager and not GameManager.is_server:
 		set_physics_process(false)
@@ -311,15 +339,31 @@ func _notify_police(attacker: Node2D) -> void:
 
 
 func _die() -> void:
-	## NPC死亡
+	## NPC死亡（权威服务器：服务器死亡后通知所有客户端移除）
 	is_dead = true
 	print("[NPC] %s 死亡" % _type_config.name)
+	if GameManager.is_server:
+		# 服务器通知所有客户端移除该NPC（传递位置用于查找）
+		_rpc_remove_npc.rpc(global_position)
 	# 死亡后变成僵尸（如果未感染，直接死亡；如果感染，变成僵尸）
 	if is_infected:
 		_turn_into_zombie()
 	else:
 		# 普通死亡，掉落物品
 		queue_free()
+
+
+@rpc("any_peer", "call_remote")
+func _rpc_remove_npc(pos: Vector2) -> void:
+	## 客户端收到服务器通知，在位置附近查找NPC并移除
+	if GameManager.is_server:
+		return
+	var npcs: Array = get_tree().get_nodes_in_group("npc")
+	for npc in npcs:
+		if npc and is_instance_valid(npc) and npc.global_position.distance_to(pos) < 30:
+			print("[NPC] 客户端移除死亡NPC: ", npc.name, " at ", pos)
+			npc.queue_free()
+			break
 
 
 func infect() -> void:

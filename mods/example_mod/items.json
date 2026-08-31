@@ -4,7 +4,7 @@
 
   "mod_sword": {
     "name": "MOD之剑",
-    "type": 3,
+    "type": 2,
     "max_stack": 1,
     "weight": 2.0,
     "color": [0.8, 0.2, 0.2, 1.0],

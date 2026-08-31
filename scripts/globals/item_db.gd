@@ -1306,32 +1306,37 @@ func get_item(item_id: String) -> Dictionary:
 
 
 func get_item_name(item_id: String) -> String:
-	if ITEMS.has(item_id):
-		return ITEMS[item_id].name
+	var item := get_item(item_id)
+	if not item.is_empty():
+		return item.get("name", "未知物品")
 	return "未知物品"
 
 
 func get_item_type(item_id: String) -> int:
-	if ITEMS.has(item_id):
-		return ITEMS[item_id].type
+	var item := get_item(item_id)
+	if not item.is_empty():
+		return item.get("type", -1)
 	return -1
 
 
 func get_max_stack(item_id: String) -> int:
-	if ITEMS.has(item_id):
-		return ITEMS[item_id].max_stack
+	var item := get_item(item_id)
+	if not item.is_empty():
+		return item.get("max_stack", 1)
 	return 1
 
 
 func get_weight(item_id: String) -> float:
-	if ITEMS.has(item_id):
-		return ITEMS[item_id].weight
+	var item := get_item(item_id)
+	if not item.is_empty():
+		return item.get("weight", 0.0)
 	return 0.0
 
 
 func get_color(item_id: String) -> Color:
-	if ITEMS.has(item_id):
-		return ITEMS[item_id].color
+	var item := get_item(item_id)
+	if not item.is_empty():
+		return item.get("color", Color.WHITE)
 	return Color.WHITE
 
 
@@ -1361,7 +1366,23 @@ var _custom_items := {}
 ## 注册/覆盖一个物品（MOD使用）
 ## 如果item_id已存在，会覆盖原有物品
 func register_item(item_id: String, data: Dictionary) -> void:
-	_custom_items[item_id] = data
+	var converted: Dictionary = data.duplicate()
+	# color字段转换：数组 [R,G,B,A] → Color对象
+	if converted.has("color") and converted.color is Array:
+		var c = converted.color
+		converted.color = Color(c[0], c[1], c[2], c[3] if c.size() > 3 else 1.0)
+	# type字段转换：字符串类型名 → 枚举数字
+	if converted.has("type") and converted.type is String:
+		match converted.type.to_lower():
+			"resource": converted.type = ItemType.RESOURCE
+			"tool": converted.type = ItemType.TOOL
+			"weapon": converted.type = ItemType.WEAPON
+			"food": converted.type = ItemType.FOOD
+			"medicine": converted.type = ItemType.MEDICINE
+			"building": converted.type = ItemType.BUILDING
+			"ammo": converted.type = ItemType.AMMO
+			"misc": converted.type = ItemType.MISC
+	_custom_items[item_id] = converted
 	print("[ItemDB] MOD注册物品: %s" % item_id)
 
 

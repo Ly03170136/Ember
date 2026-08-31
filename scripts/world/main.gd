@@ -986,7 +986,7 @@ func _update_lod() -> void:
 	var player: Node = GameManager.get_local_player()
 	if not player or not is_instance_valid(player):
 		return
-	var camera: Camera2D = player.get_node_or_null("Camera2D")
+	var camera: Camera2D = player.get_node_or_null("Camera")
 	if not camera:
 		return
 	# 重置统计
@@ -1031,8 +1031,11 @@ func _update_lod() -> void:
 
 func _set_entity_lod_level(entity: Node, lod_level: int, on_screen: bool) -> void:
 	## 设置实体的LOD级别
-	# 根据实体类型应用不同的LOD策略
-	var entity_type: String = entity.get("entity_type") if entity.has_method("get") and entity.has_method("has_method") else ""
+	# 根据实体类型应用不同的LOD策略（安全获取，避免nil赋值给String）
+	var entity_type_raw = entity.get("entity_type")
+	var entity_type: String = ""
+	if entity_type_raw != null:
+		entity_type = str(entity_type_raw)
 	# 对于丧尸和NPC，根据LOD级别调整AI更新
 	if entity.is_in_group("zombie") or entity.is_in_group("npc"):
 		match lod_level:
@@ -1052,12 +1055,11 @@ func _set_entity_lod_level(entity: Node, lod_level: int, on_screen: bool) -> voi
 				# LOD2：暂停AI（屏幕外或远距离）
 				if entity.has_method("set_ai_update_interval"):
 					entity.set_ai_update_interval(1.0)  # 每秒更新一次
-				# 对于屏幕外的实体，完全暂停process
+				# 临时禁用冻结，避免NPC静止和碰撞失效
+				entity.process_mode = Node.PROCESS_MODE_INHERIT
 				if not on_screen:
-					entity.process_mode = Node.PROCESS_MODE_DISABLED
 					lod_stats.culled += 1
 				else:
-					entity.process_mode = Node.PROCESS_MODE_INHERIT
 					lod_stats.lod2 += 1
 	# 对于建筑，根据LOD级别简化渲染
 	elif entity.is_in_group("building"):
