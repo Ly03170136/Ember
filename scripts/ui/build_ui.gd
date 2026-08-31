@@ -6,6 +6,7 @@ var is_open: bool = false
 var selected_building: String = ""
 var is_placing: bool = false
 var current_category: String = "all"
+var is_server_debug_logged: bool = false  # 防止每帧打印调试日志
 
 # UI元素缓存
 var _cached_items: Array = []  # 缓存的建筑UI元素
@@ -271,15 +272,27 @@ func _start_placing() -> void:
 
 
 func _get_world_mouse_pos() -> Vector2:
-	# 通过相机获取世界鼠标位置（DPI缩放下更准确）
+	# 获取世界鼠标位置，优先使用当前活动相机（最可靠）
+	var camera: Camera2D = get_viewport().get_camera_2d()
+	if camera:
+		var pos := camera.get_global_mouse_position()
+		if not is_server_debug_logged:
+			is_server_debug_logged = true
+			print("[BuildUI] 使用活动相机: name=", camera.name, " parent=", camera.get_parent().name if camera.get_parent() else "null", " global_pos=", camera.global_position, " mouse_world=", pos)
+		return pos
+	# 回退1：查找本地玩家的相机
 	var player: Node = GameManager.get_local_player()
 	if player and player.has_node("Camera"):
-		var camera: Camera2D = player.get_node("Camera")
-		return camera.get_global_mouse_position()
-	# 回退方案：通过视口和画布变换计算
+		var player_camera: Camera2D = player.get_node("Camera")
+		var pos := player_camera.get_global_mouse_position()
+		print("[BuildUI] 警告：使用玩家相机获取鼠标位置（活动相机未找到）, pos=", pos)
+		return pos
+	# 回退2：通过视口和画布变换计算
 	var viewport_mouse: Vector2 = get_viewport().get_mouse_position()
 	var canvas_transform: Transform2D = get_viewport().get_canvas_transform()
-	return canvas_transform.affine_inverse() * viewport_mouse
+	var pos := canvas_transform.affine_inverse() * viewport_mouse
+	print("[BuildUI] 警告：使用视口变换回退方案获取鼠标位置，结果可能不准确: ", pos)
+	return pos
 
 
 func _update_preview_position() -> void:
@@ -317,14 +330,19 @@ func _check_can_place(pos: Vector2) -> bool:
 func _try_place_building() -> void:
 	if not is_placing or selected_building == "":
 		return
-	var mouse_pos: Vector2 = _get_world_mouse_pos()
-	var grid_size: float = 32.0
-	var snapped_pos: Vector2 = Vector2(
-		round(mouse_pos.x / grid_size) * grid_size,
-		round(mouse_pos.y / grid_size) * grid_size
-	)
+	# 优先使用预览精灵的位置（确保和视觉一致），否则重新计算
+	var snapped_pos: Vector2
+	if preview and is_instance_valid(preview):
+		snapped_pos = preview.global_position
+	else:
+		var mouse_pos: Vector2 = _get_world_mouse_pos()
+		var grid_size: float = 32.0
+		snapped_pos = Vector2(
+			round(mouse_pos.x / grid_size) * grid_size,
+			round(mouse_pos.y / grid_size) * grid_size
+		)
 	var player_pos: Vector2 = GameManager.get_local_player().position if GameManager.get_local_player() else Vector2.ZERO
-	print("[BuildUI] 放置调试: mouse=", mouse_pos, " snapped=", snapped_pos, " player=", player_pos)
+	print("[BuildUI] 放置调试: snapped=", snapped_pos, " player=", player_pos, " is_server=", GameManager.is_server)
 	if not _check_can_place(snapped_pos):
 		print("[BuildUI] 无法放置：位置冲突 ", snapped_pos)
 		return
@@ -333,7 +351,7 @@ func _try_place_building() -> void:
 		return
 	# 消耗材料并放置建筑
 	BuildingDB.consume_build_materials(selected_building, inventory)
-	print("[BuildUI] 放置建筑: ", selected_building, " at ", snapped_pos, " is_server=", GameManager.is_server)
+	print("[BuildUI] 放置建筑: ", selected_building, " at ", snapped_pos)
 	emit_signal("building_placed", selected_building, snapped_pos)
 	# 继续放置同一种建筑
 	_update_preview_position()

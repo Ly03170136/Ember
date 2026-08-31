@@ -27,6 +27,10 @@ var current_time: float = 0.35  # 0.0=黎明, 0.5=正午, 1.0=次日黎明（从
 var day_count: int = 1
 var is_night: bool = false
 
+# 时间同步
+var _time_sync_timer: float = 0.0
+const TIME_SYNC_INTERVAL: float = 5.0  # 每5秒同步一次时间
+
 # 资源节点场景
 const TREE_SCENE := preload("res://scenes/entities/tree.tscn")
 const ROCK_SCENE := preload("res://scenes/entities/rock.tscn")
@@ -497,6 +501,14 @@ func _process(delta: float) -> void:
 		_update_horde(delta)
 		_update_infection(delta)
 		_check_game_over()
+		# 定期同步时间给客户端
+		_time_sync_timer += delta
+		if _time_sync_timer >= TIME_SYNC_INTERVAL:
+			_time_sync_timer = 0.0
+			_sync_time_of_day.rpc(current_time, day_count)
+	else:
+		# 客户端：本地推进时间（用于平滑显示），服务器会定期校正
+		_update_day_night(delta)
 	# 更新玩家体温
 	_update_player_temperature(delta)
 	# 连接本地玩家背包到UI
@@ -1117,6 +1129,16 @@ func _update_day_night(delta: float) -> void:
 			GameManager.send_chat.rpc("天亮了，第%d天开始" % day_count)
 
 
+@rpc("any_peer", "call_remote")
+func _sync_time_of_day(server_time: float, server_day: int) -> void:
+	## 客户端接收服务器同步的时间
+	if GameManager.is_server:
+		return
+	current_time = server_time
+	day_count = server_day
+	is_night = current_time < 0.2 or current_time > 0.8
+
+
 func _load_fixed_map() -> void:
 	## 加载固定地图场景（玩家在编辑器中手动设计）
 	print("[FixedMap] 正在加载固定地图...")
@@ -1428,10 +1450,11 @@ func _on_building_placed(building_id: String, position: Vector2) -> void:
 func _create_building(building_id: String, position: Vector2) -> void:
 	var building: Node2D = BUILDING_SCENE.instantiate()
 	building.building_id = building_id
-	building.position = position
+	# position是世界坐标，需要转换为WorldLayer的局部坐标（Main节点有偏移881,427）
+	building.position = world_layer.to_local(position)
 	building.name = "Building_%s_%d" % [building_id, randi()]
 	world_layer.add_child(building)
-	print("[World] 创建建筑: %s at %s" % [BuildingDB.get_building_name(building_id), str(position)])
+	print("[World] 创建建筑: %s at world=%s local=%s" % [BuildingDB.get_building_name(building_id), str(position), str(building.position)])
 
 
 @rpc("any_peer", "call_local")
