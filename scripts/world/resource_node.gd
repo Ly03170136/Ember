@@ -219,13 +219,20 @@ func _drop_items() -> void:
 				nearest_player = player
 	# 如果找到附近玩家（150像素范围内），将物品添加到背包
 	if nearest_player and nearest_dist < 150.0:
-		# 使用get()方法检查玩家是否有inventory变量
+		var peer_id: int = nearest_player.get_multiplayer_authority()
+		# 检查玩家是否有本地 inventory（主机玩家有，客户端玩家在服务器端的副本没有）
 		var inv = nearest_player.get("inventory")
 		if inv != null and inv.has_method("add_item"):
+			# 主机玩家：直接添加
 			var added: int = inv.add_item(drop_item, drop_count)
-			print("[Resource] %s collected, added %dx %s to %s's inventory" % [resource_name, added, drop_item, nearest_player.player_name])
+			print("[Resource] %s collected, added %dx %s to %s's inventory (本地)" % [resource_name, added, drop_item, nearest_player.player_name])
 		else:
-			print("[Resource] %s collected, dropped %dx %s (player has no valid inventory)" % [resource_name, drop_count, drop_item])
+			# 客户端玩家：通过 RPC 通知客户端添加物品
+			if nearest_player.has_method("_rpc_add_item"):
+				nearest_player._rpc_add_item.rpc_id(peer_id, drop_item, drop_count)
+				print("[Resource] %s collected, RPC通知客户端%d添加 %dx %s" % [resource_name, peer_id, drop_count, drop_item])
+			else:
+				print("[Resource] %s collected, 玩家没有_rpc_add_item方法" % resource_name)
 	else:
 		print("[Resource] %s collected, dropped %dx %s (no nearby player, dist=%.1f)" % [resource_name, drop_count, drop_item, nearest_dist])
 

@@ -739,6 +739,20 @@ func _rpc_attack_target(target_pos: Vector2, damage: float) -> void:
 		print("[Attack] 服务器未找到攻击目标: target_pos=", target_pos, " 最近距离=", nearest_dist)
 
 
+@rpc("any_peer", "call_remote")
+func _rpc_add_item(item_id: String, count: int) -> void:
+	## 客户端：接收服务器通知，添加物品到本地背包
+	if GameManager.is_server:
+		return
+	if not is_local():
+		return
+	if inventory and inventory.has_method("add_item"):
+		var added: int = inventory.add_item(item_id, count)
+		print("[Inventory] 服务器发放物品: ", item_id, " x", count, " 实际添加: ", added)
+	else:
+		print("[Inventory] 警告：无法添加物品，inventory 无效")
+
+
 func _collect_targets(node: Node, results: Array) -> void:
 	## 递归收集所有可攻击目标（丧尸、NPC、瓦片房屋）
 	for child in node.get_children():
