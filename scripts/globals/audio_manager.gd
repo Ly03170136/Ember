@@ -24,6 +24,16 @@ enum SFX {
 var _sfx_players: Array = []
 var _music_player: AudioStreamPlayer = null
 var _current_music: String = ""
+var _music_tween: Tween = null
+
+# 音乐资源路径配置（名称 -> 路径）
+const MUSIC_PATHS := {
+	"main_menu": "res://assets/audio/bgm/main_menu.ogg",
+	"game_day": "res://assets/audio/bgm/game_day.ogg",
+	"game_night": "res://assets/audio/bgm/game_night.ogg",
+	"base": "res://assets/audio/bgm/base.ogg",
+	"combat": "res://assets/audio/bgm/combat.ogg",
+}
 
 # 音量设置
 var master_volume: float = 0.8
@@ -31,6 +41,7 @@ var music_volume: float = 0.6
 var sfx_volume: float = 0.8
 
 const MAX_SFX_PLAYERS := 16
+const MUSIC_FADE_DURATION := 1.5  # 音乐淡入淡出时长（秒）
 
 
 func _ready() -> void:
@@ -64,18 +75,81 @@ func play_sfx(sfx_type: int, pitch: float = 1.0) -> void:
 	player.play()
 
 
-func play_music(music_name: String) -> void:
+func play_music(music_name: String, fade: bool = true) -> void:
+	## 播放背景音乐（自动循环，支持淡入淡出切换）
+	print("[AudioManager] play_music 被调用: ", music_name, " _music_player=", _music_player)
 	if _current_music == music_name:
+		print("[AudioManager] 同一首音乐，跳过")
 		return
+	# 检查资源路径是否配置
+	if not MUSIC_PATHS.has(music_name):
+		print("[AudioManager] 警告：未配置音乐资源: ", music_name)
+		return
+	var music_path: String = MUSIC_PATHS[music_name]
+	print("[AudioManager] 音乐路径: ", music_path, " 文件存在=", ResourceLoader.exists(music_path))
+	# 加载音乐文件
+	var stream: AudioStream = load(music_path)
+	print("[AudioManager] 加载结果: stream=", stream, " 类型=", typeof(stream))
+	if stream == null:
+		print("[AudioManager] 警告：无法加载音乐文件: ", music_path)
+		return
+	# 设置循环（不判断具体类型，检查是否有loop属性，兼容OGG/MP3等）
+	if stream and stream.get("loop") != null:
+		stream.loop = true
+		if stream.get("loop_offset") != null:
+			stream.loop_offset = 0.0
+		print("[AudioManager] 循环已设置, loop=", stream.loop)
+	else:
+		print("[AudioManager] 警告：stream没有loop属性, get(loop)=", stream.get("loop"))
 	_current_music = music_name
-	# 目前没有音乐资源，先预留接口
-	print("[AudioManager] 播放音乐: %s (暂无资源)" % music_name)
+	# 淡入淡出切换
+	if fade and _music_player.playing:
+		print("[AudioManager] 淡入淡出切换")
+		_fade_out_and_play(stream)
+	else:
+		print("[AudioManager] 直接播放, music_volume=", music_volume, " master_volume=", master_volume, " 计算音量=", linear_to_db(music_volume * master_volume))
+		_music_player.stream = stream
+		_music_player.volume_db = linear_to_db(music_volume * master_volume)
+		_music_player.play()
+		print("[AudioManager] 播放音乐: ", music_name, " playing=", _music_player.playing)
 
 
-func stop_music() -> void:
-	if _music_player:
+func stop_music(fade: bool = true) -> void:
+	## 停止背景音乐（支持淡出）
+	if not _music_player or not _music_player.playing:
+		_current_music = ""
+		return
+	if fade:
+		_fade_out_only()
+	else:
 		_music_player.stop()
-	_current_music = ""
+		_current_music = ""
+
+
+func _fade_out_and_play(new_stream: AudioStream) -> void:
+	## 淡出当前音乐，然后淡入新音乐
+	if _music_tween and _music_tween.is_valid():
+		_music_tween.kill()
+	_music_tween = create_tween()
+	_music_tween.tween_property(_music_player, "volume_db", -80.0, MUSIC_FADE_DURATION)
+	_music_tween.tween_callback(func():
+		_music_player.stream = new_stream
+		_music_player.play()
+		_music_tween = create_tween()
+		_music_tween.tween_property(_music_player, "volume_db", linear_to_db(music_volume * master_volume), MUSIC_FADE_DURATION)
+	)
+
+
+func _fade_out_only() -> void:
+	## 仅淡出当前音乐
+	if _music_tween and _music_tween.is_valid():
+		_music_tween.kill()
+	_music_tween = create_tween()
+	_music_tween.tween_property(_music_player, "volume_db", -80.0, MUSIC_FADE_DURATION)
+	_music_tween.tween_callback(func():
+		_music_player.stop()
+		_current_music = ""
+	)
 
 
 func set_master_volume(value: float) -> void:
@@ -97,6 +171,12 @@ func _apply_volumes() -> void:
 	# 应用到AudioServer总线
 	if AudioServer.bus_count > 0:
 		AudioServer.set_bus_volume_db(0, linear_to_db(master_volume))
+	# 实时更新正在播放的音乐音量
+	if _music_player and _music_player.playing:
+		var target_db: float = linear_to_db(music_volume * master_volume)
+		if _music_tween and _music_tween.is_valid():
+			_music_tween.kill()
+		_music_player.volume_db = target_db
 	# 音乐和音效总线在项目设置里配置，这里先预留
 	print("[AudioManager] 音量已更新: 主音量=%.2f, 音乐=%.2f, 音效=%.2f" % [master_volume, music_volume, sfx_volume])
 

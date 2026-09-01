@@ -1,7 +1,7 @@
 [gd_resource type="TileSet" format=3 uid="uid://dyphmyd1f5v2h"]
 
 [ext_resource type="Texture2D" uid="uid://di6keedrc0ypi" path="res://assets/tiles/TerrainLayer/shear_left.png" id="1_clpbi"]
-[ext_resource type="Texture2D" uid="uid://bel08c26hko4d" path="res://assets/tiles/TerrainLayer/草地1.png" id="1_fsnex"]
+[ext_resource type="Texture2D" uid="uid://cypcx4hsmty26" path="res://assets/tiles/TerrainLayer/草地1.png" id="1_fsnex"]
 [ext_resource type="Texture2D" uid="uid://cisiv8786t63h" path="res://assets/tiles/TerrainLayer/shear_right.png" id="3_ykcb8"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4xcxg"]

@@ -1197,8 +1197,10 @@ func _update_day_night(delta: float) -> void:
 	if was_night != is_night:
 		if is_night:
 			GameManager.send_chat.rpc("夜幕降临了，小心丧尸！")
+			AudioManager.play_music("game_night")
 		else:
 			GameManager.send_chat.rpc("天亮了，第%d天开始" % day_count)
+			AudioManager.play_music("game_day")
 
 
 @rpc("any_peer", "call_remote")

@@ -45,6 +45,10 @@ var original_window_mode: String = ""
 var original_vsync: bool = false
 var original_startup_screen: int = 0
 
+# 音效设置临时变量（应用前不生效）
+var temp_audio: Dictionary = {}
+var original_audio: Dictionary = {}
+
 # 设置值（可持久化）
 var settings_data: Dictionary = {
 	"fullscreen": false,
@@ -422,23 +426,37 @@ func _build_video_settings() -> void:
 
 
 func _build_audio_settings() -> void:
+	# 保存原始值，用于返回时恢复
+	original_audio = {
+		"master_volume": settings_data.master_volume,
+		"music_volume": settings_data.music_volume,
+		"sfx_volume": settings_data.sfx_volume,
+	}
+	# 初始化临时值
+	temp_audio = original_audio.duplicate()
 	# 主音量
 	_add_volume_slider("主音量", "master_volume")
 	_add_volume_slider("音乐音量", "music_volume")
 	_add_volume_slider("音效音量", "sfx_volume")
+	# 应用按钮
+	var apply_btn := Button.new()
+	apply_btn.text = "应用"
+	apply_btn.custom_minimum_size = Vector2(120, 36)
+	apply_btn.pressed.connect(_on_audio_apply)
+	settings_content.add_child(apply_btn)
 
 
 func _add_volume_slider(label_text: String, setting_key: String) -> void:
 	var label := Label.new()
-	label.text = "%s: %d%%" % [label_text, int(settings_data[setting_key] * 100)]
+	label.text = "%s: %d%%" % [label_text, int(temp_audio[setting_key] * 100)]
 	settings_content.add_child(label)
 	var slider := HSlider.new()
 	slider.min_value = 0.0
 	slider.max_value = 1.0
 	slider.step = 0.05
-	slider.value = settings_data[setting_key]
+	slider.value = temp_audio[setting_key]
 	slider.custom_minimum_size = Vector2(200, 20)
-	slider.value_changed.connect(func(value): _on_volume_changed(setting_key, value, label, label_text))
+	slider.value_changed.connect(func(value): _on_volume_temp_changed(setting_key, value, label, label_text))
 	settings_content.add_child(slider)
 
 
@@ -689,10 +707,43 @@ func _on_resolution_changed(res: String) -> void:
 func _on_volume_changed(key: String, value: float, label: Label, label_text: String) -> void:
 	settings_data[key] = value
 	label.text = "%s: %d%%" % [label_text, int(value * 100)]
-	# 应用音量到AudioServer
-	if key == "master_volume":
-		AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), linear_to_db(value))
+	# 实时应用音量到AudioManager（正在播放的音乐会立即响应）
+	match key:
+		"master_volume":
+			AudioManager.set_master_volume(value)
+		"music_volume":
+			AudioManager.set_music_volume(value)
+		"sfx_volume":
+			AudioManager.set_sfx_volume(value)
 	_save_settings()
+
+
+func _on_volume_temp_changed(key: String, value: float, label: Label, label_text: String) -> void:
+	## 音效设置滑块临时变化（只更新临时值和UI，实时预览但不保存）
+	temp_audio[key] = value
+	label.text = "%s: %d%%" % [label_text, int(value * 100)]
+	# 实时预览音量
+	match key:
+		"master_volume":
+			AudioManager.set_master_volume(value)
+		"music_volume":
+			AudioManager.set_music_volume(value)
+		"sfx_volume":
+			AudioManager.set_sfx_volume(value)
+
+
+func _on_audio_apply() -> void:
+	## 音效设置应用按钮：保存临时值到设置并持久化
+	settings_data.master_volume = temp_audio.master_volume
+	settings_data.music_volume = temp_audio.music_volume
+	settings_data.sfx_volume = temp_audio.sfx_volume
+	# 应用音量
+	AudioManager.set_master_volume(settings_data.master_volume)
+	AudioManager.set_music_volume(settings_data.music_volume)
+	AudioManager.set_sfx_volume(settings_data.sfx_volume)
+	# 保存到文件
+	_save_settings()
+	print("[Settings] 音效设置已应用并保存")
 
 
 func _on_language_changed(lang: String) -> void:
@@ -895,6 +946,16 @@ func _on_close_shortcuts() -> void:
 	toggle()
 
 func _on_close_settings() -> void:
+	# 如果在音效设置页面，返回时恢复原始设置（不保存临时修改）
+	if current_settings == "audio" and not original_audio.is_empty():
+		settings_data.master_volume = original_audio.master_volume
+		settings_data.music_volume = original_audio.music_volume
+		settings_data.sfx_volume = original_audio.sfx_volume
+		# 恢复音量
+		AudioManager.set_master_volume(settings_data.master_volume)
+		AudioManager.set_music_volume(settings_data.music_volume)
+		AudioManager.set_sfx_volume(settings_data.sfx_volume)
+		print("[Settings] 音效设置未应用，已恢复原始值")
 	# 直接关闭整个菜单，返回主世界
 	toggle()
 

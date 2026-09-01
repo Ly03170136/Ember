@@ -33,6 +33,8 @@ func _ready() -> void:
 	submenu_back_btn.pressed.connect(_on_submenu_back_pressed)
 	# 隐藏子菜单
 	create_submenu.visible = false
+	# 播放主菜单BGM
+	AudioManager.play_music("main_menu")
 
 
 func _apply_saved_video_settings() -> void:
