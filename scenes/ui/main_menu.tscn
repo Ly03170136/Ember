@@ -1,7 +1,11 @@
-[gd_scene format=3 uid="uid://bmainmenu01"]
+[gd_scene load_steps=9 format=3 uid="uid://bmainmenu01"]
 
 [ext_resource type="Script" uid="uid://0q002a7mnx5v" path="res://scripts/ui/main_menu.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://db2ecvt0bpn3t" path="res://assets/ui/menu_background.jpg" id="2_bg"]
+[ext_resource type="Texture2D" path="res://assets/ui/1.png" id="3_btn1"]
+[ext_resource type="Texture2D" path="res://assets/ui/2.png" id="4_btn2"]
+[ext_resource type="Texture2D" path="res://assets/ui/3.png" id="5_btn3"]
+[ext_resource type="Texture2D" path="res://assets/ui/4.png" id="6_btn4"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_submenu"]
 content_margin_left = 24.0
@@ -61,44 +65,117 @@ grow_vertical = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="ButtonContainer" type="VBoxContainer" parent="." unique_id=1735657068]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -1716.092
-offset_top = -363.42566
-offset_right = -1456.092
-offset_bottom = -83.42566
+[node name="CreateButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1560.0
+offset_top = 480.0
+offset_right = 1860.0
+offset_bottom = 620.0
 grow_horizontal = 0
 grow_vertical = 0
-theme_override_constants/separation = 18
-
-[node name="CreateButton" type="Button" parent="ButtonContainer" unique_id=1990256702]
-custom_minimum_size = Vector2(0, 52)
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
+flat = true
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(1, 0.95, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
+theme_override_constants/outline_size = 3
 text = "创建游戏"
 
-[node name="JoinButton" type="Button" parent="ButtonContainer" unique_id=14801351]
-custom_minimum_size = Vector2(0, 52)
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
+[node name="Bg" type="TextureRect" parent="CreateButton"]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_btn1")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="JoinButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1560.0
+offset_top = 640.0
+offset_right = 1860.0
+offset_bottom = 780.0
+grow_horizontal = 0
+grow_vertical = 0
+flat = true
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(1, 0.95, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
+theme_override_constants/outline_size = 3
 text = "加入游戏"
 
-[node name="SettingsButton" type="Button" parent="ButtonContainer" unique_id=473529451]
-custom_minimum_size = Vector2(0, 52)
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
+[node name="Bg" type="TextureRect" parent="JoinButton"]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_btn2")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="SettingsButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1560.0
+offset_top = 800.0
+offset_right = 1860.0
+offset_bottom = 940.0
+grow_horizontal = 0
+grow_vertical = 0
+flat = true
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(1, 0.95, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
+theme_override_constants/outline_size = 3
 text = "设置"
 
-[node name="QuitButton" type="Button" parent="ButtonContainer" unique_id=2025093009]
-custom_minimum_size = Vector2(0, 52)
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
+[node name="Bg" type="TextureRect" parent="SettingsButton"]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("5_btn3")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="QuitButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 1560.0
+offset_top = 960.0
+offset_right = 1860.0
+offset_bottom = 1100.0
+grow_horizontal = 0
+grow_vertical = 0
+flat = true
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(1, 0.95, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
+theme_override_constants/outline_size = 3
 text = "退出游戏"
+
+[node name="Bg" type="TextureRect" parent="QuitButton"]
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("6_btn4")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="CreateSubmenu" type="Panel" parent="." unique_id=1096547331]
 visible = false

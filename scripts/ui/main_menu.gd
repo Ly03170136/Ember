@@ -3,10 +3,10 @@ extends Control
 ## 按钮：创建游戏 / 加入游戏 / 设置 / 退出游戏
 
 # 主菜单按钮
-@onready var create_button: Button = $ButtonContainer/CreateButton
-@onready var join_button: Button = $ButtonContainer/JoinButton
-@onready var settings_button: Button = $ButtonContainer/SettingsButton
-@onready var quit_button: Button = $ButtonContainer/QuitButton
+@onready var create_button: Button = $CreateButton
+@onready var join_button: Button = $JoinButton
+@onready var settings_button: Button = $SettingsButton
+@onready var quit_button: Button = $QuitButton
 
 # 创建游戏子菜单
 @onready var create_submenu: Panel = $CreateSubmenu
