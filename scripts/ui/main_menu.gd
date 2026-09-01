@@ -1,126 +1,114 @@
 extends Control
-## 主菜单：一级菜单（创建/加入）+ 二级菜单（职业选择）
+## 主菜单：4按钮 + 创建游戏子菜单
+## 按钮：创建游戏 / 加入游戏 / 设置 / 退出游戏
 
-# 一级菜单节点
-@onready var main_panel: Panel = $MainPanel
-@onready var name_input: LineEdit = $MainPanel/VBox/NameInput
-@onready var host_button: Button = $MainPanel/VBox/HostButton
-@onready var ip_input: LineEdit = $MainPanel/VBox/IPRow/IPInput
-@onready var join_button: Button = $MainPanel/VBox/IPRow/JoinButton
-@onready var status_label: Label = $MainPanel/VBox/StatusLabel
+# 主菜单按钮
+@onready var create_button: Button = $ButtonContainer/CreateButton
+@onready var join_button: Button = $ButtonContainer/JoinButton
+@onready var settings_button: Button = $ButtonContainer/SettingsButton
+@onready var quit_button: Button = $ButtonContainer/QuitButton
 
-# 二级菜单节点
-@onready var class_select_panel: Panel = $ClassSelectPanel
-@onready var player_name_label: Label = $ClassSelectPanel/VBox/PlayerNameLabel
-@onready var class_grid: GridContainer = $ClassSelectPanel/VBox/ClassGrid
-@onready var selected_class_label: Label = $ClassSelectPanel/VBox/SelectedClassLabel
-@onready var class_desc_label: Label = $ClassSelectPanel/VBox/ClassDescLabel
-@onready var back_button: Button = $ClassSelectPanel/VBox/ButtonRow/BackButton
-@onready var start_button: Button = $ClassSelectPanel/VBox/ButtonRow/StartButton
+# 创建游戏子菜单
+@onready var create_submenu: Panel = $CreateSubmenu
+@onready var new_game_btn: Button = $CreateSubmenu/VBox/NewGameBtn
+@onready var load_save_btn: Button = $CreateSubmenu/VBox/LoadSaveBtn
+@onready var submenu_back_btn: Button = $CreateSubmenu/VBox/BackBtn
 
-var selected_class: String = "warrior"
-const CLASS_MAP := {
-	"战士": "warrior",
-	"工匠": "craftsman",
-	"医生": "doctor",
-	"农民": "farmer",
-	"汽修工": "mechanic",
-	"厨师": "chef",
-	"伐木工": "lumberjack",
-	"工程师": "engineer",
-}
-const CLASS_DESC := {
-	"warrior": "战斗属性高，能改造高级武器。擅长近战和防御，是团队的主要战斗力。",
-	"craftsman": "建造时间减半，能建造高级建筑。其他人无法建造高级建筑。",
-	"doctor": "能治疗和制药，救人。倒地玩家只有医生能救起，其他人无法治疗。",
-	"farmer": "能种植农作物，其他人不能种植。需要寻找农业书籍才能解锁。",
-	"mechanic": "能修理和改装载具，其他人不能修车。地图残骸只有汽修工能拆卸。",
-	"chef": "能做高级食物，烹饪效率高。高级食物可以恢复生命值。",
-	"lumberjack": "力量高，获取资源效率高。伐木和采矿速度比其他职业快。",
-	"engineer": "能建造电力系统和自动化防御。发电机、炮塔等只有工程师能建造。",
-}
+# 设置菜单实例
+var settings_instance: Control = null
 
 
 func _ready() -> void:
-	# 确保游戏未暂停（从游戏返回主菜单时可能处于暂停状态）
 	get_tree().paused = false
-	# 一级菜单按钮
-	host_button.pressed.connect(_on_host_pressed)
+	# 主按钮
+	create_button.pressed.connect(_on_create_pressed)
 	join_button.pressed.connect(_on_join_pressed)
-	name_input.text = "Player%d" % randi_range(1, 99)
-	ip_input.text = "127.0.0.1"
-	status_label.text = ""
-
-	# 二级菜单按钮
-	back_button.pressed.connect(_on_back_pressed)
-	start_button.pressed.connect(_on_start_pressed)
-
-	# 职业按钮
-	for btn in class_grid.get_children():
-		if btn is Button:
-			btn.pressed.connect(_on_class_selected.bind(btn.text))
-
-	# 默认选中战士
-	_update_class_selection()
+	settings_button.pressed.connect(_on_settings_pressed)
+	quit_button.pressed.connect(_on_quit_pressed)
+	# 子菜单按钮
+	new_game_btn.pressed.connect(_on_new_game_pressed)
+	load_save_btn.pressed.connect(_on_load_save_pressed)
+	submenu_back_btn.pressed.connect(_on_submenu_back_pressed)
+	# 隐藏子菜单
+	create_submenu.visible = false
 
 
-# ==================== 一级菜单 ====================
+# ==================== 主菜单按钮 ====================
 
-func _on_host_pressed() -> void:
-	var name := name_input.text.strip_edges()
-	if name.is_empty():
-		name = "Host"
-		name_input.text = name
-	# 进入二级职业选择菜单
-	player_name_label.text = "玩家：%s" % name
-	main_panel.visible = false
-	class_select_panel.visible = true
+func _on_create_pressed() -> void:
+	# 显示创建游戏子菜单
+	create_submenu.visible = true
+	_set_main_buttons_enabled(false)
 
 
 func _on_join_pressed() -> void:
-	var name := name_input.text.strip_edges()
-	if name.is_empty():
-		name = "Guest"
-	var ip := ip_input.text.strip_edges()
-	if ip.is_empty():
-		status_label.text = "请输入主机IP地址"
-		return
-	status_label.text = "正在连接 %s..." % ip
-	# 加入游戏默认用战士职业
-	GameManager.join_game(ip, name, "warrior")
-	await get_tree().create_timer(3.0).timeout
-	if not GameManager.is_connected:
-		status_label.text = "连接失败，请检查IP和网络"
+	# 切换到网络大厅
+	get_tree().change_scene_to_file("res://scenes/ui/network_lobby.tscn")
 
 
-# ==================== 二级菜单 ====================
+func _on_settings_pressed() -> void:
+	# 打开设置菜单（实例化为子节点）
+	if settings_instance and is_instance_valid(settings_instance):
+		settings_instance.queue_free()
+		settings_instance = null
+	# 记录当前窗口大小，设置菜单可能会修改它
+	var current_size: Vector2i = DisplayServer.window_get_size()
+	settings_instance = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	add_child(settings_instance)
+	# 强制显示（settings_menu默认visible=false）
+	settings_instance.visible = true
+	# 主菜单中不暂停游戏
+	get_tree().paused = false
+	# 延迟恢复窗口大小（设置菜单的_deferred_load_settings可能会修改它）
+	call_deferred("_restore_window_size", current_size)
+	# 连接返回按钮，点击后销毁设置菜单
+	if settings_instance.has_node("Panel/VBox/ReturnBtn"):
+		var return_btn: Button = settings_instance.get_node("Panel/VBox/ReturnBtn")
+		return_btn.pressed.connect(_on_settings_closed)
+	# 连接退出到主菜单按钮
+	if settings_instance.has_node("Panel/VBox/QuitBtn"):
+		var quit_btn: Button = settings_instance.get_node("Panel/VBox/QuitBtn")
+		quit_btn.pressed.connect(_on_settings_closed)
 
-func _on_back_pressed() -> void:
-	# 返回一级菜单
-	class_select_panel.visible = false
-	main_panel.visible = true
+
+func _restore_window_size(size: Vector2i) -> void:
+	# 恢复窗口大小
+	if DisplayServer.window_get_size() != size:
+		DisplayServer.window_set_size(size)
+		print("[MainMenu] 窗口大小已恢复为 ", size)
 
 
-func _on_start_pressed() -> void:
-	var name := name_input.text.strip_edges()
-	if name.is_empty():
-		name = "Host"
-	status_label.text = "正在创建主机..."
-	# 使用选择的职业创建主机
-	GameManager.host_game(name, selected_class)
+func _on_settings_closed() -> void:
+	# 设置菜单关闭时销毁实例
+	if settings_instance and is_instance_valid(settings_instance):
+		settings_instance.queue_free()
+		settings_instance = null
+	get_tree().paused = false
 
 
-func _on_class_selected(class_name_str: String) -> void:
-	selected_class = CLASS_MAP.get(class_name_str, "warrior")
-	_update_class_selection()
+func _on_quit_pressed() -> void:
+	get_tree().quit()
 
 
-func _update_class_selection() -> void:
-	selected_class_label.text = "当前职业：%s" % PlayerSprite.get_class_name(selected_class)
-	class_desc_label.text = CLASS_DESC.get(selected_class, "")
-	for btn in class_grid.get_children():
-		if btn is Button:
-			if CLASS_MAP.get(btn.text, "") == selected_class:
-				btn.modulate = Color(0.6, 1, 0.6)
-			else:
-				btn.modulate = Color.WHITE
+# ==================== 创建游戏子菜单 ====================
+
+func _on_new_game_pressed() -> void:
+	# 切换到准备大厅（创建模式）
+	get_tree().change_scene_to_file("res://scenes/ui/lobby_menu.tscn")
+
+
+func _on_load_save_pressed() -> void:
+	# 切换到存档列表
+	get_tree().change_scene_to_file("res://scenes/ui/save_list.tscn")
+
+
+func _on_submenu_back_pressed() -> void:
+	create_submenu.visible = false
+	_set_main_buttons_enabled(true)
+
+
+func _set_main_buttons_enabled(enabled: bool) -> void:
+	create_button.disabled = not enabled
+	join_button.disabled = not enabled
+	settings_button.disabled = not enabled
+	quit_button.disabled = not enabled

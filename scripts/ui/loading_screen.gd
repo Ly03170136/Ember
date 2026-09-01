@@ -11,7 +11,7 @@ extends Control
 @onready var tip_label: Label = $VBox/TipLabel
 @onready var stage_label: Label = $VBox/StageLabel
 @onready var subtitle_label: Label = $VBox/Subtitle
-@onready var title_label: Label = $VBox/Title
+@onready var title_image: TextureRect = $VBox/TitleImage
 
 # 游戏小提示
 const TIPS := [
@@ -71,7 +71,7 @@ func _process(delta: float) -> void:
 	# 标题呼吸动画
 	_title_anim_time += delta
 	var breath: float = 0.85 + 0.15 * sin(_title_anim_time * 2.0)
-	title_label.modulate = Color(breath, breath * 0.75, breath * 0.35, 1.0)
+	title_image.modulate = Color(breath, breath, breath, 1.0)
 
 
 # ==================== LoadManager信号处理 ====================

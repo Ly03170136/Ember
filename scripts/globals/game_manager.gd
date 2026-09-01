@@ -6,6 +6,11 @@ signal player_joined(peer_id: int)
 signal player_left(peer_id: int)
 signal chat_received(peer_id: int, message: String)
 signal game_started()
+# 准备大厅信号
+signal lobby_player_joined(peer_id: int)
+signal lobby_player_left(peer_id: int)
+signal lobby_ready_changed(peer_id: int, is_ready: bool)
+signal lobby_start_game()
 
 const PORT := 7777
 const MAX_PLAYERS := 4
@@ -22,6 +27,10 @@ var local_player_class: String = "warrior"
 var game_world: Node2D = null
 var chat_history: Array = []
 var player_name: String = "幸存者"  # 玩家名称
+
+# 准备大厅系统
+var in_lobby: bool = false  # 是否在准备大厅阶段
+var lobby_players: Dictionary = {}  # peer_id -> {name: String, class: String, ready: bool}
 
 # 断线重连系统
 var disconnected_players: Dictionary = {}  # player_name -> {peer_id, position, health, hunger, thirst, stamina, level, experience, class, color, disconnect_time}
@@ -80,9 +89,12 @@ func host_game(player_name: String = "Player", player_class: String = "warrior")
 	local_peer_id = 1
 	player_names[1] = player_name
 	player_classes[1] = player_class
-	print("[Server] Hosting on port %d, peer_id=1" % PORT)
-	GameLogger.info("创建主机，端口: %d, 玩家: %s, 职业: %s" % [PORT, player_name, player_class], "Network")
-	_start_game()
+	# 进入准备大厅阶段，不立即开始游戏
+	in_lobby = true
+	lobby_players[1] = {"name": player_name, "class": player_class, "ready": true}
+	print("[Server] Hosting on port %d, peer_id=1, 进入准备大厅" % PORT)
+	GameLogger.info("创建主机，端口: %d, 玩家: %s, 职业: %s, 进入准备大厅" % [PORT, player_name, player_class], "Network")
+	# 不调用_start_game()，停留在准备大厅等待玩家
 
 
 func join_game(ip: String, player_name: String = "Player", player_class: String = "warrior") -> void:
@@ -121,6 +133,8 @@ func reset_network_state() -> void:
 	multiplayer.multiplayer_peer = null
 	is_connected = false
 	is_server = false
+	in_lobby = false
+	lobby_players.clear()
 	players.clear()
 	player_names.clear()
 	player_classes.clear()
@@ -404,14 +418,23 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	GameLogger.info("玩家离开，peer_id: %d" % peer_id, "Network")
 	player_left.emit(peer_id)
 	if is_server:
-		# 保存断线玩家数据用于重连
-		_save_disconnected_player(peer_id)
-		# 移除玩家角色
-		_despawn_player(peer_id)
-		player_names.erase(peer_id)
-		player_classes.erase(peer_id)
-		_sync_player_names.rpc()
-		_sync_player_classes.rpc()
+		# 如果在准备大厅阶段，从大厅移除并广播
+		if in_lobby and lobby_players.has(peer_id):
+			lobby_players.erase(peer_id)
+			player_names.erase(peer_id)
+			player_classes.erase(peer_id)
+			_lobby_broadcast_players.rpc()
+			lobby_player_left.emit(peer_id)
+			print("[Lobby] 玩家 %d 离开准备大厅" % peer_id)
+		else:
+			# 保存断线玩家数据用于重连
+			_save_disconnected_player(peer_id)
+			# 移除玩家角色
+			_despawn_player(peer_id)
+			player_names.erase(peer_id)
+			player_classes.erase(peer_id)
+			_sync_player_names.rpc()
+			_sync_player_classes.rpc()
 
 
 func _on_connected_to_server() -> void:
@@ -419,10 +442,17 @@ func _on_connected_to_server() -> void:
 	local_peer_id = multiplayer.get_unique_id()
 	print("[Client] Connected! peer_id=%d" % local_peer_id)
 	GameLogger.info("连接服务器成功，peer_id: %d" % local_peer_id, "Network")
-	# 向服务器注册名字和职业
-	_register_name.rpc_id(1, player_names.get(0, "Player"))
-	_register_class.rpc_id(1, player_classes.get(0, "warrior"))
-	_start_game()
+	# 进入准备大厅阶段
+	in_lobby = true
+	# 向服务器注册到准备大厅（名字和职业）
+	var pname: String = player_names.get(0, "Player")
+	var pclass: String = player_classes.get(0, "warrior")
+	player_names[local_peer_id] = pname
+	player_classes[local_peer_id] = pclass
+	lobby_players[local_peer_id] = {"name": pname, "class": pclass, "ready": false}
+	_lobby_register.rpc_id(1, pname, pclass)
+	print("[Client] 已注册到准备大厅，等待主机开始游戏")
+	# 不调用_start_game()，停留在准备大厅
 
 
 func _on_connection_failed() -> void:
@@ -443,6 +473,147 @@ func _on_server_disconnected() -> void:
 
 
 # ==================== RPC ====================
+
+# ==================== 准备大厅RPC ====================
+
+@rpc("any_peer", "call_local")
+func _lobby_register(name: String, class_id: String) -> void:
+	## 客户端注册到准备大厅（主机接收）
+	var pid := multiplayer.get_remote_sender_id()
+	if pid == 0:
+		pid = local_peer_id
+	if not is_server:
+		return
+	print("[Lobby] 玩家 %d 注册到大厅: %s (%s)" % [pid, name, class_id])
+	GameLogger.info("玩家加入准备大厅: %s, peer_id=%d" % [name, pid], "Lobby")
+	# 添加到大厅玩家列表
+	player_names[pid] = name
+	player_classes[pid] = class_id
+	lobby_players[pid] = {"name": name, "class": class_id, "ready": false}
+	# 广播玩家列表给所有客户端
+	_lobby_broadcast_players.rpc()
+	lobby_player_joined.emit(pid)
+
+
+@rpc("authority", "call_local")
+func _lobby_broadcast_players() -> void:
+	## 主机广播大厅玩家列表给所有客户端
+	if not is_server:
+		return
+	# 序列化为JSON字符串传递（Dictionary不能直接通过RPC传递）
+	var players_json: String = JSON.stringify(lobby_players)
+	_receive_lobby_players.rpc(players_json)
+
+
+@rpc("any_peer", "call_local")
+func _receive_lobby_players(players_json: String) -> void:
+	## 客户端接收主机广播的玩家列表
+	var json := JSON.new()
+	if json.parse(players_json) != OK:
+		print("[Lobby] 解析玩家列表失败")
+		return
+	# JSON的key是String类型，需要转换回int类型的peer_id
+	var converted: Dictionary = {}
+	for key in json.data.keys():
+		var pid: int = int(key)
+		converted[pid] = json.data[key]
+	lobby_players = converted
+	print("[Lobby] 收到玩家列表，共 %d 人" % lobby_players.size())
+	# 通知UI更新
+	lobby_player_joined.emit(0)  # 用0表示列表更新
+
+
+@rpc("any_peer", "call_local")
+func _lobby_player_ready(is_ready: bool) -> void:
+	## 客户端通知准备状态（主机接收并广播）
+	var pid := multiplayer.get_remote_sender_id()
+	if pid == 0:
+		pid = local_peer_id
+	if is_server:
+		# 主机更新准备状态
+		if lobby_players.has(pid):
+			lobby_players[pid].ready = is_ready
+			print("[Lobby] 玩家 %d 准备状态: %s" % [pid, str(is_ready)])
+			GameLogger.info("玩家准备状态变更: peer_id=%d, ready=%s" % [pid, str(is_ready)], "Lobby")
+			# 广播给所有客户端
+			_lobby_broadcast_ready.rpc(pid, is_ready)
+			lobby_ready_changed.emit(pid, is_ready)
+
+
+@rpc("authority", "call_local")
+func _lobby_broadcast_ready(pid: int, is_ready: bool) -> void:
+	## 主机广播玩家准备状态给所有客户端
+	if lobby_players.has(pid):
+		lobby_players[pid].ready = is_ready
+		lobby_ready_changed.emit(pid, is_ready)
+
+
+@rpc("authority", "call_local")
+func _lobby_start_game() -> void:
+	## 主机通知所有客户端开始游戏
+	print("[Lobby] 收到主机开始游戏指令")
+	in_lobby = false
+	# 所有客户端进入游戏
+	_start_game()
+
+
+# ==================== 准备大厅公共函数 ====================
+
+func lobby_set_ready(is_ready: bool) -> void:
+	## 客户端设置自己的准备状态
+	if is_server:
+		# 主机永远是准备状态
+		return
+	if not in_lobby:
+		return
+	_lobby_player_ready.rpc_id(1, is_ready)
+
+
+func start_lobby_game() -> void:
+	## 主机开始游戏（通知所有客户端）
+	if not is_server or not in_lobby:
+		return
+	# 检查所有人是否都准备了
+	for pid in lobby_players.keys():
+		if pid == 1:
+			continue  # 主机默认准备
+		if not lobby_players[pid].get("ready", false):
+			print("[Lobby] 还有玩家未准备，无法开始游戏")
+			return
+	print("[Lobby] 所有人已准备，开始游戏")
+	GameLogger.info("准备大厅开始游戏，共 %d 人" % lobby_players.size(), "Lobby")
+	in_lobby = false
+	# 广播给所有客户端（call_local会让主机也执行）
+	_lobby_start_game.rpc()
+
+
+func lobby_kick_player(peer_id: int) -> void:
+	## 主机踢出玩家
+	if not is_server or not in_lobby:
+		return
+	if peer_id == 1:
+		return  # 不能踢主机
+	print("[Lobby] 踢出玩家 %d" % peer_id)
+	GameLogger.info("主机踢出玩家: peer_id=%d" % peer_id, "Lobby")
+	# 通知被踢的玩家
+	_lobby_kicked.rpc_id(peer_id)
+	# 从大厅移除
+	lobby_players.erase(peer_id)
+	player_names.erase(peer_id)
+	player_classes.erase(peer_id)
+	# 广播更新
+	_lobby_broadcast_players.rpc()
+	lobby_player_left.emit(peer_id)
+
+
+@rpc("any_peer")
+func _lobby_kicked() -> void:
+	## 客户端被主机踢出
+	print("[Lobby] 你被主机踢出了大厅")
+	in_lobby = false
+	reset_network_state()
+	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+
 
 @rpc("any_peer", "call_local")
 func _register_name(name: String) -> void:
