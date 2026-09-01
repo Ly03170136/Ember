@@ -20,6 +20,8 @@ var settings_instance: Control = null
 
 func _ready() -> void:
 	get_tree().paused = false
+	# 启动时应用保存的视频设置（全屏/分辨率/VSync）
+	_apply_saved_video_settings()
 	# 主按钮
 	create_button.pressed.connect(_on_create_pressed)
 	join_button.pressed.connect(_on_join_pressed)
@@ -31,6 +33,46 @@ func _ready() -> void:
 	submenu_back_btn.pressed.connect(_on_submenu_back_pressed)
 	# 隐藏子菜单
 	create_submenu.visible = false
+
+
+func _apply_saved_video_settings() -> void:
+	## 启动时应用保存的视频设置
+	if not FileAccess.file_exists("user://settings.cfg"):
+		return
+	var file := FileAccess.open("user://settings.cfg", FileAccess.READ)
+	if not file:
+		return
+	var content: String = file.get_as_text()
+	file.close()
+	var parsed: Variant = JSON.parse_string(content)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	var settings: Dictionary = parsed
+	# 应用全屏设置
+	if settings.get("fullscreen", false):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	# 应用分辨率设置
+	if settings.has("screen_width") and settings.has("screen_height"):
+		var w: int = int(settings.screen_width)
+		var h: int = int(settings.screen_height)
+		if w > 0 and h > 0:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			DisplayServer.window_set_size(Vector2i(w, h))
+			get_viewport().size = Vector2i(w, h)
+			# 在当前屏幕居中
+			var current_screen: int = DisplayServer.window_get_current_screen()
+			var screen_pos: Vector2i = DisplayServer.screen_get_position(current_screen)
+			var screen_size: Vector2i = DisplayServer.screen_get_size(current_screen)
+			var new_x: int = screen_pos.x + (screen_size.x - w) / 2
+			var new_y: int = screen_pos.y + (screen_size.y - h) / 2
+			DisplayServer.window_set_position(Vector2i(new_x, new_y))
+	# 应用VSync设置
+	if settings.has("vsync"):
+		if settings.vsync:
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+		else:
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	print("[MainMenu] 已应用保存的视频设置")
 
 
 # ==================== 主菜单按钮 ====================
@@ -51,16 +93,17 @@ func _on_settings_pressed() -> void:
 	if settings_instance and is_instance_valid(settings_instance):
 		settings_instance.queue_free()
 		settings_instance = null
-	# 记录当前窗口大小，设置菜单可能会修改它
+	# 记录当前窗口状态，设置菜单可能会修改它
 	var current_size: Vector2i = DisplayServer.window_get_size()
+	var current_mode: int = DisplayServer.window_get_mode()
 	settings_instance = load("res://scenes/ui/settings_menu.tscn").instantiate()
 	add_child(settings_instance)
 	# 强制显示（settings_menu默认visible=false）
 	settings_instance.visible = true
 	# 主菜单中不暂停游戏
 	get_tree().paused = false
-	# 延迟恢复窗口大小（设置菜单的_deferred_load_settings可能会修改它）
-	call_deferred("_restore_window_size", current_size)
+	# 延迟恢复窗口状态（设置菜单的_deferred_load_settings可能会修改它）
+	call_deferred("_restore_window_state", current_size, current_mode)
 	# 连接返回按钮，点击后销毁设置菜单
 	if settings_instance.has_node("Panel/VBox/ReturnBtn"):
 		var return_btn: Button = settings_instance.get_node("Panel/VBox/ReturnBtn")
@@ -71,8 +114,11 @@ func _on_settings_pressed() -> void:
 		quit_btn.pressed.connect(_on_settings_closed)
 
 
-func _restore_window_size(size: Vector2i) -> void:
-	# 恢复窗口大小
+func _restore_window_state(size: Vector2i, mode: int) -> void:
+	# 恢复窗口模式和大小
+	if DisplayServer.window_get_mode() != mode:
+		DisplayServer.window_set_mode(mode)
+		print("[MainMenu] 窗口模式已恢复")
 	if DisplayServer.window_get_size() != size:
 		DisplayServer.window_set_size(size)
 		print("[MainMenu] 窗口大小已恢复为 ", size)
