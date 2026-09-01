@@ -91,6 +91,10 @@ window/size/window_width=1280
 window/size/window_height=720
 window/size/fullscreen=false
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/bilingual_editor/plugin.cfg")
+
 [input]
 
 move_up={
